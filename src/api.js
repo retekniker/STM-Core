@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const path = require("path");
 
 class ApiServer {
@@ -17,6 +18,10 @@ class ApiServer {
 
         this.host = options.host || "0.0.0.0";
         this.port = options.port || 3000;
+        this.adminToken =
+            options.adminToken ||
+            process.env.STM_ADMIN_TOKEN ||
+            "";
 
         this.dashboardPath =
             options.dashboardPath ||
@@ -94,13 +99,58 @@ class ApiServer {
         next();
     }
 
+    requireAdmin(request, response, next) {
+
+        if (!this.adminToken) {
+            response.status(503).json({
+                success: false,
+                error: "ADMIN_AUTH_NOT_CONFIGURED"
+            });
+            return;
+        }
+
+        const authorization =
+            request.get("authorization") || "";
+        const prefix = "Bearer ";
+
+        if (!authorization.startsWith(prefix)) {
+            response.status(401).json({
+                success: false,
+                error: "ADMIN_AUTH_REQUIRED"
+            });
+            return;
+        }
+
+        const suppliedToken =
+            Buffer.from(authorization.slice(prefix.length));
+        const expectedToken =
+            Buffer.from(this.adminToken);
+
+        const valid =
+            suppliedToken.length === expectedToken.length &&
+            crypto.timingSafeEqual(
+                suppliedToken,
+                expectedToken
+            );
+
+        if (!valid) {
+            response.status(403).json({
+                success: false,
+                error: "ADMIN_AUTH_INVALID"
+            });
+            return;
+        }
+
+        next();
+    }
+
     configureRoutes() {
 
         this.app.get("/", (request, response) => {
 
             response.json({
                 service: "STM Core API",
-                version: "0.7.0",
+                version: "0.8.0",
                 status: "running",
                 dashboard: "/community/"
             });
@@ -113,7 +163,7 @@ class ApiServer {
                 response.json({
                     success: true,
                     service: "STM Core API",
-                    version: "0.7.0",
+                    version: "0.8.0",
                     uptimeSeconds: Math.floor(
                         process.uptime()
                     ),
@@ -282,19 +332,81 @@ class ApiServer {
 
         this.app.get(
             "/api/v1/admin/health",
+            this.requireAdmin.bind(this),
             (request, response) => {
 
                 response.json({
                     success: true,
                     mode: "admin",
                     authentication:
-                        "not-configured",
+                        "bearer-token",
                     message:
-                        "Admin API placeholder. " +
-                        "Authentication will be added later.",
+                        "Admin authentication is active.",
                     timestamp:
                         new Date().toISOString()
                 });
+            }
+        );
+
+        this.app.get(
+            "/api/v1/admin/overview",
+            this.requireAdmin.bind(this),
+            async (request, response, next) => {
+
+                try {
+
+                    const servers =
+                        this.stateEngine.getAll();
+
+                    const events =
+                        this.historyRepository
+                            ? await this.historyRepository
+                                .getEvents({
+                                    limit:
+                                        request.query.limit || 25
+                                })
+                            : [];
+
+                    const memory =
+                        process.memoryUsage();
+
+                    response.json({
+                        success: true,
+                        service: {
+                            name: "STM Core",
+                            version: "0.8.0",
+                            uptimeSeconds:
+                                Math.floor(process.uptime()),
+                            startedAt:
+                                this.startedAt.toISOString(),
+                            pid:
+                                process.pid,
+                            nodeVersion:
+                                process.version,
+                            memory: {
+                                rssBytes:
+                                    memory.rss,
+                                heapUsedBytes:
+                                    memory.heapUsed,
+                                heapTotalBytes:
+                                    memory.heapTotal,
+                                externalBytes:
+                                    memory.external
+                            }
+                        },
+                        serverCount:
+                            servers.length,
+                        servers,
+                        eventCount:
+                            events.length,
+                        events,
+                        timestamp:
+                            new Date().toISOString()
+                    });
+
+                } catch (error) {
+                    next(error);
+                }
             }
         );
 
