@@ -6,6 +6,7 @@ const EventEngine = require("./eventEngine");
 const StateEngine = require("./stateEngine");
 const Scheduler = require("./scheduler");
 const Database = require("./database");
+const ApiServer = require("./api");
 
 const configPath = path.join(
     __dirname,
@@ -21,6 +22,13 @@ const eventEngine = new EventEngine();
 const stateEngine = new StateEngine();
 const database = new Database();
 
+const apiServer = new ApiServer({
+    stateEngine,
+    database,
+    host: "0.0.0.0",
+    port: 3000
+});
+
 let shuttingDown = false;
 
 function getTime() {
@@ -34,27 +42,40 @@ function printEvent(serverId, event) {
 
     switch (event.type) {
         case "FIRST_SCAN":
-            console.log(`${prefix} [INIT] Initial state recorded`);
+            console.log(
+                `${prefix} [INIT] Initial state recorded`
+            );
             break;
 
         case "PLAYER_JOIN":
-            console.log(`${prefix} [+] ${event.player} joined`);
+            console.log(
+                `${prefix} [+] ${event.player} joined`
+            );
             break;
 
         case "PLAYER_LEFT":
-            console.log(`${prefix} [-] ${event.player} left`);
+            console.log(
+                `${prefix} [-] ${event.player} left`
+            );
             break;
 
         case "PLAYER_COUNT_CHANGED":
-            console.log(`${prefix} [COUNT] ${event.message}`);
+            console.log(
+                `${prefix} [COUNT] ${event.message}`
+            );
             break;
 
         case "MAP_CHANGED":
-            console.log(`${prefix} [MAP] ${event.message}`);
+            console.log(
+                `${prefix} [MAP] ${event.message}`
+            );
             break;
 
         default:
-            console.log(`${prefix} [EVENT]`, event);
+            console.log(
+                `${prefix} [EVENT]`,
+                event
+            );
     }
 }
 
@@ -127,10 +148,19 @@ async function shutdown(signal) {
 
     console.log("");
     console.log(
-        `[STM] Received ${signal}. Stopping scheduler...`
+        `[STM] Received ${signal}. Stopping services...`
     );
 
     scheduler.stop();
+
+    try {
+        await apiServer.stop();
+        console.log("[STM] API server stopped");
+    } catch (error) {
+        console.error(
+            `[STM] API stop error: ${error.message}`
+        );
+    }
 
     try {
         await database.close();
@@ -144,17 +174,29 @@ async function shutdown(signal) {
     process.exit(0);
 }
 
-process.on("SIGINT", () => void shutdown("SIGINT"));
-process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on(
+    "SIGINT",
+    () => void shutdown("SIGINT")
+);
+
+process.on(
+    "SIGTERM",
+    () => void shutdown("SIGTERM")
+);
 
 async function start() {
     await database.init();
 
+    const apiInfo = await apiServer.start();
+
     console.log("==========================================");
-    console.log("        STM CORE v0.3");
+    console.log("        STM CORE v0.4");
     console.log("==========================================");
     console.log(`Polling interval: ${config.pollInterval} ms`);
     console.log("SQLite database: database/stm.db");
+    console.log(
+        `REST API: http://${apiInfo.host}:${apiInfo.port}`
+    );
     console.log("Press Ctrl+C to stop");
     console.log("");
 
@@ -166,6 +208,8 @@ start().catch(async error => {
         `[STM STARTUP ERROR] ${error.message}`
     );
 
+    await apiServer.stop().catch(() => {});
     await database.close().catch(() => {});
+
     process.exit(1);
 });
