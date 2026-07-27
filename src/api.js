@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 
 class ApiServer {
 
@@ -16,6 +17,14 @@ class ApiServer {
 
         this.host = options.host || "0.0.0.0";
         this.port = options.port || 3000;
+
+        this.dashboardPath =
+            options.dashboardPath ||
+            path.join(
+                __dirname,
+                "..",
+                "dashboard"
+            );
 
         this.app = express();
         this.server = null;
@@ -54,6 +63,16 @@ class ApiServer {
 
             next();
         });
+
+        this.app.use(
+            "/community",
+            express.static(
+                this.dashboardPath,
+                {
+                    index: "index.html"
+                }
+            )
+        );
     }
 
     requireHistoryRepository(
@@ -81,8 +100,9 @@ class ApiServer {
 
             response.json({
                 service: "STM Core API",
-                version: "0.6.0",
-                status: "running"
+                version: "0.7.0",
+                status: "running",
+                dashboard: "/community/"
             });
         });
 
@@ -93,7 +113,7 @@ class ApiServer {
                 response.json({
                     success: true,
                     service: "STM Core API",
-                    version: "0.6.0",
+                    version: "0.7.0",
                     uptimeSeconds: Math.floor(
                         process.uptime()
                     ),
