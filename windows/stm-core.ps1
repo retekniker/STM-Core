@@ -69,7 +69,7 @@ function Start-STMCore {
     }
 
     if (-not (Test-Path $NodeExe)) {
-        throw "Nie znaleziono środowiska Node.js: $NodeExe"
+        throw "Nie znaleziono srodowiska Node.js: $NodeExe"
     }
 
     $env:STM_ENV_PATH = $EnvFile
@@ -100,11 +100,11 @@ function Start-STMCore {
         }
 
         if ($process.HasExited) {
-            throw "STM Core zakończył działanie. Sprawdź: $stderrLog"
+            throw "STM Core zakonczyl dzialanie. Sprawdz: $stderrLog"
         }
     }
 
-    throw "STM Core nie odpowiedział w ciągu 30 sekund."
+    throw "STM Core nie odpowiedzial w ciagu 30 sekund."
 }
 
 function Stop-STMCore {
@@ -145,7 +145,7 @@ switch ($Action) {
                 ConvertTo-Json
         }
         else {
-            Write-Output "STM Core nie działa."
+            Write-Output "STM Core nie dziala."
         }
     }
 
