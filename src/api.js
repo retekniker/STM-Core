@@ -348,6 +348,68 @@ class ApiServer {
             }
         );
 
+        this.app.get(
+            "/api/v1/admin/overview",
+            this.requireAdmin.bind(this),
+            async (request, response, next) => {
+
+                try {
+
+                    const servers =
+                        this.stateEngine.getAll();
+
+                    const events =
+                        this.historyRepository
+                            ? await this.historyRepository
+                                .getEvents({
+                                    limit:
+                                        request.query.limit || 25
+                                })
+                            : [];
+
+                    const memory =
+                        process.memoryUsage();
+
+                    response.json({
+                        success: true,
+                        service: {
+                            name: "STM Core",
+                            version: "0.8.0-dev",
+                            uptimeSeconds:
+                                Math.floor(process.uptime()),
+                            startedAt:
+                                this.startedAt.toISOString(),
+                            pid:
+                                process.pid,
+                            nodeVersion:
+                                process.version,
+                            memory: {
+                                rssBytes:
+                                    memory.rss,
+                                heapUsedBytes:
+                                    memory.heapUsed,
+                                heapTotalBytes:
+                                    memory.heapTotal,
+                                externalBytes:
+                                    memory.external
+                            }
+                        },
+                        serverCount:
+                            servers.length,
+                        servers,
+                        eventCount:
+                            events.length,
+                        events,
+                        timestamp:
+                            new Date().toISOString()
+                    });
+
+                } catch (error) {
+                    next(error);
+                }
+            }
+        );
+
         this.app.use((request, response) => {
 
             response.status(404).json({
