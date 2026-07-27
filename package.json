@@ -1,10 +1,11 @@
 {
-  "name": "stm-probe",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "stm-core",
+  "version": "0.8.1",
+  "description": "Self-hosted Arma 3 server telemetry and monitoring dashboard",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/index.js"
   },
   "keywords": [],
   "type": "commonjs",
