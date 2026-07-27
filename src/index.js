@@ -9,6 +9,7 @@ const Scheduler = require("./scheduler");
 const Database = require("./database");
 const ApiServer = require("./api");
 const WebSocketHub = require("./websocket");
+const HistoryRepository = require("./historyRepository");
 
 const configPath = path.join(
     __dirname,
@@ -24,10 +25,11 @@ const eventEngine = new EventEngine();
 const reliabilityEngine = new ReliabilityEngine(3);
 const stateEngine = new StateEngine();
 const database = new Database();
+const historyRepository = new HistoryRepository(database);
 
 const apiServer = new ApiServer({
     stateEngine,
-    database,
+    historyRepository,
     host: "0.0.0.0",
     port: 3000
 });
@@ -272,7 +274,7 @@ async function start() {
     webSocketHub.start(apiServer.server);
 
     console.log("==========================================");
-    console.log("        STM CORE v0.5.1");
+    console.log("        STM CORE v0.6.0");
     console.log("==========================================");
     console.log(`Polling interval: ${config.pollInterval} ms`);
     console.log("Offline threshold: 3 failed queries");
