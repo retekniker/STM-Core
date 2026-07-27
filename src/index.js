@@ -7,6 +7,7 @@ const StateEngine = require("./stateEngine");
 const Scheduler = require("./scheduler");
 const Database = require("./database");
 const ApiServer = require("./api");
+const WebSocketHub = require("./websocket");
 
 const configPath = path.join(
     __dirname,
@@ -27,6 +28,12 @@ const apiServer = new ApiServer({
     database,
     host: "0.0.0.0",
     port: 3000
+});
+
+const webSocketHub = new WebSocketHub({
+    stateEngine,
+    path: "/ws",
+    heartbeatInterval: 30000
 });
 
 let shuttingDown = false;
@@ -89,6 +96,8 @@ async function pollServers() {
     for (const result of results) {
         stateEngine.update(result);
 
+        webSocketHub.broadcastServerState(result);
+
         try {
             await database.saveSnapshot(result);
         } catch (error) {
@@ -117,6 +126,12 @@ async function pollServers() {
 
         for (const event of events) {
             printEvent(result.id, event);
+
+            webSocketHub.broadcastEvent(
+                result.id,
+                event,
+                result.timestamp
+            );
 
             try {
                 await database.saveEvent(
@@ -154,6 +169,15 @@ async function shutdown(signal) {
     scheduler.stop();
 
     try {
+        await webSocketHub.stop();
+        console.log("[STM] WebSocket stopped");
+    } catch (error) {
+        console.error(
+            `[STM] WebSocket stop error: ${error.message}`
+        );
+    }
+
+    try {
         await apiServer.stop();
         console.log("[STM] API server stopped");
     } catch (error) {
@@ -189,13 +213,18 @@ async function start() {
 
     const apiInfo = await apiServer.start();
 
+    webSocketHub.start(apiServer.server);
+
     console.log("==========================================");
-    console.log("        STM CORE v0.4");
+    console.log("        STM CORE v0.5");
     console.log("==========================================");
     console.log(`Polling interval: ${config.pollInterval} ms`);
     console.log("SQLite database: database/stm.db");
     console.log(
         `REST API: http://${apiInfo.host}:${apiInfo.port}`
+    );
+    console.log(
+        `WebSocket: ws://127.0.0.1:${apiInfo.port}/ws`
     );
     console.log("Press Ctrl+C to stop");
     console.log("");
@@ -208,6 +237,7 @@ start().catch(async error => {
         `[STM STARTUP ERROR] ${error.message}`
     );
 
+    await webSocketHub.stop().catch(() => {});
     await apiServer.stop().catch(() => {});
     await database.close().catch(() => {});
 
