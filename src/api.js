@@ -150,7 +150,7 @@ class ApiServer {
 
             response.json({
                 service: "STM Core API",
-                version: "0.8.3",
+                version: "0.8.4",
                 status: "running",
                 dashboard: "/community/"
             });
@@ -163,7 +163,7 @@ class ApiServer {
                 response.json({
                     success: true,
                     service: "STM Core API",
-                    version: "0.8.3",
+                    version: "0.8.4",
                     uptimeSeconds: Math.floor(
                         process.uptime()
                     ),
@@ -374,7 +374,7 @@ class ApiServer {
                         success: true,
                         service: {
                             name: "STM Core",
-                            version: "0.8.3",
+                            version: "0.8.4",
                             uptimeSeconds:
                                 Math.floor(process.uptime()),
                             startedAt:
