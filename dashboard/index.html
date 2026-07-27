@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Re-Tek | STM PRO v6.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0b0f14; color: #00ff9c; font-family: 'JetBrains Mono', monospace; overflow-x: hidden; position: relative; z-index: 0; }
+        
+        /* STANDARDOWE RAMKI */
+        .soc-border { border: 4px solid #00ff9c; box-shadow: 0 0 25px rgba(0, 255, 156, 0.5), inset 0 0 10px rgba(0, 255, 156, 0.2); transition: all 0.3s ease; }
+        .soc-border-red { border: 4px solid #ff4d4d; box-shadow: 0 0 25px rgba(255, 77, 77, 0.5), inset 0 0 10px rgba(255, 77, 77, 0.2); }
+        .soc-border-pulse { border: 4px solid #ff4d4d; animation: pulse-border-red-strong 1s infinite; transition: all 0.3s ease; }
+
+        /* WZMOCNIONE RAMKI DLA GŁÓWNYCH SERWERÓW */
+        .server-box.soc-border { border-width: 6px; box-shadow: 0 0 45px rgba(0, 255, 156, 0.9), inset 0 0 20px rgba(0, 255, 156, 0.4); }
+        .server-box.soc-border-pulse { border-width: 6px; animation: pulse-border-red-heavy 1s infinite; }
+
+        @keyframes pulse-border-red-heavy { 0%, 100% { box-shadow: 0 0 55px rgba(255,77,77,1), inset 0 0 30px rgba(255,77,77,0.6); border-color: #ff4d4d; } 50% { box-shadow: 0 0 15px rgba(255,77,77,0.5), inset 0 0 10px rgba(255,77,77,0.2); border-color: rgba(255,77,77,0.8); } }
+        @keyframes pulse-border-red-strong { 0%, 100% { box-shadow: 0 0 35px rgba(255,77,77,1), inset 0 0 20px rgba(255,77,77,0.6); border-color: #ff4d4d; } 50% { box-shadow: 0 0 10px rgba(255,77,77,0.4), inset 0 0 5px rgba(255,77,77,0.1); border-color: rgba(255,77,77,0.6); } }
+
+        @keyframes pulse-warning-orange { 0%, 100% { color: #eab308; text-shadow: 0 0 10px #eab308; } 50% { color: #ffffff; text-shadow: 0 0 20px #eab308; } }
+        .warning-pulse { animation: pulse-warning-orange 1s infinite; }
+
+        /* --- STM V6.0: AUTO MODE UI (ANALYSIS) --- */
+        .text-analysis {
+            font-size: 2rem !important;
+            font-weight: 900;
+            color: #ffb300; 
+            text-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
+            animation: pulseAnalysis 1.5s infinite alternate;
+            letter-spacing: 2px;
+        }
+        @keyframes pulseAnalysis {
+            from { opacity: 0.6; text-shadow: 0 0 5px rgba(255, 179, 0, 0.3); }
+            to { opacity: 1; text-shadow: 0 0 15px rgba(255, 179, 0, 0.8); color: #fff; }
+        }
+
+        @keyframes data-flow { 0%, 100% { opacity: 0.1; box-shadow: 0 0 5px #00ff9c; } 50% { opacity: 0.8; box-shadow: 0 0 20px #00ff9c, 0 0 30px rgba(0,255,156,0.6); } }
+        @keyframes data-flow-red { 0%, 100% { opacity: 0.1; box-shadow: 0 0 5px #ff4d4d; } 50% { opacity: 0.8; box-shadow: 0 0 20px #ff4d4d, 0 0 30px rgba(255,77,77,0.6); } }
+        .cyber-cable { background: #00ff9c; position: absolute; z-index: -10; animation: data-flow 2s infinite ease-in-out; border-radius: 4px; }
+        .cyber-cable-red { background: #ff4d4d; animation: data-flow-red 1.5s infinite ease-in-out; }
+        .delay-1 { animation-delay: 0.3s; } .delay-2 { animation-delay: 0.6s; } .delay-3 { animation-delay: 0.9s; }
+
+        .glow-text { text-shadow: 0 0 12px rgba(0, 255, 156, 0.8), 0 0 20px rgba(0, 255, 156, 0.4); }
+        .bottom-logo { max-width: 200px; width: 100%; height: auto; margin-top: 15px; filter: drop-shadow(0 0 10px rgba(0, 255, 156, 0.3)); opacity: 0.8; }
+        .players-count-glow { font-size: 1.75rem; color: #ffffff; text-shadow: 0 0 10px rgba(0, 255, 156, 0.8), 0 0 20px rgba(0, 255, 156, 0.4); font-weight: 700; line-height: 1; }
+        .cap-bar-bg { background: rgba(255, 255, 255, 0.05); height: 12px; border: 1px solid rgba(0, 255, 156, 0.2); border-radius: 2px; overflow: hidden; }
+        .cap-bar-fill { height: 100%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; }
+        
+        .btn-system-led { font-size: 10px; letter-spacing: 0.15em; padding: 5px 12px; border: 1px solid #00ff9c; background: rgba(0, 255, 156, 0.1); color: #00ff9c; box-shadow: 0 0 8px rgba(0, 255, 156, 0.2); transition: all 0.2s ease; text-transform: uppercase; cursor: pointer; font-weight: 900; }
+        .btn-system-led:hover, .btn-system-led.active { background: #00ff9c; color: #0b0f14; box-shadow: 0 0 15px rgba(0, 255, 156, 0.6); }
+        .btn-system-led:active { background: rgba(0, 255, 156, 0.2) !important; color: #00ff9c !important; box-shadow: inset 0 0 10px rgba(0, 255, 156, 0.4) !important; }
+
+        .btn-system-led-red { font-size: 10px; letter-spacing: 0.15em; padding: 5px 12px; border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.1); color: #ff4d4d; box-shadow: 0 0 8px rgba(255, 77, 77, 0.2); transition: all 0.2s ease; text-transform: uppercase; cursor: pointer; font-weight: 900; }
+        .btn-system-led-red:hover, .btn-system-led-red.active-adv { background: #ff4d4d; color: #0b0f14; box-shadow: 0 0 15px rgba(255, 77, 77, 0.6); }
+
+        /* ANIMOWANY PRZYCISK SYNC */
+        .sync-btn-wrapper { position: relative; display: inline-block; padding: 1px; overflow: hidden; border-radius: 2px; cursor: pointer; }
+        .sync-btn-wrapper::before { content: ''; position: absolute; top: -150%; left: -150%; width: 400%; height: 400%; background: conic-gradient(from 0deg, transparent 70%, #00ff9c 100%); animation: sync-spin 2s linear infinite; }
+        .sync-btn-inner { display: block; position: relative; background: #0b0f14; z-index: 1; }
+        @keyframes sync-spin { 100% { transform: rotate(360deg); } }
+
+        @keyframes alert-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
+        .full-text-blink { font-size: 10px; font-weight: 900; color: #ff4d4d; text-shadow: 0 0 8px #ff4d4d; animation: alert-blink 0.5s infinite; }
+        .blink-text { animation: alert-blink 1s infinite; }
+        .aprx-clock-badge { color: #eab308; border: 1px solid #eab308; background: rgba(234,179,8,0.12); box-shadow: 0 0 10px rgba(234,179,8,0.45), inset 0 0 6px rgba(234,179,8,0.15); text-shadow: 0 0 6px #eab308; animation: pulse-warning-orange 1s infinite; }
+        
+        /* MIGAJĄCE TŁO DLA PRZYCISKU INIT COMM */
+        @keyframes btn-attention-blink { 0%, 100% { background: rgba(234, 179, 8, 0.1); border-color: #eab308; color: #eab308; box-shadow: 0 0 5px rgba(234, 179, 8, 0.2); } 50% { background: rgba(234, 179, 8, 0.8); border-color: #eab308; color: #0b0f14; box-shadow: 0 0 20px rgba(234, 179, 8, 0.8); } }
+        .btn-attention { animation: btn-attention-blink 0.8s infinite; }
+        .alert-icon { width: 16px; height: 16px; border-radius: 50%; text-align: center; line-height: 16px; font-weight: bold; font-size: 10px; animation: alert-blink 0.8s infinite; color: #0b0f14; display: inline-block; }
+
+        #helpModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: #0b0f14; border: 4px solid #00ff9c; box-shadow: 0 0 40px rgba(0, 255, 156, 0.4); max-width: 800px; width: 95%; padding: 3rem; max-height: 85vh; overflow-y: auto; }
+        
+        .player-row { font-size: 0.875rem; font-weight: 500; transition: all 0.2s; border-left: 2px solid transparent; position: relative; overflow: hidden; }
+        .player-row:hover { background: rgba(255, 255, 255, 0.05); cursor: cell; }
+        
+        .volume-wrapper { position: relative; display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid rgba(0, 255, 156, 0.2); background: rgba(0, 255, 156, 0.02); }
+        .vol-level { height: 14px; width: 5px; border-radius: 1px; transition: all 0.1s; background: rgba(0, 255, 156, 0.1); }
+        
+        /* STRICT MILITARY SQUAD PALETTE */
+        .squad-btn { font-size: 10px; font-weight: 700; padding: 5px 12px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; background: transparent; }
+        .sq-color-1 { color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); } .sq-color-1:hover, .sq-color-1.active { background: #ef4444; color: #0b0f14; border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+        .sq-color-2 { color: #fcd34d; border: 1px solid rgba(252, 211, 77, 0.4); } .sq-color-2:hover, .sq-color-2.active { background: #fcd34d; color: #0b0f14; border-color: #fcd34d; box-shadow: 0 0 15px rgba(252, 211, 77, 0.6); }
+        .sq-color-3 { color: #a3e635; border: 1px solid rgba(163, 230, 53, 0.4); } .sq-color-3:hover, .sq-color-3.active { background: #a3e635; color: #0b0f14; border-color: #a3e635; box-shadow: 0 0 15px rgba(163, 230, 53, 0.6); }
+        .sq-color-4 { color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); } .sq-color-4:hover, .sq-color-4.active { background: #22c55e; color: #0b0f14; border-color: #22c55e; box-shadow: 0 0 15px rgba(34, 197, 94, 0.6); }
+        .sq-color-5 { color: #b45309; border: 1px solid rgba(180, 83, 9, 0.4); } .sq-color-5:hover, .sq-color-5.active { background: #b45309; color: #0b0f14; border-color: #b45309; box-shadow: 0 0 15px rgba(180, 83, 9, 0.6); }
+        .sq-color-6 { color: #f97316; border: 1px solid rgba(249, 115, 22, 0.4); } .sq-color-6:hover, .sq-color-6.active { background: #f97316; color: #0b0f14; border-color: #f97316; box-shadow: 0 0 15px rgba(249, 115, 22, 0.6); }
+        .sq-color-7 { color: #71717a; border: 1px solid rgba(113, 113, 122, 0.4); } .sq-color-7:hover, .sq-color-7.active { background: #71717a; color: #0b0f14; border-color: #71717a; box-shadow: 0 0 15px rgba(113, 113, 122, 0.6); }
+        .sq-color-8 { color: #d4d4d8; border: 1px solid rgba(212, 212, 216, 0.4); } .sq-color-8:hover, .sq-color-8.active { background: #d4d4d8; color: #0b0f14; border-color: #d4d4d8; box-shadow: 0 0 15px rgba(212, 212, 216, 0.6); }
+
+        @keyframes number-glow-pulse { 0%, 100% { filter: brightness(0.8); text-shadow: 0 0 2px currentColor; transform: scale(1); } 50% { filter: brightness(1.5); text-shadow: 0 0 8px currentColor, 0 0 12px currentColor; transform: scale(1.1); } }
+        .squad-number-glow { animation: number-glow-pulse 3s ease-in-out infinite; font-weight: 900; display: inline-block; opacity: 1 !important; }
+
+        /* EFEKT PULSOWANIA DLA OFICJALNYCH CZŁONKÓW JSOC NA LISTACH */
+        @keyframes jsoc-name-pulse {
+            0%, 100% { filter: brightness(1); text-shadow: none; }
+            50% { filter: brightness(1.4); text-shadow: 0 0 8px currentColor, 0 0 15px currentColor; }
+        }
+        .clan-member .truncate { animation: jsoc-name-pulse 3s ease-in-out infinite; font-weight: 900; }
+
+        /* 3-WAY RADIO SWITCH CSS */
+        .wd-switch-container { display: flex; background: rgba(0,0,0,0.8); border: 1px solid rgba(0, 255, 156, 0.2); border-radius: 2px; overflow: hidden; width: fit-content; box-shadow: inset 0 0 10px rgba(0,0,0,0.9); }
+        .wd-switch-btn { font-size: 9px; padding: 4px 8px; cursor: pointer; text-transform: uppercase; font-weight: 900; letter-spacing: 0.05em; transition: all 0.2s ease; color: rgba(255,255,255,0.3); border-right: 1px solid rgba(255,255,255,0.05); }
+        .wd-switch-btn:last-child { border-right: none; }
+        .wd-switch-container-vertical { display: flex; flex-direction: column; background: rgba(0,0,0,0.8); border: 1px solid rgba(0, 255, 156, 0.2); border-radius: 2px; overflow: hidden; width: 74px; min-width: 74px; box-shadow: inset 0 0 10px rgba(0,0,0,0.9); }
+        .wd-switch-container-vertical .wd-switch-btn { display: flex; align-items: center; justify-content: center; min-height: 32px; padding: 6px 10px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 10px; }
+        .wd-switch-container-vertical .wd-switch-btn:last-child { border-bottom: none; }
+        .wd-switch-btn.active-off { background: rgba(255, 77, 77, 0.15); color: #ff4d4d; box-shadow: inset 0 0 8px rgba(255,77,77,0.4); text-shadow: 0 0 5px #ff4d4d; }
+        .wd-switch-btn.active-auto { background: rgba(234, 179, 8, 0.15); color: #eab308; box-shadow: inset 0 0 8px rgba(234, 179, 8, 0.4); text-shadow: 0 0 5px #eab308; }
+        .wd-switch-btn.active-on { background: rgba(0, 255, 156, 0.15); color: #00ff9c; box-shadow: inset 0 0 8px rgba(0,255,156,0.4); text-shadow: 0 0 5px #00ff9c; }
+        .wd-switch-btn:hover:not([class*="active-"]) { background: rgba(255,255,255,0.05); color: #fff; }
+
+        /* --- STYLIZACJA EKRANÓW VFD / DMD --- */
+        .vfd-container { background-color: #030604; border: 2px solid #0f1c14; border-radius: 3px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 4px 6px; box-shadow: inset 0 0 15px rgba(0,0,0,1), 0 0 5px rgba(0,0,0,0.5); height: 100%; width: 100%; overflow: hidden; }
+        .vfd-pixel-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(0, 0, 0, 0.65) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.65) 1px, transparent 1px); background-size: 2px 2px; z-index: 5; pointer-events: none; }
+        .vfd-text { font-family: 'VT323', monospace; font-size: 1.15rem; line-height: 1.1; position: relative; z-index: 2; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+        .vfd-ping { color: #00ff9c; text-shadow: 0 0 6px #00ff9c; }
+        .vfd-ping-auto { color: #eab308; text-shadow: 0 0 6px #eab308; }
+        .vfd-opr { color: #eab308; text-shadow: 0 0 6px #eab308; }
+        .vfd-alert { color: #ff4d4d; text-shadow: 0 0 6px #ff4d4d; animation: alert-blink 0.5s infinite; }
+        .vfd-standby { color: #ff4d4d; text-shadow: 0 0 2px #ff4d4d; opacity: 0.3; }
+
+        /* OSCYLOSKOP */
+        .mini-chart-wrapper { position: relative; width: 100%; height: 100%; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 15px rgba(0,0,0,0.8); transition: all 0.3s ease; }
+        .mini-chart-container { position: absolute; inset: 0; }
+        .mini-chart-container canvas { width: 100% !important; height: 100% !important; border-radius: 3px; }
+        
+        @keyframes sync-pulse-on { 0%, 100% { box-shadow: 0 0 5px #00ff9c, inset 0 0 5px rgba(0,255,156,0.1); border-color: rgba(0,255,156,0.5); } 50% { box-shadow: 0 0 20px #00ff9c, inset 0 0 15px rgba(0,255,156,0.4); border-color: #00ff9c; } }
+        @keyframes sync-led-on { 0%, 100% { box-shadow: 0 0 5px #00ff9c; background-color: rgba(0,255,156,0.6); } 50% { box-shadow: 0 0 20px #00ff9c, 0 0 30px rgba(0,255,156,0.6); background-color: #00ff9c; } }
+        @keyframes sync-pulse-auto { 0%, 100% { box-shadow: 0 0 5px #eab308, inset 0 0 5px rgba(234,179,8,0.1); border-color: rgba(234,179,8,0.5); } 50% { box-shadow: 0 0 20px #eab308, inset 0 0 15px rgba(234,179,8,0.4); border-color: #eab308; } }
+        @keyframes sync-led-auto { 0%, 100% { box-shadow: 0 0 5px #eab308; background-color: rgba(234,179,8,0.6); } 50% { box-shadow: 0 0 20px #eab308, 0 0 30px rgba(234,179,8,0.6); background-color: #eab308; } }
+        @keyframes pulse-off-dim { 0%, 100% { opacity: 0.25; box-shadow: 0 0 2px #ff4d4d; background-color: #aa0000; border-color: rgba(255,77,77,0.3); } 50% { opacity: 0.05; box-shadow: none; background-color: #550000; border-color: rgba(255,77,77,0.1); } }
+        @keyframes alert-blink-rapid { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
+        
+        .oscy-glow-on { animation: sync-pulse-on 2s infinite ease-in-out; border: 1px solid transparent; }
+        .oscy-glow-auto { animation: sync-pulse-auto 2s infinite ease-in-out; border: 1px solid transparent; }
+        .oscy-glow-off { border: 1px solid rgba(255,255,255,0.1); }
+        .led-green-pulse { animation: sync-led-on 2s infinite ease-in-out; border-color: rgba(0,255,156,0.8); }
+        .led-yellow-pulse { animation: sync-led-auto 2s infinite ease-in-out; border-color: rgba(234,179,8,0.8); }
+        .led-off-pulse { animation: pulse-off-dim 4s infinite ease-in-out; }
+        .led-red-blink { background-color: #ff4d4d; box-shadow: 0 0 20px #ff4d4d, 0 0 40px rgba(255,77,77,0.8); animation: alert-blink 0.4s infinite; border-color: #ff4d4d; }
+        .led-yellow-blink-rapid { background-color: #eab308; box-shadow: 0 0 20px #eab308, 0 0 40px rgba(234,179,8,0.8); animation: alert-blink-rapid 0.2s infinite; border-color: #eab308; }
+        .clock-wait { opacity: 0.3; }
+        .led-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 10px; vertical-align: middle; border: 2px solid rgba(255,255,255,0.4); }
+        
+        .chart-container { position: relative; width: 100%; height: 180px; } canvas { width: 100% !important; height: 100% !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 255, 156, 0.05); border-radius: 3px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 255, 156, 0.3); border-radius: 3px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00ff9c; }
+        
+        .server-grid-row { display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 0.75rem; align-items: stretch; width: 100%; min-height: 118px; }
+        @media (min-width: 1024px) { .server-grid-row { grid-template-columns: 320px minmax(0, 1fr); gap: 1rem; } }
+        .watchdog-clock-panel { display: flex; align-items: stretch; justify-content: space-between; gap: 0.75rem; height: 100%; }
+        .watchdog-clock-meta { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
+
+        /* ANIMOWANY RADAR CSS & GLOW BOX */
+        .radar-glow-box { border: 1px solid rgba(0, 255, 156, 0.4); box-shadow: 0 0 12px rgba(0, 255, 156, 0.2), inset 0 0 8px rgba(0, 255, 156, 0.1); border-radius: 6px; padding: 4px 8px; background: rgba(0, 0, 0, 0.4); transition: all 0.3s ease; }
+        .radar-glow-box.agr-mode { border-color: rgba(255, 77, 77, 0.6); box-shadow: 0 0 15px rgba(255, 77, 77, 0.3), inset 0 0 10px rgba(255, 77, 77, 0.2); }
+        .radar-scope { width: 14px; height: 14px; border-radius: 50%; border: 1px solid currentColor; position: relative; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: 0 0 5px currentColor; }
+        .radar-sweep { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 70%, currentColor 100%); transform-origin: center; }
+        .radar-eco { color: #00ff9c; } .radar-eco .radar-sweep { animation: radar-spin 3s linear infinite; }
+        .radar-norm { color: #eab308; } .radar-norm .radar-sweep { animation: radar-spin 1.5s linear infinite; }
+        .radar-agr { color: #ff4d4d; animation: alert-blink-rapid 0.4s infinite; text-shadow: 0 0 8px #ff4d4d; box-shadow: 0 0 10px rgba(255,77,77,0.5); } .radar-agr .radar-sweep { animation: radar-spin 0.5s linear infinite; }
+        @keyframes radar-spin { 100% { transform: rotate(360deg); } }
+
+        /* STATUSY ASSET SATURATION & TĘTNIĄCE PROCENTY */
+        .status-pulse-online { color: #00ff9c; text-shadow: 0 0 8px #00ff9c; animation: alert-blink 2s infinite; }
+        .status-pulse-offline { color: #ff4d4d; text-shadow: 0 0 8px #ff4d4d; animation: alert-blink-rapid 0.5s infinite; }
+
+        @keyframes perc-pulse-green { 0%, 100% { color: #00ff9c; text-shadow: 0 0 10px rgba(0,255,156,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #00ff9c, 0 0 30px #00ff9c; transform: scale(1.05); } }
+        @keyframes perc-pulse-orange { 0%, 100% { color: #ff8c00; text-shadow: 0 0 10px rgba(255,140,0,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #ff8c00, 0 0 30px #ff8c00; transform: scale(1.05); } }
+        @keyframes perc-pulse-cyan { 0%, 100% { color: #00e5ff; text-shadow: 0 0 10px rgba(0,229,255,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #00e5ff, 0 0 30px #00e5ff; transform: scale(1.05); } }
+        @keyframes perc-pulse-white { 0%, 100% { color: #ffffff; text-shadow: 0 0 10px rgba(255,255,255,0.6); transform: scale(1); } 50% { color: #e2e8f0; text-shadow: 0 0 20px #ffffff, 0 0 30px #ffffff; transform: scale(1.05); } }
+        
+        .perc-pulse-green { animation: perc-pulse-green 2s infinite ease-in-out; display: inline-block; font-size: 1.75rem; font-weight: 900; }
+        .perc-pulse-orange { animation: perc-pulse-orange 2s infinite ease-in-out; display: inline-block; font-size: 1.75rem; font-weight: 900; }
+        .perc-pulse-cyan { animation: perc-pulse-cyan 2s infinite ease-in-out; display: inline-block; font-size: 1.75rem; font-weight: 900; }
+        .perc-pulse-white { animation: perc-pulse-white 2s infinite ease-in-out; display: inline-block; font-size: 1.75rem; font-weight: 900; }
+        .perc-offline { color: #555 !important; text-shadow: none !important; animation: none !important; transform: scale(1) !important; font-size: 1.75rem; font-weight: 900; letter-spacing: 0.1em; }
+
+        /* =========================================================
+           CSS DLA DMD (RE-TEK SENTRY STYLE & KOLEJKA)
+           ========================================================= */
+        .dmd-container { background: #030504; border: 2px solid #1a1a1a; height: 60px; display: flex; align-items: center; position: relative; overflow: hidden; box-shadow: inset 0 0 25px #000; font-family: 'VT323', monospace; transition: all 0.3s ease; }
+        .dmd-pixel-overlay { position: absolute; inset: 0; background-image: linear-gradient(rgba(0,0,0,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.4) 1px, transparent 1px); background-size: 3px 3px; z-index: 10; pointer-events: none; }
+        
+        .dmd-branding-zone { padding: 0 20px; font-size: 1.4rem; letter-spacing: 1px; white-space: pre; border-left: 1px solid rgba(255,176,0,0.2); flex: 1; color: #ffb000; text-shadow: 0 0 10px #ffb000; z-index: 11; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.3s ease;}
+        
+        @keyframes cursor-blink-anim { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        .cursor-blink { animation: cursor-blink-anim 1s infinite; font-weight: 900; }
+
+        .dmd-reticle { position: relative; padding: 0 30px; display: flex; align-items: center; justify-content: center; border-left: 1px solid rgba(255,176,0,0.2); color: #ffb000; text-shadow: 0 0 10px #ffb000; z-index: 11; height: 100%; transition: opacity 0.3s ease; }
+        .dmd-reticle::before, .dmd-reticle::after { content: ''; position: absolute; width: 10px; height: 10px; border-color: #ffb000; border-style: solid; }
+        .dmd-reticle::before { top: 10px; left: 15px; border-width: 2px 0 0 2px; }
+        .dmd-reticle::after { bottom: 10px; right: 15px; border-width: 0 2px 2px 0; }
+        .dmd-time-val { font-size: 2.2rem; font-weight: 900; letter-spacing: 2px; }
+        
+        .dmd-heat-zone { padding: 0 20px; border-left: 1px solid rgba(255,176,0,0.2); min-width: 140px; display: flex; flex-direction: column; justify-content: center; z-index: 11; height: 100%; transition: opacity 0.3s ease, color 0.3s, text-shadow 0.3s; }
+        .heat-bar { font-size: 1.4rem; font-weight: 900; letter-spacing: 1px; }
+
+        /* DMD ALARMS */
+        .dmd-alarm-red { border-color: #ff4d4d !important; background-color: rgba(255,0,0,0.15) !important; box-shadow: inset 0 0 40px rgba(255,0,0,0.5) !important; }
+        .dmd-alarm-yellow { border-color: #eab308 !important; background-color: rgba(234,179,8,0.15) !important; box-shadow: inset 0 0 40px rgba(234,179,8,0.4) !important; }
+        .dmd-alarm-green { border-color: #00ff9c !important; background-color: rgba(0,255,156,0.1) !important; }
+
+        /* CSS DLA STATS OVERLAY */
+        .stats-bar-fill { position: absolute; left: 0; top: 0; height: 100%; z-index: 0; transition: width 1s ease-in-out; }
+
+    </style>
+</head>
+<body class="p-4 md:p-6 relative" onclick="unlockAudioFallback()">
+
+    <div id="stickyAlerts" class="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 w-full max-w-2xl px-4 pointer-events-none"></div>
+
+    <div id="helpModal">
+        <div class="modal-content custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-green-900 pb-4 mb-6">
+                <h2 class="text-2xl md:text-3xl font-black glow-text uppercase tracking-tighter">STM OPERATIONAL GUIDE V6.0</h2>
+                <button onclick="toggleHelp()" class="text-green-500 hover:text-white text-4xl">&times;</button>
+            </div>
+            
+            <div class="mb-6 p-4 border border-green-500/30 bg-green-900/10 rounded">
+                <h3 class="font-bold text-white mb-2 uppercase tracking-widest">Voice Architect (TTS Engine)</h3>
+                <p class="text-xs opacity-70 mb-3 text-green-300">Wybierz syntezator mowy z systemu. Głosy z tagiem "Male/David" są obniżane dla taktycznego efektu.</p>
+                <select id="voiceSelect" class="w-full bg-black border border-green-500 text-green-400 p-2 outline-none font-mono text-sm custom-scrollbar focus:border-[#00ff9c] focus:ring-1 focus:ring-[#00ff9c]"></select>
+            </div>
+
+            <div class="space-y-8 text-base md:text-lg leading-loose text-green-300">
+                <strong>1. VOICE COMMS:</strong> Click [INIT COMM] to activate the module.<br><br>
+                <strong>2. SQUAD TRACKING:</strong> Operators are color-coded by squad. The [DRAFT UNLINKED] function targets and assigns only unlinked players.<br>
+                <span class="text-sm opacity-80">- <b>AUTO-FAV:</b> Automatically adds new, unassigned players to Squad 8 (FAV).</span><br>
+                <span class="text-sm opacity-80">- <b>STATS:</b> Displays session time and persistent total historical time.</span><br><br>
+                <strong>3. ASSET TELEMETRY (WATCHDOG V6.0):</strong> Real-time persistent tracking of server stability. <br>
+                <ul class="list-disc ml-8 mt-2 space-y-2 text-sm opacity-80">
+                    <li><span class="text-green-400 font-bold">ON:</span> Full active monitoring. Visual & Voice alerts enabled. Oscilloscope displays Ping.</li>
+                    <li><span class="text-yellow-500 font-bold">AUTO:</span> Stealth telemetry (SILENT HUNTER). Analyzes cycle deltas, veteran disconnects, and auto-exports data logs. 12H quarantine on cold start.</li>
+                    <li><span class="text-red-400 font-bold">OFF:</span> System Standby. Reboot tracking disabled. Oscilloscope flatlined.</li>
+                </ul>
+                <br>
+                <strong>4. OVERRIDE MODULE & ARCHIVING:</strong><br>
+                <span class="text-sm opacity-80">- <b>SINGLE CLICK CLOCK:</b> Toggle between Countdown and Approx Time formats.</span><br>
+                <span class="text-sm opacity-80">- <b>DOUBLE CLICK CLOCK:</b> Manual time injection. Sets state to [APRX] until mathematically verified by the system.</span><br>
+                <span class="text-sm opacity-80">- <b>AUTO-BACKUP:</b> Automatically downloads a full system JSON backup and operator DB every 48 hours.</span>
+            </div>
+            <button onclick="toggleHelp()" class="mt-10 w-full py-4 bg-green-900/20 border border-green-500 hover:bg-green-500 hover:text-black transition-all font-bold uppercase text-sm tracking-widest">CLOSE INTERFACE</button>
+        </div>
+    </div>
+
+    <div class="flex flex-col xl:flex-row justify-between items-center mb-6 border-b border-green-900 pb-4 gap-4 w-full relative z-10">
+        
+        <div class="flex-1 dmd-container w-full min-w-0" id="dmd-main-node">
+            <div class="dmd-pixel-overlay"></div>
+            
+            <div id="dmd-override-zone" class="absolute inset-0 flex items-center justify-center font-black tracking-widest text-[1.4rem] z-20 pointer-events-none opacity-0 transition-opacity duration-300 text-white"></div>
+
+            <div class="dmd-branding-zone" id="dmd-text-stream">Re-Tek corp.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;..::77th JSOC::.. Server Tactical Monitor PRO V6.0//........SYSTEM READY<span class="cursor-blink">!█</span></div>
+
+            <div class="dmd-reticle hidden sm:flex" id="dmd-reticle-node">
+                <div id="dmd-time" class="dmd-time-val">00:00:00</div>
+            </div>
+
+            <div class="dmd-heat-zone hidden md:flex text-[#00ff9c]" style="text-shadow: 0 0 10px #00ff9c;" id="heat-zone-container">
+                <div class="flex justify-between w-full mb-1 items-end">
+                    <div class="text-[9px] opacity-60 uppercase leading-none">API_HEAT_SYNC</div>
+                    <div id="heat-text-val" class="text-xs font-bold leading-none ml-2">00/60</div>
+                </div>
+                <div id="heat-visual" class="heat-bar">[..........]</div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 shrink-0 flex-wrap">
+            
+            <div class="volume-wrapper hidden md:flex h-[50px] px-4">
+                <button onclick="toggleMute()" id="muteBtn" class="mute-btn flex items-center justify-center mr-3">
+                    <svg id="muteIcon" width="22" height="22" viewBox="0 0 24 24" fill="#00ff9c"></svg>
+                </button>
+                <div class="flex gap-1.5 items-center" id="volumeLevels">
+                    <div class="vol-level cursor-pointer !h-[26px] !w-[6px]" onclick="setVolume(0.2)" data-vol="0.2"></div>
+                    <div class="vol-level cursor-pointer !h-[26px] !w-[6px]" onclick="setVolume(0.4)" data-vol="0.4"></div>
+                    <div class="vol-level cursor-pointer !h-[26px] !w-[6px]" onclick="setVolume(0.6)" data-vol="0.6"></div>
+                    <div class="vol-level cursor-pointer !h-[26px] !w-[6px]" onclick="setVolume(0.8)" data-vol="0.8"></div>
+                    <div class="vol-level cursor-pointer !h-[26px] !w-[6px]" onclick="setVolume(1.0)" data-vol="1.0"></div>
+                </div>
+            </div>
+
+            <div id="radar-glow-container" class="flex items-center gap-3 radar-glow-box mr-1 h-[50px] px-4">
+                <div id="radar-icon-wrapper" class="flex items-center radar-norm transition-colors duration-300 rounded-full px-1 py-0.5">
+                    <div class="radar-scope !w-[18px] !h-[18px]"><div class="radar-sweep"></div></div>
+                    <span class="text-[11px] md:text-xs opacity-90 uppercase tracking-widest font-black hidden sm:inline ml-2">RADAR</span>
+                </div>
+                <div class="wd-switch-container h-full items-center flex">
+                    <div class="wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4" id="radar-btn-eco" onclick="setRadarMode('ECO')">EKO</div>
+                    <div class="wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4" id="radar-btn-norm" onclick="setRadarMode('NORM')">NORM</div>
+                    <div class="wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4" id="radar-btn-agr" onclick="setRadarMode('AGR')">AGR</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 h-[50px]">
+                <div class="sync-btn-wrapper h-full" title="Force Sync API">
+                    <button onclick="updateAll()" class="sync-btn-inner btn-system-led flex items-center justify-center h-full w-full px-6 text-xs md:text-sm font-black !border-none hover:!bg-[#00ff9c] hover:!text-[#0b0f14] tracking-[0.2em]">SYNC</button>
+                </div>
+                <button onclick="toggleHelp()" class="btn-system-led flex items-center justify-center h-full px-6 text-xs md:text-sm font-black drop-shadow-[0_0_8px_rgba(0,255,156,0.8)] border-2 border-green-400 tracking-[0.2em]">GUIDE [?]</button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6 items-start w-full relative z-10">
+        
+        <div class="flex flex-col gap-6 w-full lg:w-[42%] xl:w-[44%] shrink-0 relative">
+            <div class="flex flex-col md:flex-row gap-4 w-full relative z-10">
+                <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[16.6%] delay-1"></div>
+                <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[50%] delay-2"></div>
+                <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[83.3%] delay-3"></div>
+                <div class="hidden md:block cyber-cable h-[4px] -bottom-[12px] left-[16.6%] w-[66.7%]"></div>
+                <div class="hidden md:block cyber-cable w-[8px] h-[12px] -bottom-[24px] left-[50%] -translate-x-1/2"></div>
+
+                <div id="containerEU1" class="server-box soc-border p-4 bg-black/40 w-full md:flex-1 shrink-0 relative z-20">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-black text-xl text-[#00ff9c] drop-shadow-[0_0_8px_#00ff9c] tracking-wider">EU-1</h2>
+                            <div id="alertsEU1" class="flex gap-1 items-center"></div>
+                        </div>
+                    </div>
+                    <div id="statusEU1" class="text-[10px] px-2 py-0.5 rounded border border-current uppercase w-full text-right mb-3">Loading</div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU1" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU1" class="text-right truncate text-[11px]">-</div><div class="opacity-70">LAT:</div> <div id="pingEU1" class="text-right font-bold">-ms</div></div>
+                    <div id="listEU1" class="h-[400px] md:h-[500px] overflow-y-auto text-xs space-y-1 custom-scrollbar pr-1"></div>
+                </div>
+                
+                <div id="containerEU2" class="server-box soc-border p-4 bg-black/40 w-full md:flex-1 shrink-0 relative z-20">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-black text-xl text-[#ff8c00] drop-shadow-[0_0_8px_#ff8c00] tracking-wider">EU-2</h2>
+                            <div id="alertsEU2" class="flex gap-1 items-center"></div>
+                        </div>
+                    </div>
+                    <div id="statusEU2" class="text-[10px] px-2 py-0.5 rounded border border-current uppercase w-full text-right mb-3">Loading</div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU2" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU2" class="text-right truncate text-[11px]">-</div><div class="opacity-70">LAT:</div> <div id="pingEU2" class="text-right font-bold">-ms</div></div>
+                    <div id="listEU2" class="h-[400px] md:h-[500px] overflow-y-auto text-xs space-y-1 custom-scrollbar pr-1"></div>
+                </div>
+                
+                <div id="containerEU3" class="server-box soc-border p-4 bg-black/40 w-full md:flex-1 shrink-0 relative z-20">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-black text-xl text-[#00e5ff] drop-shadow-[0_0_8px_#00e5ff] tracking-wider">EU-3</h2>
+                            <div id="alertsEU3" class="flex gap-1 items-center"></div>
+                        </div>
+                    </div>
+                    <div id="statusEU3" class="text-[10px] px-2 py-0.5 rounded border border-current uppercase w-full text-right mb-3">Loading</div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU3" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU3" class="text-right truncate text-[11px]">-</div><div class="opacity-70">LAT:</div> <div id="pingEU3" class="text-right font-bold">-ms</div></div>
+                    <div id="listEU3" class="h-[400px] md:h-[500px] overflow-y-auto text-xs space-y-1 custom-scrollbar pr-1"></div>
+                </div>
+            </div>
+            
+            <div class="soc-border p-4 md:p-6 bg-black/60 flex flex-col xl:flex-row items-stretch justify-between w-full min-h-[300px] gap-6 relative z-10 overflow-hidden">
+                <div class="hidden lg:block cyber-cable h-[6px] w-[32px] top-[50%] -right-[28px] delay-1"></div>
+
+                <div class="flex flex-col gap-3 flex-1 min-w-0 relative z-20 xl:border-r border-green-900/40 xl:pr-6">
+                    
+                    <div class="server-grid-row border border-white/10 bg-black/20 rounded p-2">
+                        <div class="pr-3 border-r border-white/10">
+                            <div class="watchdog-clock-panel">
+                                <div class="watchdog-clock-meta">
+                                    <div class="text-xs md:text-sm uppercase flex items-center mb-1 font-bold tracking-widest drop-shadow-md text-gray-500 whitespace-nowrap" id="title-wrapper-EU1-side">
+                                        <span id="led-EU1-side" class="led-indicator w-3 h-3 md:w-4 md:h-4 mr-2 border-2"></span>
+                                        <span id="title-EU1-side">EU1 UPTIME</span>
+                                        <span id="aprx-EU1" class="ml-2 text-[10px] font-black hidden tracking-widest px-1 rounded-sm aprx-clock-badge" title="Second clock view active">APRX</span>
+                                    </div>
+                                    <div id="clock-EU1-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time | Double-click: Manual Override" onclick="handleClockClick('EU1')">--:--:--</div>
+                                    <div id="eta-EU1-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
+                                </div>
+                                <div class="wd-switch-container-vertical flex-shrink-0 self-center">
+                                    <div class="wd-switch-btn" id="sw-EU1-side-off" onclick="setWdState('EU1', 'OFF')">OFF</div>
+                                    <div class="wd-switch-btn" id="sw-EU1-side-auto" onclick="setWdState('EU1', 'AUTO')">AUTO</div>
+                                    <div class="wd-switch-btn" id="sw-EU1-side-on" onclick="setWdState('EU1', 'ON')">ON</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-center h-full min-w-0">
+                            <div class="mini-chart-wrapper oscy-glow-off" id="oscy-EU1">
+                                <div class="mini-chart-container">
+                                    <canvas id="miniChart-EU1"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="server-grid-row border border-white/10 bg-black/20 rounded p-2">
+                        <div class="pr-3 border-r border-white/10">
+                            <div class="watchdog-clock-panel">
+                                <div class="watchdog-clock-meta">
+                                    <div class="text-xs md:text-sm uppercase flex items-center mb-1 font-bold tracking-widest drop-shadow-md text-gray-500 whitespace-nowrap" id="title-wrapper-EU2-side">
+                                        <span id="led-EU2-side" class="led-indicator w-3 h-3 md:w-4 md:h-4 mr-2 border-2"></span>
+                                        <span id="title-EU2-side">EU2 UPTIME</span>
+                                        <span id="aprx-EU2" class="ml-2 text-[10px] font-black hidden tracking-widest px-1 rounded-sm aprx-clock-badge" title="Second clock view active">APRX</span>
+                                    </div>
+                                    <div id="clock-EU2-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time | Double-click: Manual Override" onclick="handleClockClick('EU2')">--:--:--</div>
+                                    <div id="eta-EU2-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
+                                </div>
+                                <div class="wd-switch-container-vertical flex-shrink-0 self-center">
+                                    <div class="wd-switch-btn" id="sw-EU2-side-off" onclick="setWdState('EU2', 'OFF')">OFF</div>
+                                    <div class="wd-switch-btn" id="sw-EU2-side-auto" onclick="setWdState('EU2', 'AUTO')">AUTO</div>
+                                    <div class="wd-switch-btn" id="sw-EU2-side-on" onclick="setWdState('EU2', 'ON')">ON</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-center h-full min-w-0">
+                            <div class="mini-chart-wrapper oscy-glow-off" id="oscy-EU2">
+                                <div class="mini-chart-container">
+                                    <canvas id="miniChart-EU2"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="server-grid-row border border-white/10 bg-black/20 rounded p-2">
+                        <div class="pr-3 border-r border-white/10">
+                            <div class="watchdog-clock-panel">
+                                <div class="watchdog-clock-meta">
+                                    <div class="text-xs md:text-sm uppercase flex items-center mb-1 font-bold tracking-widest drop-shadow-md text-gray-500 whitespace-nowrap" id="title-wrapper-EU3-side">
+                                        <span id="led-EU3-side" class="led-indicator w-3 h-3 md:w-4 md:h-4 mr-2 border-2"></span>
+                                        <span id="title-EU3-side">EU3 UPTIME</span>
+                                        <span id="aprx-EU3" class="ml-2 text-[10px] font-black hidden tracking-widest px-1 rounded-sm aprx-clock-badge" title="Second clock view active">APRX</span>
+                                    </div>
+                                    <div id="clock-EU3-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time | Double-click: Manual Override" onclick="handleClockClick('EU3')">--:--:--</div>
+                                    <div id="eta-EU3-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
+                                </div>
+                                <div class="wd-switch-container-vertical flex-shrink-0 self-center">
+                                    <div class="wd-switch-btn" id="sw-EU3-side-off" onclick="setWdState('EU3', 'OFF')">OFF</div>
+                                    <div class="wd-switch-btn" id="sw-EU3-side-auto" onclick="setWdState('EU3', 'AUTO')">AUTO</div>
+                                    <div class="wd-switch-btn" id="sw-EU3-side-on" onclick="setWdState('EU3', 'ON')">ON</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-center h-full min-w-0">
+                            <div class="mini-chart-wrapper oscy-glow-off" id="oscy-EU3">
+                                <div class="mini-chart-container">
+                                    <canvas id="miniChart-EU3"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="flex flex-col items-center justify-center w-full xl:w-[220px] shrink-0 relative z-20 pt-6 xl:pt-0 border-t xl:border-t-0 border-green-900/40">
+                    <div class="text-sm md:text-base font-bold glow-text uppercase tracking-[0.2em] md:tracking-[0.3em] mb-3 text-center text-green-400 whitespace-nowrap">ACTIVE PERSONNEL</div>
+                    <div class="text-5xl md:text-7xl xl:text-7xl font-bold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] leading-none" id="totalStat">0</div>
+                    
+                    <div class="mt-4 border border-green-500/20 bg-green-900/10 p-2 rounded w-full max-w-[240px] text-center" onclick="event.stopPropagation()">
+                        <div class="flex justify-center gap-2">
+                            <button onclick="toggleVoice()" id="btnInitAudio" class="btn-system-led flex-1 border-gray-500 text-gray-500 hover:border-green-500 btn-attention">INIT COMM</button>
+                            <button onclick="testAudio()" class="btn-system-led flex-1">TEST</button>
+                        </div>
+                        <div id="audioStatus" class="text-[9px] text-red-500 mt-2 font-bold uppercase blink-text tracking-widest">AUDIO LOCKED</div>
+                    </div>
+
+                    <img src="Adobe Express - file.png" alt="77th JSOC Logo" class="bottom-logo mt-4 max-w-[100px] md:max-w-[140px]" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-6 flex-1 w-full min-w-0 relative">
+            <div class="soc-border p-4 bg-black/40 relative z-10">
+                <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-2"></div>
+                <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-1"></div>
+
+                <div class="flex justify-between items-center mb-4 relative z-20">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-bold uppercase opacity-80 mr-2">SQUAD ROSTER</h3>
+                        <button onclick="toggleSort()" id="btnSortToggle" class="btn-system-led !text-[9px] !py-1">SORT: ADDED</button>
+                        
+                        <button onclick="toggleStats()" id="btnStatsToggle" class="btn-system-led !text-[9px] !py-1">STATS: OFF</button>
+                        <button onclick="toggleAutoFav()" id="btnAutoFavToggle" class="btn-system-led !text-[9px] !py-1">AUTO-FAV: OFF</button>
+                    </div>
+                    <div id="squadCounter" class="squad-count">0/11</div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-1.5 mb-4 relative z-20">
+                    <button onclick="switchSquad(1)" id="sq-btn-1" class="squad-btn sq-color-1 active">Alfa</button>
+                    <button onclick="switchSquad(2)" id="sq-btn-2" class="squad-btn sq-color-2">Bravo</button>
+                    <button onclick="switchSquad(3)" id="sq-btn-3" class="squad-btn sq-color-3">Charlie</button>
+                    <button onclick="switchSquad(4)" id="sq-btn-4" class="squad-btn sq-color-4">Delta</button>
+                    <button onclick="switchSquad(5)" id="sq-btn-5" class="squad-btn sq-color-5">Echo</button>
+                    <button onclick="switchSquad(6)" id="sq-btn-6" class="squad-btn sq-color-6">Foxtrot</button>
+                    <button onclick="switchSquad(7)" id="sq-btn-7" class="squad-btn sq-color-7">Golf</button>
+                    <button onclick="switchSquad(8)" id="sq-btn-8" class="squad-btn sq-color-8">FAV</button>
+                </div>
+                <div class="flex gap-2 mb-4 relative z-20">
+                    <input id="watchInput" type="text" placeholder="Callsign..." class="bg-black border border-green-900 text-xs p-2 flex-1 outline-none transition-all" onkeypress="if(event.key === 'Enter') addWatch()">
+                    <button onclick="addWatch()" class="btn-system-led">ADD</button>
+                    <button onclick="addAllToWatchCurrent()" class="btn-system-led">DRAFT UNLINKED</button>
+                    <button onclick="clearAllWatch()" class="btn-system-led-red border-red-500 text-red-500 hover:bg-red-500 hover:text-black">PURGE</button>
+                </div>
+                <div id="watchList" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto custom-scrollbar relative z-20 content-start"></div>
+            </div>
+            
+            <div class="soc-border-red p-4 bg-red-950/10 relative z-10">
+                <div class="hidden md:block cyber-cable cyber-cable-red w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-3"></div>
+                <div class="hidden md:block cyber-cable cyber-cable-red w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-2"></div>
+                <div class="flex justify-between items-center mb-3 relative z-20"><h3 class="text-sm font-bold uppercase text-white">ACTIVITY FEED</h3><button onclick="clearAllAlerts()" class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Clear All</button></div>
+                <div id="alertBox" class="text-[11px] h-56 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 pr-1 relative z-20"></div>
+            </div>
+
+            <div class="soc-border p-4 bg-black flex-1 min-h-[380px] min-w-0 relative z-10">
+                <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-1"></div>
+                <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-3"></div>
+                <h3 class="text-sm font-bold uppercase opacity-80 mb-6 relative z-20">ASSET SATURATION</h3>
+                <div class="grid grid-cols-4 gap-4 mb-8 relative z-20">
+                    <div class="text-center">
+                        <span class="text-xl md:text-2xl font-black text-[#00ff9c] drop-shadow-[0_0_5px_#00ff9c] tracking-widest">EU1</span><br>
+                        <span id="percEU1" class="perc-offline mt-1 mb-1 block">---</span>
+                        <div class="cap-bar-bg"><div id="barEU1" class="cap-bar-fill bg-green-500" style="width: 0%"></div></div>
+                        <div id="satStatusEU1" class="text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
+                        <span id="fullEU1" class="full-text-blink mt-1" style="display:none">SERVER FULL</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-xl md:text-2xl font-black text-[#ff8c00] drop-shadow-[0_0_5px_#ff8c00] tracking-widest">EU2</span><br>
+                        <span id="percEU2" class="perc-offline mt-1 mb-1 block">---</span>
+                        <div class="cap-bar-bg"><div id="barEU2" class="cap-bar-fill bg-green-500" style="width: 0%"></div></div>
+                        <div id="satStatusEU2" class="text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
+                        <span id="fullEU2" class="full-text-blink mt-1" style="display:none">SERVER FULL</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-xl md:text-2xl font-black text-[#00e5ff] drop-shadow-[0_0_5px_#00e5ff] tracking-widest">EU3</span><br>
+                        <span id="percEU3" class="perc-offline mt-1 mb-1 block">---</span>
+                        <div class="cap-bar-bg"><div id="barEU3" class="cap-bar-fill bg-green-500" style="width: 0%"></div></div>
+                        <div id="satStatusEU3" class="text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
+                        <span id="fullEU3" class="full-text-blink mt-1" style="display:none">SERVER FULL</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-xl md:text-2xl font-black text-white drop-shadow-[0_0_5px_#ffffff] tracking-widest">TOTAL</span><br>
+                        <span id="percTOTAL" class="perc-pulse-white mt-1 mb-1 block">0%</span>
+                        <div class="cap-bar-bg"><div id="barTOTAL" class="cap-bar-fill bg-white" style="width: 0%"></div></div>
+                    </div>
+                </div>
+                <div class="chart-container relative z-20" id="chartParent"><canvas id="popChart"></canvas></div>
+            </div>
+            <div class="soc-border p-4 bg-black/40 relative z-10">
+                <div class="flex justify-between items-center mb-2 relative z-20">
+                    <h3 class="text-sm font-bold uppercase opacity-80">SYS-LOG</h3>
+                    <div class="flex gap-2 flex-wrap justify-end">
+                        <button id="btnAutoBackup" onclick="toggleAutoBackup()" class="btn-system-led">AUTO-BACKUP: OFF</button>
+                        <button onclick="systemBackup()" class="btn-system-led text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-black">SYS BACKUP</button>
+                        <label for="restoreUpload" class="btn-system-led text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black cursor-pointer mb-0 flex items-center">RESTORE</label>
+                        <input type="file" id="restoreUpload" accept=".json" class="hidden" onchange="restoreSystem(event)">
+                        <button onclick="resetBrowserMemory()" class="btn-system-led-red">MEM RESET</button>
+                        
+                        <button id="advToggle" onclick="toggleAdvanced()" class="btn-system-led-red">ADV: OFF</button>
+                        <button onclick="exportDatabase()" class="btn-system-led text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black">DB</button>
+                        <button class="btn-system-led" onclick="copyLog()">COPY</button>
+                        <button class="btn-system-led" onclick="saveLog()">LOG</button>
+                    </div>
+                </div>
+                <div id="logBox" class="text-[11px] h-32 overflow-y-auto font-mono opacity-80 bg-black/20 p-2 custom-scrollbar relative z-20"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const workerCode = `
+            let timer;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    if (timer) clearInterval(timer);
+                    timer = setInterval(() => self.postMessage('tick'), 1000);
+                }
+            };
+        `;
+        const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(workerBlob));
+        
+        // --- STM V6.0: ZMIENNE GLOBALNE I BUFORY ---
+        let lastFetchTime = Date.now();
+        let isFetching = false;
+        let rateLimitCooldown = 0; 
+        let wdLogCounter = 0;
+        let blackBoxLogs = [];
+        
+        const systemStartTime = Date.now();
+        const QUARANTINE_MS = 12 * 60 * 60 * 1000;
+        
+        let serverBuffers = { EU1: [], EU2: [], EU3: [] };
+
+        const SERVERS = { EU1: "14808491", EU2: "28825461", EU3: "30137964" };
+        const SQUAD_NAMES = ["", "ALFA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "FAV"];
+        
+        const SOUND_LEAVE = "https://actions.google.com/sounds/v1/cartoon/pop.ogg";
+        const SOUND_SQUAD = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+        const SOUND_FAV = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+        const SOUND_UNASSIGNED = "https://actions.google.com/sounds/v1/water/water_drop.ogg";
+        
+        const SQUAD_COLORS = { 
+            1: { text: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444' }, 
+            2: { text: '#fcd34d', bg: 'rgba(252, 211, 77, 0.1)', border: '#fcd34d' }, 
+            3: { text: '#a3e635', bg: 'rgba(163, 230, 53, 0.1)', border: '#a3e635' }, 
+            4: { text: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e' }, 
+            5: { text: '#b45309', bg: 'rgba(180, 83, 9, 0.1)', border: '#b45309' }, 
+            6: { text: '#f97316', bg: 'rgba(249, 115, 22, 0.1)', border: '#f97316' }, 
+            7: { text: '#71717a', bg: 'rgba(113, 113, 122, 0.1)', border: '#71717a' }, 
+            8: { text: '#d4d4d8', bg: 'rgba(212, 212, 216, 0.1)', border: '#d4d4d8' }  
+        };
+
+        const WD_COLORS = { 'EU1': 'text-[#00ff9c] drop-shadow-[0_0_12px_rgba(0,255,156,0.8)]', 'EU2': 'text-[#ff8c00] drop-shadow-[0_0_12px_rgba(255,140,0,0.8)]', 'EU3': 'text-[#00e5ff] drop-shadow-[0_0_12px_rgba(0,229,255,0.8)]' };
+        const TITLE_COLORS = { 'EU1': 'text-[#00ff9c]', 'EU2': 'text-[#ff8c00]', 'EU3': 'text-[#00e5ff]' };
+
+        let isServerFullAlerted = { EU1: false, EU2: false, EU3: false }; 
+
+        function safeJsonGet(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (e) {
+                console.warn(`[LS] corrupted key: ${key}`, e);
+                localStorage.removeItem(key);
+                return fallback;
+            }
+        }
+        
+        let wdState = safeJsonGet('jsoc_wd_state', { EU1: 'AUTO', EU2: 'AUTO', EU3: 'AUTO' });
+        let isApprox = safeJsonGet('jsoc_approx_state', { EU1: false, EU2: false, EU3: false });
+        // Clock mode controls only the display: elapsed uptime or secondary restart-time view.
+        // APRX badge is tied to this click-toggle view, not to watchdog AUTO/ON state.
+        let clockMode = { EU1: 'elapsed', EU2: 'elapsed', EU3: 'elapsed' };
+        let clockClickTimers = { EU1: null, EU2: null, EU3: null };
+
+        let apiHeatLog = safeJsonGet('jsoc_api_heat', []);
+        let updateAllInFlight = false;
+        let lastWatchListHash = '';
+
+        let radarMode = localStorage.getItem('jsoc_radar_mode') || 'NORM';
+        let telemetryLog = safeJsonGet('jsoc_telemetry_log', { EU1: [], EU2: [], EU3: [] });
+        
+        // AUTO BACKUP VARS
+        let autoBackupEnabled = localStorage.getItem('jsoc_auto_backup') === 'true';
+        let lastBackupTime = parseInt(localStorage.getItem('jsoc_last_backup_time')) || Date.now();
+
+        let miniCharts = {};
+        let pingHistory = { EU1: Array(30).fill(0), EU2: Array(30).fill(0), EU3: Array(30).fill(0) };
+        let playerHistory = { EU1: Array(30).fill(0), EU2: Array(30).fill(0), EU3: Array(30).fill(0) };
+
+        let currentSquadIdx = parseInt(localStorage.getItem('jsoc_sq_idx')) || 1;
+        let ALL_SQUADS = safeJsonGet('jsoc_all_squads', { 1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] });
+        // FIX v2: licznik wersji squadów - bumpuj przy KAŻDEJ mutacji ALL_SQUADS,
+        // używany w listHash żeby renderUI odświeżył kolory po reassignach.
+        let squadsVersion = 0;
+        function bumpSquads() { squadsVersion++; renderDirty = true; lsSet('jsoc_all_squads', JSON.stringify(ALL_SQUADS)); }
+        function isInAnySquad(name) {
+            const lc = name.toLowerCase();
+            for (let i = 1; i <= 8; i++) {
+                if (ALL_SQUADS[i] && ALL_SQUADS[i].some(w => w.toLowerCase() === lc)) return true;
+            }
+            return false;
+        }
+        let previous = { EU1: [], EU2: [], EU3: [] };
+        
+        let prevUptime = { EU1: -1, EU2: -1, EU3: -1 }; 
+        // [v8] Steam server ID - rotuje przy KAŻDYM restarcie procesu serwera. 100% pewny sygnał.
+        let prevSteamId = safeJsonGet('jsoc_steam_ids', { EU1: null, EU2: null, EU3: null });
+        let cache = {}; let historyData = []; let historyLabels = [];
+        let lastRenderedHash = { EU1: '', EU2: '', EU3: '' }; 
+        let isFirstLoad = true;
+        let renderDirty = true; // flag: true when data changed, renderUI needed
+        let playerSessions = {}; 
+        
+        let lastRestartData = safeJsonGet('jsoc_last_restarts', { EU1: null, EU2: null, EU3: null });
+        let statsData = safeJsonGet('jsoc_stats', {}); 
+        let calibrationData = safeJsonGet('jsoc_calibration_data', { EU1: 0, EU2: 0, EU3: 0 });
+        
+        let isMuted = localStorage.getItem('jsoc_muted') === 'true';
+        let storedVol = localStorage.getItem('jsoc_volume');
+        let currentVolume = storedVol !== null ? parseFloat(storedVol) : 1.0;
+        
+        let isBooting = { EU1: false, EU2: false, EU3: false };
+        let alert15Triggers = { EU1: false, EU2: false, EU3: false };
+
+        // [v5] COOLDOWN: blokuje ponowną detekcję restartu zaraz po wykryciu (anti-storm)
+        const RESTART_DETECTION_COOLDOWN_MS = 30 * 60 * 1000; // 30 min
+        let lastRestartDetected = { EU1: 0, EU2: 0, EU3: 0 };
+        let lastBmStaleAlert = { EU1: 0, EU2: 0, EU3: 0 };
+
+        let advMode = localStorage.getItem('jsoc_adv_mode') === 'true';
+        let audioUnlocked = false; let voiceEnabled = false; let ttsVoice = null;
+        let audioQueue = []; let isPlayingQueue = false; let currentAudioObj = null; let ttsUtterances = []; 
+
+        let showStats = false;
+        let autoFavEnabled = false;
+        let sortMode = localStorage.getItem('jsoc_sort_mode') || 'ADDED';
+
+        let dmdQueue = [];
+        let isDmdProcessing = false;
+        let dmdTimeout = null;
+        const DMD_DEFAULT_TEXT = 'Re-Tek corp.      ..::77th JSOC::.. Server Tactical Monitor PRO V6.0//........SYSTEM READY!';
+        function setDMDText(el, text, cursor = '█') {
+            if (!el) return;
+            el.textContent = text;
+            const cur = document.createElement('span');
+            cur.className = 'cursor-blink';
+            cur.textContent = cursor;
+            el.appendChild(cur);
+        }
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        function escapeAttr(str) {
+            return str.replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+
+
+        // --- MEMORY LEAK FIX: Periodic cleanup of stale playerSessions ---
+        let lastSessionCleanup = Date.now();
+        function cleanupPlayerSessions() {
+            const allOnline = new Set();
+            ['EU1', 'EU2', 'EU3'].forEach(s => {
+                if (cache[s] && cache[s].list) {
+                    cache[s].list.forEach(p => allOnline.add(p.name));
+                }
+            });
+            let cleaned = 0;
+            Object.keys(playerSessions).forEach(name => {
+                if (!allOnline.has(name)) {
+                    delete playerSessions[name];
+                    cleaned++;
+                }
+            });
+            if (cleaned > 0 && advMode) {
+                logEvent(`[GC] CLEANED ${cleaned} STALE SESSION ENTRIES`, "text-gray-500", true);
+            }
+
+            // --- FIX v2: GHOST PURGE statsData (ochrona przed QuotaExceededError) ---
+            // Usuwa graczy nieobecnych >30 dni, ALE chroni: watchlistę, wszystkich w squadach,
+            // oraz wpisy bez lastTick (legacy) - dostają jeden grace cycle (lastTick=now).
+            try {
+                const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+                const now = Date.now();
+                let purged = 0;
+                Object.keys(statsData).forEach(pName => {
+                    const entry = statsData[pName];
+                    if (!entry) return;
+                    if (!entry.lastTick) { entry.lastTick = now; return; } // legacy guard
+                    if (now - entry.lastTick <= THIRTY_DAYS) return;
+                    if (typeof watchlist !== 'undefined' && Array.isArray(watchlist) && watchlist.includes(pName)) return;
+                    if (isInAnySquad(pName)) return;
+                    delete statsData[pName];
+                    purged++;
+                });
+                if (purged > 0) {
+                    lsSet('jsoc_stats', JSON.stringify(statsData));
+                    if (advMode) logEvent(`[GC] PURGED ${purged} GHOST DB ENTRIES (>30d)`, "text-purple-500", true);
+                }
+            } catch(e) { console.warn('[GC] ghost purge failed', e); }
+        }
+
+        function updateServerBuffer(server, ping, status) {
+            serverBuffers[server].push({ ping: ping, status: status, time: Date.now() });
+            serverBuffers[server] = serverBuffers[server].filter(entry => Date.now() - entry.time <= 60000);
+        }
+
+        worker.onmessage = function(e) {
+            if (e.data === 'tick') {
+                updateClock();
+                updateApiHeatUI();
+                if (renderDirty) { renderUI(); renderDirty = false; }
+
+                let now = Date.now();
+                let nextInterval = 8000;
+                if (radarMode === 'ECO') nextInterval = 12000;
+                else if (radarMode === 'AGR') nextInterval = 5500;
+
+                ["EU1", "EU2", "EU3"].forEach(n => {
+                    if (wdState[n] === 'AUTO' && calibrationData[n] > 0 && now > calibrationData[n]) {
+                        calibrationData[n] = 0;
+                        lsSet('jsoc_calibration_data', JSON.stringify(calibrationData));
+                        setWdState(n, 'ON');
+                        logEvent(`[SYSTEM] ${n} 24H CALIBRATION COMPLETE. SWITCHING TO ON.`, "text-green-400 font-bold");
+                        pushToDMD(`${n} CYCLE SECURED // WD: ON`, 1, 'dmd-alarm-green');
+                    }
+                });
+
+                // GC: cleanup stale playerSessions every 60s
+                if (now - lastSessionCleanup >= 60000) {
+                    lastSessionCleanup = now;
+                    cleanupPlayerSessions();
+                }
+
+                if (autoBackupEnabled && now - lastBackupTime >= 48 * 60 * 60 * 1000) {
+                    systemBackup();
+                    if (blackBoxLogs.length > 500) {
+                        blackBoxLogs = blackBoxLogs.slice(-500);
+                    }
+                    lastBackupTime = now;
+                    localStorage.setItem('jsoc_last_backup_time', lastBackupTime);
+                    logEvent("[SYS] 48H AUTO-BACKUP COMPLETED. LOGS PRUNED.", "text-purple-400 font-bold");
+                    pushToDMD("[SYS] 48H AUTO-BACKUP COMPLETED", 1, "dmd-alarm-green");
+                }
+
+                if (now >= rateLimitCooldown && now - lastFetchTime >= nextInterval && !isFetching) {
+                    lastFetchTime = now;
+                    updateAll().finally(() => { renderDirty = true; });
+                }
+            }
+        };
+
+        window.handleClockClick = function(server) {
+            // Single click: toggle elapsed/restart time. Double click: manual override.
+            if (clockClickTimers[server]) {
+                clearTimeout(clockClickTimers[server]);
+                clockClickTimers[server] = null;
+                resetClock(server);
+                return;
+            }
+
+            clockClickTimers[server] = setTimeout(() => {
+                clockClickTimers[server] = null;
+                clockMode[server] = clockMode[server] === 'restartTime' ? 'elapsed' : 'restartTime';
+                updateClock();
+            }, 250);
+        };
+
+        window.resetClock = function(server) {
+            const input = prompt(`[MANUAL OVERRIDE]\nPodaj dokładną godzinę ostatniego restartu dla ${server} (format HH:MM):\n\nZostaw puste, aby użyć obecnego czasu (TERAZ).`);
+            if (input === null) return; 
+
+            let newRestartTime = Date.now();
+            
+            if (input.trim() !== "") {
+                const match = input.trim().match(/^(\d{1,2}):(\d{2})$/);
+                if (match) {
+                    const now = new Date();
+                    now.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
+                    newRestartTime = now.getTime();
+                    
+                    if (newRestartTime > Date.now()) {
+                        newRestartTime -= 24 * 60 * 60 * 1000;
+                    }
+                } else {
+                    alert("Błędny format! Wymagany format to HH:MM (np. 05:36)");
+                    return;
+                }
+            }
+            
+            lastRestartData[server] = newRestartTime;
+            localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
+            
+            isApprox[server] = true;
+            localStorage.setItem('jsoc_approx_state', JSON.stringify(isApprox));
+            
+            if (wdState[server] !== 'ON') {
+                setWdState(server, 'ON');
+            }
+            
+            const timeStr = new Date(newRestartTime).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+            logEvent(`[OVERRIDE] ${server} CYCLE SECURED FOR ${timeStr} (APRX)`, "text-orange-500 font-bold");
+            pushToDMD(`[ ! ] MANUAL OVERRIDE: ${server} SYNCED TO ${timeStr} [APRX] [ ! ]`, 2, 'dmd-alarm-yellow');
+            updateClock();
+        };
+
+        function systemBackup() {
+            lsFlush();
+            exportDatabase();
+            
+            setTimeout(() => {
+                let backupData = {
+                    jsoc_stats: localStorage.getItem('jsoc_stats') || '{}',
+                    jsoc_all_squads: localStorage.getItem('jsoc_all_squads') || '{}',
+                    jsoc_wd_state: localStorage.getItem('jsoc_wd_state') || '{}',
+                    jsoc_last_restarts: localStorage.getItem('jsoc_last_restarts') || '{}',
+                    jsoc_approx_state: localStorage.getItem('jsoc_approx_state') || '{}',
+                    jsoc_radar_mode: localStorage.getItem('jsoc_radar_mode') || 'NORM',
+                    jsoc_sq_idx: localStorage.getItem('jsoc_sq_idx') || '1'
+                };
+                
+                const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `stm_system_backup_${new Date().getTime()}.json`;
+                a.click();
+                
+                logEvent("[SYS] SYSTEM STATE BACKUP EXPORTED", "text-purple-400 font-bold");
+                pushToDMD(`[SYS] SYSTEM STATE BACKUP EXPORTED`, 1, 'dmd-alarm-green');
+            }, 500); 
+        }
+
+        function restoreSystem(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.jsoc_stats) localStorage.setItem('jsoc_stats', data.jsoc_stats);
+                    if (data.jsoc_all_squads) localStorage.setItem('jsoc_all_squads', data.jsoc_all_squads);
+                    if (data.jsoc_wd_state) localStorage.setItem('jsoc_wd_state', data.jsoc_wd_state);
+                    if (data.jsoc_last_restarts) localStorage.setItem('jsoc_last_restarts', data.jsoc_last_restarts);
+                    if (data.jsoc_approx_state) localStorage.setItem('jsoc_approx_state', data.jsoc_approx_state);
+                    if (data.jsoc_radar_mode) localStorage.setItem('jsoc_radar_mode', data.jsoc_radar_mode);
+                    if (data.jsoc_sq_idx) localStorage.setItem('jsoc_sq_idx', data.jsoc_sq_idx);
+                    
+                    pushToDMD(`[SYS] SYSTEM RESTORED. REBOOTING...`, 2, 'dmd-alarm-green');
+                    alert("SYSTEM RESTORED SUCCESSFULLY! Rebooting kernel...");
+                    location.reload();
+                } catch (err) {
+                    alert("FAILED TO RESTORE BACKUP. Invalid file format.");
+                    logEvent("[ERROR] RESTORE FAILED. CORRUPTED FILE.", "text-red-500 font-bold");
+                    pushToDMD(`[ERROR] RESTORE FAILED: CORRUPTED FILE`, 2, 'dmd-alarm-red');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
+        }
+
+        function toggleAutoBackup() {
+            autoBackupEnabled = !autoBackupEnabled;
+            localStorage.setItem('jsoc_auto_backup', autoBackupEnabled);
+            const btn = document.getElementById("btnAutoBackup");
+            btn.innerText = `AUTO-BACKUP: ${autoBackupEnabled ? 'ON' : 'OFF'}`;
+            if (autoBackupEnabled) {
+                btn.classList.add("active");
+                lastBackupTime = Date.now(); 
+                localStorage.setItem('jsoc_last_backup_time', lastBackupTime);
+                logEvent("[SYS] 48H AUTO-BACKUP ENGAGED", "text-purple-400 font-bold");
+                pushToDMD(`[SYS] 48H AUTO-BACKUP: ON`, 1, 'dmd-alarm-green');
+            } else {
+                btn.classList.remove("active");
+                logEvent("[SYS] 48H AUTO-BACKUP OFFLINE", "text-gray-500");
+                pushToDMD(`[SYS] 48H AUTO-BACKUP: OFF`, 1, 'dmd-alarm-yellow');
+            }
+        }
+
+        function resetBrowserMemory() {
+            const ok = confirm(
+                "[STM MEMORY RESET]\n\n" +
+                "To usunie dane zapisane w pamięci przeglądarki dla STM:\n" +
+                "- squady / watchlisty\n" +
+                "- statystyki graczy\n" +
+                "- watchdog state\n" +
+                "- restart history\n" +
+                "- Steam server IDs\n" +
+                "- radar / volume / mute / backup settings\n\n" +
+                "Nie rusza plików na dysku ani danych BattleMetrics.\n\n" +
+                "Kontynuować?"
+            );
+
+            if (!ok) return;
+
+            try {
+                if (typeof _lsTimer !== "undefined" && _lsTimer) {
+                    clearTimeout(_lsTimer);
+                    _lsTimer = null;
+                }
+
+                if (typeof _lsPending !== "undefined") {
+                    Object.keys(_lsPending).forEach(k => delete _lsPending[k]);
+                }
+
+                const STM_KEYS = [
+                    "jsoc_wd_state",
+                    "jsoc_approx_state",
+                    "jsoc_radar_mode",
+                    "jsoc_telemetry_log",
+                    "jsoc_auto_backup",
+                    "jsoc_last_backup_time",
+                    "jsoc_all_squads",
+                    "jsoc_sq_idx",
+                    "jsoc_steam_ids",
+                    "jsoc_stats",
+                    "jsoc_calibration_data",
+                    "jsoc_last_restarts",
+                    "jsoc_muted",
+                    "jsoc_volume",
+                    "jsoc_adv_mode",
+                    "jsoc_sort_mode",
+                    "jsoc_api_heat",
+                    "jsoc_ping_baseline",
+                    "jsoc_restart_pattern"
+                ];
+
+                STM_KEYS.forEach(k => localStorage.removeItem(k));
+
+                console.log("%c[STM RESET] browser memory cleared", "color:#00ff9c;font-weight:bold");
+                alert("STM browser memory cleared. Reloading interface...");
+                location.reload();
+
+            } catch (e) {
+                console.error("[STM RESET] failed", e);
+                alert("MEM RESET failed. Check console.");
+            }
+        }
+
+        function pushToDMD(msg, priority = 0, colorClass = null) {
+            dmdQueue.push({ msg, priority, colorClass });
+            if (!isDmdProcessing) processDMD();
+        }
+
+        function processDMD() {
+            const dmdStream = document.getElementById('dmd-text-stream');
+            const dmdNode = document.getElementById('dmd-main-node');
+            const dmdOverride = document.getElementById('dmd-override-zone');
+            const hides = [document.getElementById('dmd-reticle-node'), document.getElementById('heat-zone-container')];
+
+            if (!dmdStream || !dmdOverride) return;
+
+            if (dmdQueue.length === 0) {
+                isDmdProcessing = false;
+                dmdStream.style.opacity = '1';
+                hides.forEach(el => { if(el) el.style.opacity = '1'; });
+                dmdOverride.style.opacity = '0';
+                setDMDText(dmdStream, DMD_DEFAULT_TEXT, '█');
+                dmdNode.className = "flex-1 dmd-container w-full min-w-0";
+                return;
+            }
+
+            isDmdProcessing = true;
+            const item = dmdQueue.shift();
+            const duration = (item.priority === 2) ? 15000 : (dmdQueue.length > 0 ? 4000 : 8000);
+
+            if (item.priority === 2) {
+                dmdStream.style.opacity = '0';
+                hides.forEach(el => { if(el) el.style.opacity = '0'; });
+                dmdOverride.style.opacity = '1';
+                setDMDText(dmdOverride, item.msg, '█');
+                dmdNode.className = "flex-1 dmd-container w-full min-w-0 " + (item.colorClass || 'dmd-alarm-red');
+            } else {
+                setDMDText(dmdStream, `Re-Tek corp.      >> ${item.msg}`, '█');
+                dmdNode.className = "flex-1 dmd-container w-full min-w-0"; 
+                if (item.colorClass) dmdNode.classList.add(item.colorClass);
+            }
+
+            if (dmdTimeout) clearTimeout(dmdTimeout);
+            dmdTimeout = setTimeout(processDMD, duration);
+        }
+
+        function initVoice() {
+            if (!window.speechSynthesis) return;
+            const voices = window.speechSynthesis.getVoices();
+            const select = document.getElementById('voiceSelect');
+            if (select) {
+                select.innerHTML = "";
+                voices.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.name; opt.innerText = `${v.name} (${v.lang})`;
+                    if (v.name.includes('David') || v.name.includes('Male')) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            }
+        }
+        if (window.speechSynthesis) { window.speechSynthesis.onvoiceschanged = initVoice; }
+
+        function toggleVoice() {
+            const btnInit = document.getElementById("btnInitAudio"); const statusEl = document.getElementById("audioStatus");
+            btnInit.classList.remove("btn-attention");
+            const alerts = document.querySelectorAll('#alertBox > div'); alerts.forEach(a => { if(a.innerText.includes("VOICE COMMS STANDBY")) { a.remove(); } });
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") { Notification.requestPermission(); }
+            
+            voiceEnabled = !voiceEnabled;
+            if (voiceEnabled) {
+                audioUnlocked = true;
+                btnInit.innerText = "VOICE: ON"; btnInit.classList.remove("border-gray-500", "text-gray-500"); btnInit.classList.add("border-green-500", "text-green-500");
+                statusEl.innerText = "COMM-LINK ACTIVE"; statusEl.classList.remove("text-red-500"); statusEl.classList.add("text-green-400");
+                pushToDMD("--::COMM-LINK ACTIVE::--", 1, "dmd-alarm-green");
+                queueSpeech("Voice communication active.");
+                logEvent("COMM-LINK INITIALIZED", "text-green-400 font-bold");
+                if(window.speechSynthesis) { const msg = new SpeechSynthesisUtterance(""); msg.volume=0; window.speechSynthesis.speak(msg); }
+            } else {
+                btnInit.innerText = "VOICE: OFF"; btnInit.classList.remove("border-green-500", "text-green-500"); btnInit.classList.add("border-gray-500", "text-gray-500"); 
+                statusEl.innerText = "AUDIO LOCKED"; statusEl.classList.remove("text-green-400"); statusEl.classList.add("text-red-500");
+                pushToDMD("--::COMM-LINK DEACTIVATED::--", 1, "dmd-alarm-red");
+                queueSpeech("Voice communication deactivated.");
+                logEvent("VOICE ENGINE: DISABLED", "text-gray-400"); 
+                audioQueue = []; if (currentAudioObj) { currentAudioObj.pause(); currentAudioObj = null; } if (window.speechSynthesis) window.speechSynthesis.cancel(); ttsUtterances = [];
+            }
+        }
+
+        // [v4 FIX] Cap kolejki + watchdog na zawieszone utterance (Firefox/Linux speech-dispatcher bug).
+        const AUDIO_QUEUE_MAX = 20;
+        const TTS_WATCHDOG_MS = 15000;
+        let _ttsWatchdog = null;
+        function _clearTtsWatchdog() { if (_ttsWatchdog) { clearTimeout(_ttsWatchdog); _ttsWatchdog = null; } }
+
+        function processAudioQueue() {
+            if (isMuted) { audioQueue = []; isPlayingQueue = false; if (currentAudioObj) { currentAudioObj.pause(); currentAudioObj = null; } if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch(e){} } ttsUtterances = []; _clearTtsWatchdog(); return; }
+            if (audioQueue.length === 0) { isPlayingQueue = false; currentAudioObj = null; _clearTtsWatchdog(); return; }
+            isPlayingQueue = true; let item = audioQueue.shift();
+            
+            if (item.type === 'speech') {
+                if(window.speechSynthesis) {
+                    let msg = new SpeechSynthesisUtterance(item.text); ttsUtterances.push(msg); 
+                    const select = document.getElementById('voiceSelect');
+                    if (select && select.value) {
+                        const voices = window.speechSynthesis.getVoices();
+                        msg.voice = voices.find(v => v.name === select.value);
+                        if (select.value.toLowerCase().includes('male') || select.value.includes('David')) { msg.pitch = 0.75; } else { msg.pitch = 1.0; }
+                    }
+                    msg.volume = currentVolume; msg.lang = 'en-US'; msg.rate = 0.95;
+                    let _done = false;
+                    const _finish = () => {
+                        if (_done) return; _done = true;
+                        _clearTtsWatchdog();
+                        ttsUtterances = ttsUtterances.filter(u => u !== msg);
+                        setTimeout(processAudioQueue, 300);
+                    };
+                    msg.onend = _finish;
+                    msg.onerror = _finish;
+                    // Watchdog: jezeli silnik TTS nie zglosi sie w ciagu 15s (klasyczny bug FF+speech-dispatcher),
+                    // wymuszamy cancel i jedziemy dalej, zeby nie zablokowac kolejki i nie zatkac main threadu.
+                    _ttsWatchdog = setTimeout(() => {
+                        try { window.speechSynthesis.cancel(); } catch(e){}
+                        _finish();
+                    }, TTS_WATCHDOG_MS);
+                    try { window.speechSynthesis.speak(msg); }
+                    catch(e) { console.warn('[TTS] speak() threw', e); _finish(); }
+                } else { processAudioQueue(); }
+            } else if (item.type === 'sound') {
+                try {
+                    currentAudioObj = new Audio(item.url); currentAudioObj.volume = item.volume !== undefined ? item.volume : currentVolume * 0.15;
+                    currentAudioObj.onended = () => { currentAudioObj = null; processAudioQueue(); }; currentAudioObj.onerror = () => { currentAudioObj = null; processAudioQueue(); }; 
+                    currentAudioObj.play().catch(() => { currentAudioObj = null; processAudioQueue(); });
+                } catch(e) { currentAudioObj = null; setTimeout(processAudioQueue, 100); }
+            }
+        }
+
+        function _trimAudioQueue() {
+            if (audioQueue.length <= AUDIO_QUEUE_MAX) return;
+            // Drop najstarsze speech (sound zostawiamy, jest krotki)
+            const overflow = audioQueue.length - AUDIO_QUEUE_MAX;
+            let removed = 0;
+            audioQueue = audioQueue.filter(it => {
+                if (removed >= overflow) return true;
+                if (it.type === 'speech') { removed++; return false; }
+                return true;
+            });
+            if (audioQueue.length > AUDIO_QUEUE_MAX) audioQueue = audioQueue.slice(-AUDIO_QUEUE_MAX);
+        }
+        function queueSpeech(text) { if (isMuted || !voiceEnabled) return; audioQueue.push({ type: 'speech', text: text }); _trimAudioQueue(); if (!isPlayingQueue) { processAudioQueue(); } }
+        function queueSound(url, vol) { if (isMuted) return; audioQueue.push({ type: 'sound', url: url, volume: vol }); _trimAudioQueue(); if (!isPlayingQueue) { processAudioQueue(); } }
+
+        // [v4 FIX] Gdy tab idzie w tlo, FF zatrzymuje TTS w pol slowa i utterance zostaje "zombie".
+        // Czyscimy kolejke i kasujemy silnik, zeby po powrocie nie bylo deadlocka.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && window.speechSynthesis) {
+                try { window.speechSynthesis.cancel(); } catch(e){}
+                audioQueue = audioQueue.filter(it => it.type !== 'speech');
+                ttsUtterances = [];
+                _clearTtsWatchdog();
+                isPlayingQueue = false;
+            }
+        });
+        function unlockAudioFallback() { if(window.speechSynthesis && !window.speechSynthesis.speaking){ let msg = new SpeechSynthesisUtterance(""); msg.volume=0; window.speechSynthesis.speak(msg); } }
+
+        function updateApiHeatUI() {
+            const now = Date.now();
+            apiHeatLog = apiHeatLog.filter(t => now - t < 60000);
+            const heatVisual = document.getElementById('heat-visual');
+            const heatText = document.getElementById('heat-text-val');
+            const heatContainer = document.getElementById('heat-zone-container');
+            if (heatVisual && heatText && heatContainer) {
+                let count = apiHeatLog.length; let bars = Math.min(10, Math.floor(count / 6));
+                heatVisual.innerText = "[" + "|".repeat(bars) + ".".repeat(10 - bars) + "]";
+                heatText.innerText = `${count.toString().padStart(2, '0')}/60`;
+                if (count >= 50) { heatContainer.style.color = "#ff4d4d"; heatContainer.style.textShadow = "0 0 10px #ff4d4d"; } 
+                else if (count >= 35) { heatContainer.style.color = "#eab308"; heatContainer.style.textShadow = "0 0 10px #eab308"; } 
+                else { heatContainer.style.color = "#00ff9c"; heatContainer.style.textShadow = "0 0 10px #00ff9c"; }
+            }
+            return apiHeatLog.length;
+        }
+
+        function recordApiCall() {
+            const now = Date.now();
+            apiHeatLog = apiHeatLog.filter(t => now - t < 60000);
+            apiHeatLog.push(now);
+            updateApiHeatUI();
+        }
+
+        function setRadarMode(mode) {
+            radarMode = mode; localStorage.setItem('jsoc_radar_mode', mode);
+            document.getElementById('radar-btn-eco').className = `wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4 ${mode === 'ECO' ? 'active-on' : ''}`;
+            document.getElementById('radar-btn-norm').className = `wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4 ${mode === 'NORM' ? 'active-auto' : ''}`;
+            document.getElementById('radar-btn-agr').className = `wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4 ${mode === 'AGR' ? 'active-off' : ''}`;
+            const radarIcon = document.getElementById('radar-icon-wrapper');
+            if(radarIcon) { radarIcon.className = `flex items-center transition-colors duration-300 rounded-full px-1 py-0.5 ${mode === 'ECO' ? 'radar-eco' : mode === 'NORM' ? 'radar-norm' : 'radar-agr'}`; }
+            const radarContainer = document.getElementById('radar-glow-container');
+            if(radarContainer) { if(mode === 'AGR') { radarContainer.classList.add('agr-mode'); } else { radarContainer.classList.remove('agr-mode'); } }
+            logEvent(`[RADAR] FREQUENCY SET TO ${mode}`, "text-cyan-400 font-bold");
+        }
+
+        function showStickyAlert(server, title, message) {
+            if (document.getElementById(`sticky-${server}`)) return; 
+            const container = document.getElementById('stickyAlerts'); const div = document.createElement('div'); div.id = `sticky-${server}`;
+            div.className = "pointer-events-auto border-2 border-red-500 bg-red-950/95 text-white p-4 rounded shadow-[0_0_30px_rgba(255,0,0,0.8)] flex justify-between items-center backdrop-blur-md mb-2";
+            div.innerHTML = `<div class="flex flex-col"><span class="text-red-500 font-black text-lg md:text-xl tracking-widest uppercase text-shadow-sm flex items-center gap-2"><span class="animate-ping">🔴</span> ${title}</span><span class="text-sm font-bold mt-1 text-gray-200">${message}</span></div><button onclick="this.parentElement.remove()" class="bg-red-500/20 hover:bg-red-500 border border-red-500 text-white font-bold py-2 px-4 ml-4 transition-colors tracking-widest text-xs uppercase shrink-0">DISMISS</button>`;
+            container.appendChild(div);
+            if ("Notification" in window && Notification.permission === "granted") { new Notification(title, { body: message, requireInteraction: true, icon: "https://cdn-icons-png.flaticon.com/512/559/559343.png" }); }
+        }
+
+        function clearStickyAlertForServer(server) { const alertNode = document.getElementById(`sticky-${server}`); if (alertNode) { alertNode.remove(); } }
+
+        function clearServerRosterAfterRestart(server) {
+            const oldRoster = Array.isArray(previous[server]) ? [...previous[server]] : [];
+            oldRoster.forEach(pName => {
+                const lc = String(pName).toLowerCase();
+                const stillVisibleElsewhere = ['EU1', 'EU2', 'EU3'].some(other => {
+                    if (other === server) return false;
+                    return cache[other] && Array.isArray(cache[other].list) && cache[other].list.some(p => String(p.name).toLowerCase() === lc);
+                });
+                if (!stillVisibleElsewhere) delete playerSessions[pName];
+            });
+
+            previous[server] = [];
+            if (!cache[server]) cache[server] = { status: 'booting', players: 0, maxPlayers: 0, details: {}, list: [], ping: 0 };
+            cache[server].players = 0;
+            cache[server].list = [];
+            cache[server].status = isBooting[server] ? 'booting' : (cache[server].status || 'online');
+            lastRenderedHash[server] = `restart-clear-${Date.now()}`;
+            renderDirty = true;
+        }
+
+        function setWdState(server, state) {
+            wdState[server] = state; localStorage.setItem('jsoc_wd_state', JSON.stringify(wdState));
+            renderWdSwitches(); updateClock(); updateOscyStyle(server, state); 
+            let color = "text-gray-500"; if(state === 'ON') color = "text-green-400"; if(state === 'AUTO') color = "text-yellow-500";
+            logEvent(`[SYSTEM] ${server} WATCHDOG SET TO ${state}`, color); queueSound(SOUND_SQUAD, currentVolume * 0.15);
+        }
+
+        function renderWdSwitches() {
+            ["EU1", "EU2", "EU3"].forEach(s => {
+                const st = wdState[s];
+                ['off', 'auto', 'on'].forEach(mode => {
+                    const btnTop = document.getElementById(`sw-${s}-top-${mode}`); const btnSide = document.getElementById(`sw-${s}-side-${mode}`); const isActive = st.toLowerCase() === mode;
+                    if(btnTop) { btnTop.className = `wd-switch-btn ${isActive ? 'active-'+mode : ''}`; } if(btnSide) { btnSide.className = `wd-switch-btn ${isActive ? 'active-'+mode : ''}`; }
+                });
+                updateOscyStyle(s, st);
+            });
+        }
+
+        function updateOscyStyle(server, value) {
+            const wrapper = document.getElementById(`oscy-${server}`); if (!wrapper) return;
+            wrapper.classList.remove('oscy-glow-on', 'oscy-glow-auto', 'oscy-glow-off');
+            if (value === 'ON') wrapper.classList.add('oscy-glow-on'); else if (value === 'AUTO') wrapper.classList.add('oscy-glow-auto'); else wrapper.classList.add('oscy-glow-off');
+            if(miniCharts[server]) { let color = '#555'; if (value === 'ON') color = '#00ff9c'; if (value === 'AUTO') color = '#eab308'; miniCharts[server].data.datasets[0].borderColor = color; miniCharts[server].update('none'); }
+        }
+
+        function exportDatabase() {
+            lsFlush();
+            let db = statsData || safeJsonGet('jsoc_stats', {});
+            let arr = Object.keys(db).map(k => ({ name: k, total: db[k].totalTime || 0, session: db[k].sessionTime || 0 }));
+            arr.sort((a, b) => b.total - a.total);
+            
+            let text = "=== STM PRO V6.0 | PERSISTENT OPERATOR DATABASE ===\n";
+            text += "GENERATED: " + new Date().toLocaleString() + "\n\n";
+            
+            arr.forEach((p, i) => {
+                let tH = Math.floor(p.total / 3600000); let tM = Math.floor((p.total % 3600000) / 60000);
+                let sH = Math.floor(p.session / 3600000); let sM = Math.floor((p.session % 3600000) / 60000);
+                text += `${String(i+1).padStart(3, '0')}. ${p.name.padEnd(25, ' ')} | TOTAL: ${tH}h ${String(tM).padStart(2, '0')}m | LAST SES: ${sH}h ${String(sM).padStart(2, '0')}m\n`;
+            });
+            
+            const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `stm_operator_db_${new Date().getTime()}.txt`;
+            a.click();
+            logEvent("[DB] DATABASE EXPORTED SUCCESSFULLY", "text-yellow-400 font-bold");
+            pushToDMD(`[SYS] OPERATOR DB EXPORTED`, 1, 'dmd-alarm-green');
+        }
+
+        function toggleStats() {
+            showStats = !showStats;
+            const btn = document.getElementById('btnStatsToggle');
+            btn.innerText = `STATS: ${showStats ? 'ON' : 'OFF'}`;
+            if(showStats) btn.classList.add('active'); else btn.classList.remove('active');
+            renderWatchList();
+        }
+
+        function toggleAutoFav() {
+            autoFavEnabled = !autoFavEnabled;
+            const btn = document.getElementById('btnAutoFavToggle');
+            btn.innerText = `AUTO-FAV: ${autoFavEnabled ? 'ON' : 'OFF'}`;
+            if(autoFavEnabled) {
+                btn.classList.add('active');
+                pushToDMD("AUTO-FAV MODULE ENGAGED", 1, "dmd-alarm-green");
+                logEvent("[MODULE] AUTO-FAV ENGAGED", "text-cyan-400 font-bold");
+            } else {
+                btn.classList.remove('active');
+                logEvent("[MODULE] AUTO-FAV OFFLINE", "text-gray-500");
+            }
+        }
+
+        function toggleSort() {
+            if (sortMode === 'ADDED') sortMode = 'A-Z';
+            else if (sortMode === 'A-Z') sortMode = 'ONLINE';
+            else sortMode = 'ADDED';
+            
+            localStorage.setItem('jsoc_sort_mode', sortMode);
+            const btn = document.getElementById('btnSortToggle');
+            btn.innerText = `SORT: ${sortMode}`;
+            if (sortMode !== 'ADDED') btn.classList.add('active'); else btn.classList.remove('active');
+            
+            renderWatchList();
+        }
+
+        function getWatchedSquadDetails(name) { for (let i = 1; i <= 8; i++) { let idx = ALL_SQUADS[i].findIndex(w => w.toLowerCase() === name.toLowerCase()); if (idx !== -1) { return { squadIdx: i, squadName: SQUAD_NAMES[i], playerNumber: idx + 1 }; } } return null; }
+        
+        function announceAction(squadDetails, serverName, isJoin) {
+            if (!audioUnlocked || isMuted) return; const actionText = isJoin ? "connected" : "disconnected";
+            if (!isJoin) { queueSound(SOUND_LEAVE, currentVolume * 0.15); } else { if (!squadDetails) { queueSound(SOUND_UNASSIGNED, currentVolume * 0.2); } else { queueSound(SOUND_SQUAD, currentVolume * 0.15); } }
+            if (voiceEnabled && squadDetails && squadDetails.squadName !== "FAV") { queueSpeech(`${squadDetails.squadName} ${squadDetails.playerNumber} ${actionText}`); }
+        }
+
+        function testAudio() {
+            if (!audioUnlocked) toggleVoice(); logEvent("DIAGNOSTIC: AUDIO TEST...", "text-yellow-400 font-bold");
+            if (voiceEnabled) { queueSpeech("Audio check. Charlie 2 connected."); queueSpeech("Critical alert. EU One server down or restarting."); } else { queueSound(SOUND_SQUAD, currentVolume * 0.15); } queueSound(SOUND_SQUAD, currentVolume * 0.3);
+        }
+
+        function initAdvButton() { const btn = document.getElementById("advToggle"); btn.innerText = `ADV: ${advMode ? 'ON' : 'OFF'}`; if(advMode) { btn.classList.add("active-adv"); } else { btn.classList.remove("active-adv"); } }
+        function toggleAdvanced() { 
+            advMode = !advMode; 
+            localStorage.setItem('jsoc_adv_mode', advMode); 
+            initAdvButton(); 
+            logEvent(`Advanced logging ${advMode ? 'ENABLED' : 'DISABLED'}`, advMode ? "text-cyan-400" : "text-gray-500"); 
+            pushToDMD(`[SYS] ADVANCED LOGGING: ${advMode ? 'ON' : 'OFF'}`, 1, advMode ? 'dmd-alarm-yellow' : null);
+        }
+        
+        function logEvent(text, color = "text-green-500", isAdvanced = false) { 
+            if (isAdvanced && !advMode) return; 
+            const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); 
+            
+            blackBoxLogs.push(`[${timeStr}] [SYS] ${text}`);
+            if (blackBoxLogs.length > 20000) blackBoxLogs.shift();
+
+            const log = document.getElementById("logBox"); if (!log) return; 
+            const entry = document.createElement("div"); entry.className = `${color} py-0.5 border-b border-white/5 uppercase`; entry.innerHTML = `<span class="opacity-40">[${timeStr}]</span> ${text}`; 
+            log.insertBefore(entry, log.firstChild); if (log.children.length > 100) { log.removeChild(log.lastChild); } 
+        }
+
+        function copyLog() { 
+            const text = blackBoxLogs.join('\n'); 
+            navigator.clipboard.writeText(text).then(() => {
+                logEvent("BLACK BOX COPIED TO CLIPBOARD", "text-cyan-400"); 
+                pushToDMD(`[SYS] BLACK BOX COPIED TO CLIPBOARD`, 1, 'dmd-alarm-green');
+            });
+        }
+        function saveLog() { 
+            let header = "=== STM PRO V6.0 | BLACK BOX FLIGHT RECORDER ===\n";
+            header += "GENERATED: " + new Date().toLocaleString() + "\n";
+            header += "=================================================\n\n";
+            const text = header + blackBoxLogs.join('\n'); 
+            const blob = new Blob([text], {type: 'text/plain;charset=utf-8'}); 
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
+            a.download = `stm_blackbox_${new Date().getTime()}.txt`; a.click(); 
+            logEvent("BLACK BOX EXPORTED SUCCESSFULLY", "text-cyan-400 font-bold");
+            pushToDMD(`[SYS] BLACK BOX EXPORTED`, 1, 'dmd-alarm-green');
+        }
+
+        function addPlayerAlert(name, server, isJoin, squadDetails, joinedAt = null) {
+            const b = document.getElementById("alertBox"); const d = document.createElement("div"); const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); let sessionTimeStr = "";
+            let sessionMin = 0;
+            if (!isJoin && joinedAt) { sessionMin = Math.floor((Date.now() - joinedAt) / 60000); sessionTimeStr = `<span class="text-orange-400 text-[10px] ml-2 tracking-widest">[${sessionMin}m]</span>`; }
+            
+            const bbAction = isJoin ? "JOINED" : "LEFT";
+            const bbSq = squadDetails ? `[${squadDetails.squadName}-${squadDetails.playerNumber}] ` : "";
+            const bbSess = (!isJoin && joinedAt) ? ` [SESSION: ${sessionMin}m]` : "";
+            blackBoxLogs.push(`[${timeStr}] [ACTIVITY] ${bbSq}${name} ${bbAction} ${server}${bbSess}`);
+            if (blackBoxLogs.length > 20000) blackBoxLogs.shift();
+
+            if (squadDetails) {
+                const actionText = isJoin ? "JOINED" : "LEFT"; const actionColor = isJoin ? "text-green-500" : "text-red-500"; const arrow = isJoin ? "IN" : "OUT"; const bgClass = isJoin ? "bg-green-900/20" : "bg-red-900/20"; const borderClass = isJoin ? "border-green-500" : "border-red-500"; const squadTag = `${squadDetails.squadName}-${squadDetails.playerNumber}`; const sqColor = SQUAD_COLORS[squadDetails.squadIdx].text;
+                d.className = `flex justify-between items-center border-l-2 ${borderClass} pl-2 ${bgClass} py-1.5 transition-all mb-0.5`;
+                d.innerHTML = `<div class="flex items-center gap-2 flex-wrap flex-1"><span class="opacity-60 text-xs text-white">[${timeStr}]</span><span class="font-bold text-sm uppercase" style="color: ${sqColor}; text-shadow: 0 0 5px ${sqColor};">[${squadTag}]</span><span class="text-white font-black text-lg tracking-wider">&lt; ${escapeHTML(name)} &gt;</span><span class="${actionColor} font-bold text-sm ml-1">${actionText} ${server}</span>${sessionTimeStr}<span class="${actionColor} font-black text-xs ml-2 tracking-widest drop-shadow-md">${arrow}</span></div><div class="flex items-center pr-2"><span class="cursor-pointer text-white hover:text-red-500 text-sm px-2 font-bold" onclick="this.parentElement.parentElement.remove()">X</span></div>`;
+            } else {
+                const actionText = isJoin ? "JOINED" : "LEFT"; const color = isJoin ? "text-green-500" : "text-red-500"; const arrow = isJoin ? "IN" : "OUT";
+                d.className = `flex justify-between items-center pl-2 bg-black/40 py-1 border-l border-white/10 mb-0.5`;
+                d.innerHTML = `<div class="flex items-center gap-2 opacity-90 flex-1"><span class="opacity-50 text-[11px] text-white">[${timeStr}]</span><span class="text-gray-300 text-sm font-bold uppercase">${escapeHTML(name)}</span><span class="text-gray-500 text-xs ml-1">${actionText} ${server}</span>${sessionTimeStr}<span class="${color} font-bold text-xs ml-1 tracking-widest drop-shadow-sm">${arrow}</span></div><div class="flex items-center pr-2 opacity-80"><span class="cursor-pointer text-gray-500 hover:text-red-500 text-xs px-2 font-bold" onclick="this.parentElement.parentElement.remove()">X</span></div>`;
+            }
+            b.insertBefore(d, b.firstChild); if (b.children.length > 80) { b.removeChild(b.lastChild); } b.scrollTop = 0; 
+        }
+
+        function addSystemAlert(message, alertId = null) {
+            const b = document.getElementById("alertBox"); const d = document.createElement("div"); const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            blackBoxLogs.push(`[${timeStr}] [ALERT] ${message}`);
+            if (blackBoxLogs.length > 20000) blackBoxLogs.shift();
+
+            d.className = `flex justify-between items-center border-l-4 border-red-500 pl-3 bg-red-950/80 py-2 soc-border-pulse mb-1`; if (alertId) { d.id = alertId; }
+            d.innerHTML = `<div class="flex items-center gap-3"><span class="opacity-70 text-[10px] text-white">[${timeStr}]</span><span class="text-yellow-400 font-black text-xs md:text-sm tracking-widest uppercase text-shadow-sm">! ${message} !</span></div><span class="cursor-pointer text-white hover:text-red-500 px-2 text-lg" onclick="this.parentElement.remove()">X</span>`;
+            b.insertBefore(d, b.firstChild); if (b.children.length > 80) { b.removeChild(b.lastChild); } b.scrollTop = 0; 
+        }
+
+        function updateMiniChart(server, ping, players, state) {
+            pingHistory[server].push(ping); if (pingHistory[server].length > 30) pingHistory[server].shift(); 
+            playerHistory[server].push(players); if (playerHistory[server].length > 30) playerHistory[server].shift();
+            if(miniCharts[server]) { miniCharts[server].update('none'); }
+        }
+
+        // ===== THROTTLED LOCALSTORAGE (zapis maks raz/3s) =====
+        const _lsPending = {};
+        let _lsTimer = null;
+        function lsSet(key, value) {
+            _lsPending[key] = value;
+            if (_lsTimer) return;
+            _lsTimer = setTimeout(() => {
+                try { Object.keys(_lsPending).forEach(k => localStorage.setItem(k, _lsPending[k])); } catch(e) { console.warn('[LS] write failed', e); }
+                Object.keys(_lsPending).forEach(k => delete _lsPending[k]);
+                _lsTimer = null;
+            }, 3000);
+        }
+        function lsFlush() {
+            if (_lsTimer) { clearTimeout(_lsTimer); _lsTimer = null; }
+            try { Object.keys(_lsPending).forEach(k => { localStorage.setItem(k, _lsPending[k]); delete _lsPending[k]; }); } catch(e){}
+        }
+        window.addEventListener('beforeunload', lsFlush);
+
+        // ===== WATCHDOG v2 STATE =====
+        let pingBaseline = safeJsonGet('jsoc_ping_baseline', { EU1: null, EU2: null, EU3: null });
+        let pingSpikeStrike = { EU1: 0, EU2: 0, EU3: 0 };
+        let lastSpikeAlert = { EU1: 0, EU2: 0, EU3: 0 };
+        let healthScore = { EU1: 100, EU2: 100, EU3: 100 };
+        let restartPattern = safeJsonGet('jsoc_restart_pattern', { EU1: {}, EU2: {}, EU3: {} });
+
+        function updatePingBaseline(server, ping) {
+            if (ping <= 0 || ping > 2000) return;
+            const b = pingBaseline[server];
+            pingBaseline[server] = b == null ? ping : Math.round((b * 0.9) + (ping * 0.1)); // EWMA α=0.1
+            lsSet('jsoc_ping_baseline', JSON.stringify(pingBaseline));
+        }
+
+        function detectPingSpike(server, ping) {
+            const b = pingBaseline[server];
+            if (!b || b < 20) return false;
+            const spike = ping > b * 2.5 && ping > b + 80;
+            if (spike) {
+                pingSpikeStrike[server]++;
+                if (pingSpikeStrike[server] >= 3 && Date.now() - lastSpikeAlert[server] > 120000) {
+                    lastSpikeAlert[server] = Date.now();
+                    logEvent(`[WD-v2] ${server} PING SPIKE STORM: ${ping}ms (baseline ${b}ms, x${(ping/b).toFixed(1)})`, "text-orange-400 font-bold");
+                    addSystemAlert(`${server} NETWORK INSTABILITY: ${ping}ms vs ${b}ms baseline`);
+                    pushToDMD(`[ ! ] ${server} LATENCY ANOMALY: ${ping}MS [ ! ]`, 1, 'dmd-alarm-red');
+                    pingSpikeStrike[server] = 0;
+                    return true;
+                }
+            } else {
+                pingSpikeStrike[server] = Math.max(0, pingSpikeStrike[server] - 1);
+            }
+            return false;
+        }
+
+        function computeHealthScore(server) {
+            const c = cache[server];
+            if (!c) return 0;
+            let s = 100;
+            if (c.status !== 'online') s -= 60;
+            if (isBooting[server]) s -= 30;
+            const b = pingBaseline[server];
+            if (b && c.ping > 0) {
+                const ratio = c.ping / b;
+                if (ratio > 3) s -= 25; else if (ratio > 2) s -= 15; else if (ratio > 1.5) s -= 8;
+            }
+            if (c.ping > 400) s -= 15;
+            s -= pingSpikeStrike[server] * 5;
+            const buf = serverBuffers[server] || [];
+            s -= buf.filter(e => e.status === 'offline' || e.status === 'dead').length * 4;
+            if (c.maxPlayers > 0 && c.players >= c.maxPlayers) s -= 5;
+            healthScore[server] = Math.max(0, Math.min(100, Math.round(s)));
+            return healthScore[server];
+        }
+
+        function recordRestartPattern(server) {
+            const h = new Date().getHours();
+            if (!restartPattern[server]) restartPattern[server] = {};
+            restartPattern[server][h] = (restartPattern[server][h] || 0) + 1;
+            lsSet('jsoc_restart_pattern', JSON.stringify(restartPattern));
+        }
+
+        window.resetRestartPattern = function(server) {
+            if (server && restartPattern[server]) {
+                restartPattern[server] = {};
+            } else {
+                restartPattern = { EU1: {}, EU2: {}, EU3: {} };
+            }
+            lsSet('jsoc_restart_pattern', JSON.stringify(restartPattern));
+            try { localStorage.removeItem('jsoc_last_restarts'); } catch(e){}
+            console.log('%c[RESET] restartPattern wyczyszczony' + (server?` (${server})`:' (ALL)'), 'color:#0f0;font-weight:bold');
+            return restartPattern;
+        };
+        window.resetSteamIds = function() {
+            prevSteamId = { EU1: null, EU2: null, EU3: null };
+            try { localStorage.removeItem('jsoc_steam_ids'); } catch(e){}
+            console.log('%c[RESET] Steam ID baseline wyczyszczony - następny tick ustawi nowe', 'color:#0f0;font-weight:bold');
+            return prevSteamId;
+        };
+
+        function predictNextRestartWindow(server) {
+            const hist = restartPattern[server] || {};
+            const entries = Object.entries(hist).map(([h,c]) => [parseInt(h), c]);
+            if (entries.length < 3) return null;
+            const total = entries.reduce((a,[,c]) => a+c, 0);
+            entries.sort((a,b) => b[1] - a[1]);
+            return entries.slice(0, 3).map(([h,c]) => ({ hour: h, prob: Math.round(c/total*100) }));
+        }
+
+        setInterval(() => {
+            ['EU1','EU2','EU3'].forEach(s => {
+                const score = computeHealthScore(s);
+                if (score < 40 && advMode) logEvent(`[WD-v2] ${s} HEALTH DEGRADED: ${score}/100`, "text-orange-400");
+            });
+        }, 30000);
+
+        // ===== ABORTABLE FETCH (anuluje nakładające się requesty + 8s timeout) =====
+        const _activeAbort = { EU1: null, EU2: null, EU3: null };
+        function abortableFetch(name, url, timeoutMs = 8000) {
+            if (_activeAbort[name]) { try { _activeAbort[name].abort(); } catch(e){} }
+            const ctrl = new AbortController();
+            _activeAbort[name] = ctrl;
+            const timer = setTimeout(() => { try { ctrl.abort(); } catch(e){} }, timeoutMs);
+            return fetch(url, { signal: ctrl.signal }).finally(() => {
+                clearTimeout(timer);
+                if (_activeAbort[name] === ctrl) _activeAbort[name] = null;
+            });
+        }
+
+        // ===== STM v8: deterministic restart signal from BattleMetrics/Steam =====
+        function normalizeSteamId(value) {
+            if (value === undefined || value === null || value === '') return null;
+            return String(value).trim();
+        }
+
+        function extractSteamIdFromRawJson(rawText) {
+            // serverSteamId can exceed Number.MAX_SAFE_INTEGER, so read it from raw JSON before JSON.parse can round it.
+            const m = rawText.match(/\"serverSteamId\"\s*:\s*\"?(\d{8,})\"?/);
+            return m ? m[1] : null;
+        }
+
+        function getCurrentSteamId(rawText, attr) {
+            return extractSteamIdFromRawJson(rawText) ||
+                normalizeSteamId(attr.details?.serverSteamId) ||
+                normalizeSteamId(attr.details?.steamId) ||
+                normalizeSteamId(attr.details?.serverId);
+        }
+
+        function getDetailsUptime(attr) {
+            const t = Number(attr.details?.time);
+            return Number.isFinite(t) && t > 0 ? t : 0;
+        }
+
+        function getBattlemetricsUpdatedAtMs(attr) {
+            const stamp = attr.updatedAt ? Date.parse(attr.updatedAt) : 0;
+            if (!stamp || !Number.isFinite(stamp)) return 0;
+            // Ignore impossible future timestamps. Small clock skew tolerance: 30s.
+            if (stamp > Date.now() + 30000) return 0;
+            return stamp;
+        }
+
+        function checkBattlemetricsFreshness(server, attr) {
+            const stamp = getBattlemetricsUpdatedAtMs(attr);
+            if (!stamp) return;
+            const ageMs = Date.now() - stamp;
+            if (ageMs > 5 * 60 * 1000 && Date.now() - lastBmStaleAlert[server] > 5 * 60 * 1000) {
+                lastBmStaleAlert[server] = Date.now();
+                const ageMin = Math.round(ageMs / 60000);
+                logEvent(`[BM] ${server} DATA STALE: UPDATED ${ageMin}M AGO`, "text-yellow-500 font-bold");
+                pushToDMD(`[BM] ${server} DATA STALE: ${ageMin}M`, 1, 'dmd-alarm-yellow');
+            }
+        }
+
+        function getRestartTimestampFromBm(server, attr, fallbackTs) {
+            const bmUpdatedAt = getBattlemetricsUpdatedAtMs(attr);
+            if (!bmUpdatedAt) return fallbackTs;
+
+            const previousRestart = lastRestartData[server] || 0;
+
+            // For serverSteamId rotation, BM updatedAt is the closest timestamp we get from the same API response.
+            // It prevents the clock from being late by the browser polling delay or BM cache age.
+            if (bmUpdatedAt > previousRestart && bmUpdatedAt <= fallbackTs) {
+                return bmUpdatedAt;
+            }
+
+            return fallbackTs;
+        }
+
+        async function fetchServer(name, id) {
+            const start = performance.now();
+            try {
+                recordApiCall();
+                const res = await abortableFetch(name, `https://api.battlemetrics.com/servers/${id}?include=player`, 8000);
+                const lat = Math.round(performance.now() - start);
+                
+                // WD-v2: ping baseline + spike detection
+                if (res.ok) { updatePingBaseline(name, lat); detectPingSpike(name, lat); }
+                
+                if (res.status === 429) { 
+                    rateLimitCooldown = Date.now() + 60000; 
+                    logEvent(`[WD] API LIMIT: 60S COOLDOWN`, "text-red-500 font-bold"); 
+                    pushToDMD(`[ ! ] API CONNECTION SEVERED: 429 TOO MANY REQUESTS [ ! ]`, 2, 'dmd-alarm-red');
+                    throw new Error("429"); 
+                }
+
+                const rawText = await res.text();
+                let json;
+                try {
+                    json = JSON.parse(rawText);
+                } catch (e) {
+                    logEvent(`[WD] ${name} BAD JSON FROM BATTLEMETRICS`, "text-red-500 font-bold");
+                    throw e;
+                }
+
+                const attr = json.data ? json.data.attributes : {};
+                checkBattlemetricsFreshness(name, attr);
+
+                const players = (json.included || []).filter(x => x.type === "player").map(p => p.attributes.name);
+                const currentPlayers = attr.players || 0;
+                const maxPlayers = attr.maxPlayers || 0;
+                const currentUptime = getDetailsUptime(attr);
+                // [v8] 100% signal: Steam server ID rotation. Extracted as string from raw JSON to avoid 64-bit rounding.
+                const currentSteamId = getCurrentSteamId(rawText, attr);
+                
+                if (!lastRestartData[name]) {
+                    lastRestartData[name] = currentUptime > 0 ? Date.now() - (currentUptime * 1000) : Date.now();
+                    lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData));
+                    isApprox[name] = false;
+                    lsSet('jsoc_approx_state', JSON.stringify(isApprox));
+                    logEvent(`[WD] INITIAL K.M.S. SYNC (${name})`, "text-cyan-400 font-bold");
+                }
+
+                const state = wdState[name];
+                let CYCLE = 8 * 60 * 60 * 1000; // UPDATED TO 8H
+                
+                let finalStatus = attr.status;
+                if ((finalStatus === 'offline' || finalStatus === 'dead' || finalStatus === 'booting')) {
+                    if (currentPlayers > 0 && lat > 0 && lat < 500) {
+                        finalStatus = 'online'; 
+                        logEvent(`[SYS] ANTY-ZOMBIE (${name}): API REPORTED DEAD, BUT SQUAD IS ACTIVE. OVERRIDING TO ONLINE.`, "text-yellow-400 font-bold");
+                    }
+                }
+                
+                updateServerBuffer(name, lat, finalStatus);
+
+                if (state === 'OFF') { updateMiniChart(name, 0, 0, state); } 
+                else { updateMiniChart(name, (finalStatus === 'online' ? lat : 0), (finalStatus === 'online' ? currentPlayers : 0), state); }
+
+                if (advMode) { logEvent(`[ADV] ${name} SYNC OK | LAT: ${lat}MS | STAT: ${finalStatus || 'UNKNOWN'}`, "text-gray-500", true); }
+
+                let joinedPlayers = []; let leftPlayers = [];
+                if (!isFirstLoad) {
+                    players.forEach(pName => { if (!previous[name].includes(pName)) joinedPlayers.push(pName); });
+                    if (!isBooting[name]) previous[name].forEach(pName => { if (!players.includes(pName)) leftPlayers.push(pName); });
+                }
+                
+                let isMassEvent = (joinedPlayers.length > 10 || leftPlayers.length > 10);
+                let isCrash = (finalStatus === 'dead' || finalStatus === 'offline');
+                // [v7] Czuły uptime-reset: każdy realny SPADEK uptime > 60s = restart procesu.
+                // Stary warunek (>300 && <120) wymagał, by API zawsze zwracało uptime - dla wielu gier nie zwraca, więc detekcja nigdy nie odpalała.
+                let isUptimeReset = (prevUptime[name] > 60 && currentUptime >= 0 && currentUptime < prevUptime[name] - 60);
+
+                let droppedPlayersCount = leftPlayers.length;
+                let prevPlayerSnapshot = previous[name] ? previous[name].length : 0;
+                let isConfirmedRestart = false;
+                let restartSignalLevel = "NONE"; // TRUE = deterministic, PROBABLE/SUSPECTED = visual/log only
+                let heuristicReason = "";
+                let forceEmptyRosterThisCycle = false;
+                const bmUpdatedAtForHeuristics = getBattlemetricsUpdatedAtMs(attr);
+                const bmAgeMsForHeuristics = bmUpdatedAtForHeuristics ? (Date.now() - bmUpdatedAtForHeuristics) : 0;
+                const isBmStaleForHeuristics = bmAgeMsForHeuristics > 5 * 60 * 1000;
+
+                let hasPassedQuarantine = (Date.now() - systemStartTime) >= QUARANTINE_MS;
+                if(localStorage.getItem('jsoc_last_restarts')) { hasPassedQuarantine = true; }
+
+                if (!isFirstLoad && state !== 'OFF') {
+
+                    // [v5] COOLDOWN: blokuje ponowną detekcję restartu zaraz po wykryciu (anti-storm)
+                    let inCooldown = (Date.now() - lastRestartDetected[name]) < RESTART_DETECTION_COOLDOWN_MS;
+                    let crashConfirmCount = serverBuffers[name].filter(e => e.status === 'offline' || e.status === 'dead').length;
+                    let hasLagOrOfflineInRam = serverBuffers[name].some(entry => entry.ping > 500 || entry.status === 'offline' || entry.status === 'dead');
+
+                    // P1 / v8: serverSteamId rotation is deterministic and must bypass cooldown.
+                    // Cooldown only suppresses heuristic fallback signals, never the Steam ID signal.
+                    if (prevSteamId[name] && currentSteamId && prevSteamId[name] !== currentSteamId) {
+                        isConfirmedRestart = true;
+                        restartSignalLevel = "TRUE";
+                        heuristicReason = `STEAM ID ROTATION (${prevSteamId[name]} -> ${currentSteamId})`;
+                    }
+                    else if (!inCooldown) {
+                        // P2: jawny reset uptime z API (deterministyczny sygnał, jeśli dana gra wspiera details.time)
+                        if (isUptimeReset) {
+                            isConfirmedRestart = true;
+                            restartSignalLevel = "TRUE";
+                            heuristicReason = `UPTIME RESET (${prevUptime[name]}s -> ${currentUptime}s)`;
+                        }
+                        // P3: API DEAD/OFFLINE to tylko PROBABLE. Nie resetuje zegara bez SteamID/uptime.
+                        // Przy starych danych BM wymagamy mocniejszego potwierdzenia.
+                        else if (isCrash && crashConfirmCount >= (isBmStaleForHeuristics ? 3 : 2)) {
+                            restartSignalLevel = "PROBABLE";
+                            heuristicReason = `API DEAD/OFFLINE x${crashConfirmCount}${isBmStaleForHeuristics ? ' + BM STALE' : ''}`;
+                        }
+                        // P4: Mass-leave fallback = SUSPECTED, nie TRUE. Wyłączone przy stale BM data.
+                        else if (
+                            !isBmStaleForHeuristics
+                            && (droppedPlayersCount >= 8 || (prevPlayerSnapshot >= 5 && droppedPlayersCount >= prevPlayerSnapshot * 0.7))
+                            && currentPlayers <= 3
+                            && hasLagOrOfflineInRam
+                        ) {
+                            restartSignalLevel = "SUSPECTED";
+                            heuristicReason = `MASS LEAVE (${droppedPlayersCount}/${prevPlayerSnapshot}) + LAG`;
+                        }
+                        // P5: Veteran shock = SUSPECTED, nie TRUE. Wyłączone przy stale BM data.
+                        else if (!isBmStaleForHeuristics && droppedPlayersCount >= 4 && hasLagOrOfflineInRam && currentPlayers < prevPlayerSnapshot - 3) {
+                            let veteranCount = 0;
+                            leftPlayers.forEach(pName => {
+                                if (statsData[pName] && statsData[pName].totalTime > 90 * 60 * 1000) veteranCount++;
+                            });
+                            if (veteranCount >= 2) {
+                                restartSignalLevel = "SUSPECTED";
+                                heuristicReason = `VETERAN SHOCK (${veteranCount} ELITE) + LAG`;
+                            }
+                        }
+                        else if (isBmStaleForHeuristics && (droppedPlayersCount >= 4 || isCrash)) {
+                            if (advMode) {
+                                const bmAgeMin = Math.round(bmAgeMsForHeuristics / 60000);
+                                logEvent(`[WD] ${name} HEURISTIC WEAKENED: BM DATA STALE ${bmAgeMin}M`, "text-yellow-900", true);
+                            }
+                        }
+                    }
+                    // W cooldownie: log diagnostyczny tylko w advMode
+                    else if (isCrash || droppedPlayersCount > 5) {
+                        if (advMode) {
+                            const remainCd = Math.ceil((RESTART_DETECTION_COOLDOWN_MS - (Date.now() - lastRestartDetected[name])) / 60000);
+                            logEvent(`[WD] ${name} EVENT IGNORED - RESTART COOLDOWN (${remainCd}m left)`, "text-gray-500", true);
+                        }
+                    }
+
+                    if (!isConfirmedRestart && restartSignalLevel !== "NONE") {
+                        lastRestartDetected[name] = Date.now();
+                        const signalColor = restartSignalLevel === "PROBABLE" ? "text-orange-400 font-bold" : "text-yellow-500 font-bold";
+                        logEvent(`[TELEMETRY] ${name} ${restartSignalLevel} RESTART SIGNAL (${heuristicReason}). CLOCK NOT RESET.`, signalColor);
+                        pushToDMD(`[ ${restartSignalLevel} ] ${name}: ${heuristicReason}`, 1, restartSignalLevel === "PROBABLE" ? 'dmd-alarm-yellow' : 'dmd-alarm-yellow');
+                        if (state === 'ON' || (state === 'AUTO' && hasPassedQuarantine)) {
+                            addSystemAlert(`${restartSignalLevel}: ${name} RESTART SIGNAL (${heuristicReason})`);
+                            if (!isMuted) queueSound(SOUND_SQUAD, currentVolume * 0.15);
+                        }
+                    }
+
+                    if (isConfirmedRestart) {
+                        const restartDetectedAt = Date.now();
+                        const isSteamIdRotation = currentSteamId && heuristicReason.startsWith('STEAM ID ROTATION');
+                        const restartEventAt = isSteamIdRotation ? getRestartTimestampFromBm(name, attr, restartDetectedAt) : restartDetectedAt;
+                        const correctionSec = Math.max(0, Math.round((restartDetectedAt - restartEventAt) / 1000));
+
+                        // If Steam ID changed and BM already reports ONLINE, the process has already returned.
+                        // Do not force a fake BOOTING state that would shift the restart clock on the next sample.
+                        isBooting[name] = !(finalStatus === 'online' && isSteamIdRotation);
+                        lastRestartData[name] = restartEventAt;
+                        lastRestartDetected[name] = restartDetectedAt;  // cooldown for heuristic fallbacks only
+                        lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData)); recordRestartPattern(name);
+                        
+                        isApprox[name] = false;
+                        lsSet('jsoc_approx_state', JSON.stringify(isApprox));
+                        
+                        const correctionText = correctionSec >= 10 ? ` | BM TIME CORRECTION: -${correctionSec}s` : '';
+                        logEvent(`[TELEMETRY] ${name} TRUE RESTART DETECTED (${heuristicReason})${correctionText}.`, "text-red-500 font-bold");
+
+                        // Restart means the old roster is invalid. Clear this server immediately and
+                        // treat the current BM roster as stale for this cycle. Next poll will show
+                        // players as fresh joins after the restart instead of keeping ghosts online.
+                        forceEmptyRosterThisCycle = true;
+                        joinedPlayers = [];
+                        leftPlayers = [];
+                        isMassEvent = true;
+                        clearServerRosterAfterRestart(name);
+                        logEvent(`[ROSTER] ${name} CLEARED AFTER RESTART. AWAITING FRESH JOINS.`, "text-orange-400 font-bold");
+
+                        if (state === 'AUTO' && hasPassedQuarantine) {
+                            setWdState(name, 'ON');
+                            logEvent(`[ ! ] ${name} CYCLE SECURED // LOCK-ON [ ! ]`, "text-green-400 font-bold");
+                            pushToDMD(`[ ! ] ${name} CYCLE SECURED // LOCK-ON [ ! ]`, 2, 'dmd-alarm-green');
+                        } else if (state === 'AUTO' && !hasPassedQuarantine) {
+                            logEvent(`[SYS] ${name} RESTART DETECTED BUT QUARANTINE ACTIVE. AWAITING 12H DATA.`, "text-yellow-500");
+                        }
+
+                        if (state === 'ON' || (state === 'AUTO' && hasPassedQuarantine)) {
+                            addSystemAlert(`CRITICAL: ${name} RESTART (${heuristicReason})`);
+                            queueSound(SOUND_SQUAD, currentVolume * 0.3);
+                            if (audioUnlocked && voiceEnabled && !isMuted) { queueSpeech(`Critical alert. ${name.replace('EU1', 'EU One')} restart detected.`); }
+                            if (wdState[name] === 'ON') pushToDMD(`[ ! ] CRITICAL: ${name} RESTARTING [ ! ]`, 2, 'dmd-alarm-red');
+                        }
+                    } 
+                    else if (isUptimeReset && finalStatus === 'online') {
+                        logEvent(`[ANOMALY] ${name} SOFT RESTART DETECTED. IGNORING CYCLE RESET.`, "text-yellow-400 font-bold");
+                    } 
+                    // [POPRAWKA BOOT]: Usuwamy blokadę "currentUptime > 0". Ufamy samemu PINGOWI (lat > 0) i graczom.
+                    else if (finalStatus === 'online' && lat > 0) {
+                        if (isBooting[name]) {
+                            isBooting[name] = false;
+                            // Zabezpieczenie przed błędem z brakiem "time" z API Battlemetrics.
+                            if (currentUptime > 0) {
+                                let restartOffset = currentUptime * 1000;
+                                lastRestartData[name] = Date.now() - restartOffset;
+                                lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData));
+                            }
+                            
+                            addSystemAlert(`${name} SYSTEM ONLINE. CYCLE LOCKED.`); 
+                            if(audioUnlocked && voiceEnabled && !isMuted) { queueSpeech(`System online. ${name.replace('EU1', 'EU One')} cycle locked.`); }
+                            // Dodatkowo wymuszamy wyczyszczenie komunikatu o 15 minutach!
+                            clearStickyAlertForServer(name);
+                        }
+                    }
+                }
+                
+                prevUptime[name] = currentUptime;
+                // [v8] Zapamiętaj Steam ID jako string. Pierwszy odczyt = baseline, nie alarm.
+                if (currentSteamId) {
+                    if (prevSteamId[name] !== currentSteamId) {
+                        const wasEmpty = !prevSteamId[name];
+                        prevSteamId[name] = currentSteamId;
+                        lsSet('jsoc_steam_ids', JSON.stringify(prevSteamId));
+                        if (advMode) {
+                            const label = wasEmpty ? 'STEAM ID BASELINE' : 'STEAM ID UPDATED';
+                            logEvent(`[ADV] ${name} ${label}: ${currentSteamId}`, "text-gray-500", true);
+                        }
+                    }
+                } else if (advMode) {
+                    logEvent(`[ADV] ${name} STEAM ID MISSING IN BM RESPONSE`, "text-yellow-900", true);
+                }
+
+                const effectivePlayers = forceEmptyRosterThisCycle ? [] : players;
+                const effectiveCurrentPlayers = forceEmptyRosterThisCycle ? 0 : currentPlayers;
+
+                if (maxPlayers > 0 && effectiveCurrentPlayers >= maxPlayers) {
+                    if (!isServerFullAlerted[name]) {
+                        isServerFullAlerted[name] = true;
+                        logEvent(`[ALERT] ${name} IS FULL`, "text-yellow-400 font-bold");
+                        addSystemAlert(`${name} SERVER FULL`, `alert-full-${name}`);
+                        if (voiceEnabled) { queueSpeech(`Warning. ${name.replace('EU1', 'EU One')} is full.`); }
+                        else { queueSound(SOUND_SQUAD, currentVolume * 0.2); }
+                    }
+                } else if (effectiveCurrentPlayers < maxPlayers) {
+                    isServerFullAlerted[name] = false;
+                    const oldAlert = document.getElementById(`alert-full-${name}`);
+                    if (oldAlert) { oldAlert.remove(); }
+                }
+
+                if (isFirstLoad) { 
+                    effectivePlayers.forEach(pName => { 
+                        if (!playerSessions[pName]) playerSessions[pName] = Date.now(); 
+                        if (!statsData[pName]) {
+                            statsData[pName] = { sessionTime: 0, totalTime: 0, lastTick: Date.now() };
+                        } else {
+                            statsData[pName].lastTick = Date.now();
+                        }
+                    }); 
+                } 
+                else {
+                    joinedPlayers.forEach(pName => { 
+                        playerSessions[pName] = Date.now(); 
+                        if (!statsData[pName]) {
+                            statsData[pName] = { sessionTime: 0, totalTime: 0, lastTick: Date.now() };
+                        } else {
+                            statsData[pName].sessionTime = 0; 
+                            statsData[pName].lastTick = Date.now();
+                        }
+
+                        let squadDetails = getWatchedSquadDetails(pName); 
+                        
+                        if (!squadDetails && autoFavEnabled) {
+                            if (!ALL_SQUADS[8].includes(pName)) {
+                                ALL_SQUADS[8].push(pName);
+                                bumpSquads();
+                                squadDetails = { squadIdx: 8, squadName: "FAV", playerNumber: ALL_SQUADS[8].length };
+                            }
+                        }
+
+                        if (!isMassEvent) announceAction(squadDetails, name, true); 
+                        addPlayerAlert(pName, name, true, squadDetails); 
+                        logEvent(`${escapeHTML(pName)} JOINED ${name}`, squadDetails ? "text-red-500 font-bold" : "text-gray-400"); 
+
+                        const isClan = pName.includes('77th') || pName.toUpperCase().includes('JSOC');
+                        if (isClan && !isMassEvent) {
+                            setTimeout(() => {
+                                pushToDMD(`UPLINK_ESTABLISHED: OPR. ${escapeHTML(pName)} // WELCOME!`);
+                            }, 3000);
+                        }
+                    });
+                    
+                    effectivePlayers.forEach(pName => {
+                        if (statsData[pName]) {
+                            let now = Date.now();
+                            let delta = now - (statsData[pName].lastTick || now);
+                            statsData[pName].sessionTime += delta;
+                            statsData[pName].totalTime = (statsData[pName].totalTime || 0) + delta;
+                            statsData[pName].lastTick = now;
+                        }
+                    });
+
+                    leftPlayers.forEach(pName => { const squadDetails = getWatchedSquadDetails(pName); if (!isMassEvent) announceAction(squadDetails, name, false); let joinedAt = playerSessions[pName]; addPlayerAlert(pName, name, false, squadDetails, joinedAt); delete playerSessions[pName]; logEvent(`${escapeHTML(pName)} LEFT ${name}`, squadDetails ? "text-red-500 font-bold" : "text-gray-600"); });
+                    if (isMassEvent && (joinedPlayers.length > 0 || leftPlayers.length > 0) && !isMuted) {
+                        logEvent(`[SYS] MASS DATA SHIFT: ${joinedPlayers.length} IN, ${leftPlayers.length} OUT. AUDIO THROTTLED.`, "text-yellow-500 font-bold");
+                        queueSound(SOUND_SQUAD, currentVolume * 0.3);
+                    }
+                }
+                previous[name] = effectivePlayers; cache[name] = { status: finalStatus || 'offline', players: effectiveCurrentPlayers, maxPlayers: maxPlayers, details: attr.details || {}, list: effectivePlayers.map(n => ({name: n})), ping: lat };
+            } catch (err) {
+                const state = wdState[name]; updateMiniChart(name, 0, 0, state);
+                if (advMode && err.message !== "429") { logEvent(`[ADV] ${name} FETCH FAILED`, "text-red-900", true); }
+                if (!cache[name]) { cache[name] = { status: 'offline', players: 0, maxPlayers: 0, details: {}, list: [], ping: 0 }; } else { cache[name].status = 'offline'; cache[name].players = 0; cache[name].list = []; }
+            }
+        }
+
+        async function updateAll() {
+            if (updateAllInFlight) {
+                if (advMode) logEvent(`[ADV] SYNC REQUEST IGNORED: UPDATE ALREADY IN FLIGHT`, "text-gray-500", true);
+                return;
+            }
+            updateAllInFlight = true;
+            isFetching = true;
+
+            let currentHeat = updateApiHeatUI();
+            if (Date.now() < rateLimitCooldown) { isFetching = false; updateAllInFlight = false; return; }
+            if (currentHeat >= 50) {
+                logEvent(`[WD] API HEAT CRITICAL (${currentHeat}/60). THROTTLE ACTIVATED.`, "text-yellow-500 font-bold");
+                rateLimitCooldown = Date.now() + 15000;
+                isFetching = false; updateAllInFlight = false;
+                return;
+            }
+            
+            try {
+                ["EU1", "EU2", "EU3"].forEach(n => {
+                    if(!lastRestartData[n]) { lastRestartData[n] = Date.now(); lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData)); }
+                });
+
+                // PARALLEL FETCH (Promise.allSettled) - błąd jednego serwera nie wywala innych
+                const fetchResults = await Promise.allSettled([
+                    fetchServer("EU1", SERVERS.EU1),
+                    fetchServer("EU2", SERVERS.EU2),
+                    fetchServer("EU3", SERVERS.EU3)
+                ]);
+                fetchResults.forEach((r, i) => {
+                    if (r.status === 'rejected') {
+                        const sn = ["EU1","EU2","EU3"][i];
+                        if (advMode) logEvent(`[ADV] ${sn} PARALLEL FETCH REJECTED: ${r.reason?.message||r.reason}`, "text-red-900", true);
+                    }
+                });
+                
+                wdLogCounter++; if (wdLogCounter >= 12) { logEvent(`[WD] STATUS: STABLE / SYNC OK`, "text-cyan-400 opacity-80"); wdLogCounter = 0; }
+                
+                let totalPlayers = 0; let totalMax = 0;
+                ["EU1", "EU2", "EU3"].forEach(n => {
+                    const c = cache[n]; if (!c) return;
+                    totalPlayers += (c.players || 0); totalMax += (c.maxPlayers || 0);
+                    const perc = c.maxPlayers > 0 ? Math.round((c.players / c.maxPlayers) * 100) : 0;
+                    
+                    const isOnline = (c.status === 'online');
+                    const isBoot = isBooting[n];
+                    
+                    const percEl = document.getElementById(`perc${n}`);
+                    if(percEl) {
+                        if(isOnline || c.players > 0) { 
+                            percEl.innerText = `${perc}%`; 
+                            let pulseClass = n === 'EU1' ? 'perc-pulse-green' : (n === 'EU2' ? 'perc-pulse-orange' : 'perc-pulse-cyan'); 
+                            percEl.className = `${pulseClass} mt-1 mb-1 block`; 
+                        } else { 
+                            percEl.innerText = `---`; 
+                            percEl.className = `perc-offline mt-1 mb-1 block`; 
+                        }
+                    }
+                    const bar = document.getElementById(`bar${n}`); if(bar) { bar.className = "cap-bar-fill " + (perc >= 100 ? "bg-red-500" : perc >= 86 ? "bg-yellow-500" : "bg-green-500"); bar.style.width = `${perc}%`; }
+                    const fullText = document.getElementById(`full${n}`); if(fullText) { fullText.style.display = perc >= 100 && isOnline ? "block" : "none"; }
+                    const satStatus = document.getElementById(`satStatus${n}`);
+                    if(satStatus) {
+                        if (isOnline && !isBoot) { 
+                            satStatus.innerText = "ONLINE"; satStatus.className = "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-online"; 
+                        } 
+                        else if (isBoot) { 
+                            satStatus.innerText = "BOOTING"; satStatus.className = "text-[9px] mt-1 font-bold uppercase tracking-widest text-yellow-400 warning-pulse"; 
+                        } 
+                        else { 
+                            satStatus.innerText = "OFFLINE"; satStatus.className = "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline"; 
+                        }
+                    }
+                });
+                
+                document.getElementById("totalStat").innerText = totalPlayers;
+                const totalPercEl = document.getElementById(`percTOTAL`); if(totalPercEl) { totalPercEl.innerText = `${totalMax > 0 ? Math.round((totalPlayers / totalMax) * 100) : 0}%`; }
+                document.getElementById(`barTOTAL`).style.width = `${totalMax > 0 ? Math.round((totalPlayers / totalMax) * 100) : 0}%`;
+                
+                const timeLabel = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                historyData.push(totalPlayers); historyLabels.push(timeLabel); if (historyData.length > 60) { historyData.shift(); historyLabels.shift(); }
+                if(chart) { chart.update('none'); }
+
+                lsSet('jsoc_stats', JSON.stringify(statsData));
+            } catch (e) { console.error(e); }
+            finally {
+                isFirstLoad = false;
+                isFetching = false;
+                updateAllInFlight = false;
+            }
+        }
+
+        function renderUI() {
+            ["EU1", "EU2", "EU3"].forEach(name => {
+                const c = cache[name]; if (!c) return;
+                const sEl = document.getElementById(`status${name}`); const container = document.getElementById(`container${name}`); const alertsContainer = document.getElementById(`alerts${name}`); const isFull = c.players >= c.maxPlayers && c.maxPlayers > 0;
+                
+                if (c.status === 'online' || c.players > 0) {
+                    if (isBooting[name]) { sEl.innerText = "BOOTING"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold warning-pulse"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
+                    else if (c.players > 0 && c.details?.time === 0) { sEl.innerText = "INITIALIZING / LOBBY"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); } 
+                    else if (isFull) { sEl.innerText = "SERVER FULL"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full text-red-500 full-text-blink font-bold uppercase"; container.classList.remove('soc-border'); container.classList.add('soc-border-pulse'); } 
+                    else { sEl.innerText = "ONLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-green-500 text-right w-full uppercase text-green-500"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
+                } else { sEl.innerText = "OFFLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full uppercase opacity-50"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
+                
+                document.getElementById(`players${name}`).innerText = `${c.players || 0}/${c.maxPlayers || 0}`; document.getElementById(`map${name}`).innerText = c.details?.map || "-"; document.getElementById(`ping${name}`).innerText = `${c.ping || 0}ms`;
+                // Hash check: skip full DOM rebuild if player list unchanged
+                // FIX v2: dodajemy squadsVersion - reassign gracza zmienia jego kolor nawet bez zmiany rosteru
+                const listHash = (c.list || []).map(p => p.name).join('|') + '|' + currentSquadIdx + '|' + squadsVersion;
+                const listEl = document.getElementById(`list${name}`);
+                
+                if (listHash === lastRenderedHash[name]) {
+                    // Only update squad alert icons (lightweight)
+                    let presentSquads = new Set();
+                    c.list?.forEach(p => { const sd = getWatchedSquadDetails(p.name); if (sd) presentSquads.add(sd.squadIdx); });
+                    alertsContainer.innerHTML = "";
+                    Array.from(presentSquads).sort().forEach(idx => { const sqColor = SQUAD_COLORS[idx].text; const icon = document.createElement("div"); icon.className = "alert-icon"; icon.style.backgroundColor = sqColor; icon.style.boxShadow = `0 0 8px ${sqColor}`; icon.innerText = "!"; alertsContainer.appendChild(icon); });
+                    return;
+                }
+                lastRenderedHash[name] = listHash;
+                
+                alertsContainer.innerHTML = ""; let presentSquads = new Set(); listEl.innerHTML = "";
+                
+                c.list?.forEach((p, i) => {
+                    const squadDetails = getWatchedSquadDetails(p.name); const isClan = p.name.includes('77th') || p.name.toUpperCase().includes('JSOC');
+                    if (squadDetails) { presentSquads.add(squadDetails.squadIdx); }
+                    
+                    const row = document.createElement("div"); 
+                    let rClass = `player-row py-0.5 px-1 flex items-center transition-all`;
+                    
+                    let numClass = "w-5 text-right mr-2 opacity-50 text-[10px]";
+                    let numStyle = "";
+
+                    if (squadDetails) {
+                        const colors = SQUAD_COLORS[squadDetails.squadIdx]; 
+                        row.style.backgroundColor = colors.bg; 
+                        row.style.borderLeft = `2px solid ${colors.border}`; 
+                        row.style.color = colors.text; 
+                        row.style.fontWeight = 'bold';
+                        
+                        if (squadDetails.squadIdx === currentSquadIdx) { 
+                            numClass = "w-5 text-right mr-2 squad-number-glow text-[12px]";
+                            numStyle = `color: ${colors.text};`;
+                        } else if (isClan) { 
+                            rClass += " clan-member"; 
+                        }
+                    } else { 
+                        if (isClan) { rClass += " clan-member"; } else { rClass += " unassigned-player"; } 
+                    }
+                    
+                    row.className = rClass; 
+                    row.innerHTML = `<span class="${numClass}" style="${numStyle}">${i+1}.</span><span class="truncate">${escapeHTML(p.name)}</span>`; 
+                    row.ondblclick = () => addWatch(p.name);  // p.name is already a string, safe for function arg 
+                    listEl.appendChild(row);
+                });
+                
+                Array.from(presentSquads).sort().forEach(idx => { const sqColor = SQUAD_COLORS[idx].text; const icon = document.createElement("div"); icon.className = "alert-icon"; icon.style.backgroundColor = sqColor; icon.style.boxShadow = `0 0 8px ${sqColor}`; icon.innerText = "!"; alertsContainer.appendChild(icon); });
+            });
+            renderWatchList();
+        }
+        
+        function updateClock() { 
+            const now = new Date(); 
+            const dmdTime = document.getElementById('dmd-time'); if (dmdTime) dmdTime.innerText = now.toLocaleTimeString('en-US', { hour12: false }); 
+            const CYCLE = 8 * 60 * 60 * 1000; // UPDATED TO 8H
+            
+            ["EU1", "EU2", "EU3"].forEach(n => {
+                const els = [document.getElementById(`clock-${n}`), document.getElementById(`clock-${n}-side`)]; 
+                const etas = [document.getElementById(`eta-${n}`), document.getElementById(`eta-${n}-side`)]; 
+                const leds = [document.getElementById(`led-${n}`), document.getElementById(`led-${n}-side`)]; 
+                const titles = [document.getElementById(`title-${n}`), document.getElementById(`title-${n}-side`)]; 
+                const titleWrappers = [document.getElementById(`title-wrapper-${n}`), document.getElementById(`title-wrapper-${n}-side`)];
+                const vfdL1 = document.getElementById(`vfd-${n}-l1`); const vfdL2 = document.getElementById(`vfd-${n}-l2`);
+                const aprxEl = document.getElementById(`aprx-${n}`);
+                
+                const state = wdState[n]; const c = cache[n]; const activeClockColor = WD_COLORS[n]; const activeTitleColor = TITLE_COLORS[n];
+
+                // === WD-v2 HUD: health score + restart prediction (jako tooltip) ===
+                const _hp = computeHealthScore(n);
+                const _pred = predictNextRestartWindow(n);
+                const _predTxt = _pred ? `WD-v2 PREDICTION: ${_pred.map(p=>p.hour.toString().padStart(2,'0')+':00 ('+p.prob+'%)').join(' • ')}` : 'WD-v2: collecting restart pattern...';
+                if (vfdL1) vfdL1.title = `Health: ${_hp}/100 | ${_predTxt}`;
+                etas.forEach(t => { if (t) t.title = _predTxt; });
+
+                if (aprxEl) {
+                    // APRX blinks only when the operator toggles the watchdog clock to its secondary view.
+                    // Manual override still uses isApprox internally, but it no longer forces the badge on during normal uptime display.
+                    if (clockMode[n] === 'restartTime') {
+                        aprxEl.classList.remove('hidden');
+                        aprxEl.title = isApprox[n] ? 'Approx/manual restart-time view active' : 'Secondary restart-time view active';
+                    } else {
+                        aprxEl.classList.add('hidden');
+                    }
+                }
+
+                let isCalibrating = (state === 'AUTO' && calibrationData[n] > Date.now());
+
+                if (state === 'OFF') {
+                    leds.forEach(l => { if(l) { l.className = "led-indicator led-off-pulse " + (l.id.includes('side') ? "w-3 h-3 md:w-4 md:h-4 mr-2 border-2" : ""); } });
+                    els.forEach(e => { if(e) { e.className = "text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap"; e.innerText = "--:--:--"; } });
+                    etas.forEach(t=>{if(t) { t.className = "text-[9px] font-bold tracking-widest mt-1 text-red-500/30 uppercase whitespace-nowrap"; t.innerText = `STANDBY`; }});
+                    titles.forEach(t=>{if(t) { t.innerText = `${n} UPTIME`; }}); titleWrappers.forEach(tw=>{if(tw) { tw.className = "text-xs uppercase flex items-center mb-1 font-bold tracking-widest drop-shadow-md text-gray-600 whitespace-nowrap"; }});
+                    if(vfdL1 && vfdL2) { vfdL1.innerText = "SYS:"; vfdL1.className = "vfd-text whitespace-nowrap vfd-standby"; vfdL2.innerText = "STNDBY"; vfdL2.className = "vfd-text whitespace-nowrap vfd-standby"; }
+                    return;
+                }
+
+                if (isBooting[n]) { 
+                    leds.forEach(l => { if(l) { l.className = "led-indicator led-red-blink " + (l.id.includes('side') ? "w-3 h-3 md:w-4 md:h-4 mr-2 border-2" : ""); } }); 
+                    els.forEach(e => { if(e) { e.className = `text-3xl md:text-4xl font-black clock-wait tracking-widest ${activeClockColor} whitespace-nowrap`; e.innerText = "BOOTING"; } }); 
+                    etas.forEach(t=>{if(t) { t.className = "text-[9px] font-bold tracking-widest mt-1 text-red-400 uppercase whitespace-nowrap"; t.innerText = `AWAITING...`; }}); 
+                    if(vfdL1 && vfdL2) { vfdL1.innerText = "SYS:"; vfdL1.className = "vfd-text whitespace-nowrap vfd-alert"; vfdL2.innerText = "BOOT.."; vfdL2.className = "vfd-text whitespace-nowrap vfd-alert"; }
+                    
+                    // [POPRAWKA]: Zdejmij wiszące czerwone pudło od razu po wejściu w BOOTING
+                    if (alert15Triggers[n]) { clearStickyAlertForServer(n); alert15Triggers[n] = false; }
+                    
+                    return; 
+                }
+                
+                const latStr = (c && c.ping !== undefined) ? c.ping.toString().padStart(3, '0') : "000"; const oprStr = (c && c.players !== undefined) ? c.players.toString().padStart(2, '0') : "00";
+
+                if (state === 'AUTO') {
+                    leds.forEach(l => { if(l) l.className = "led-indicator led-yellow-pulse " + (l.id.includes('side') ? "w-3 h-3 md:w-4 md:h-4 mr-2 border-2" : ""); }); 
+                    titles.forEach(t=>{if(t) { t.innerText = `${n} TELEMETRY`; }}); titleWrappers.forEach(tw=>{if(tw) { tw.className = `text-xs uppercase flex items-center mb-1 font-bold tracking-widest drop-shadow-md ${activeTitleColor} whitespace-nowrap`; }});
+                    if(vfdL1 && vfdL2) { vfdL1.innerText = `LAT:${latStr}`; vfdL1.className = "vfd-text whitespace-nowrap vfd-ping-auto"; vfdL2.innerText = `OPR:${oprStr}`; vfdL2.className = "vfd-text whitespace-nowrap vfd-opr"; }
+                    
+                    els.forEach(e => { if(e) { e.innerText = "ANALYSIS"; e.className = "text-analysis"; }});
+                    etas.forEach(t=>{if(t) { t.className = "text-[9px] font-bold tracking-widest mt-1 text-yellow-500 uppercase warning-pulse whitespace-nowrap"; t.innerText = `[ GATHERING INTEL ]`; }});
+                    return; 
+                } else {
+                    leds.forEach(l => { if(l) l.className = "led-indicator led-green-pulse " + (l.id.includes('side') ? "w-3 h-3 md:w-4 md:h-4 mr-2 border-2" : ""); }); 
+                    titles.forEach(t=>{if(t) { t.innerText = `${n} UPTIME`; }}); titleWrappers.forEach(tw=>{if(tw) { tw.className = `text-xs uppercase flex items-center mb-1 font-bold tracking-widest drop-shadow-md ${activeTitleColor} whitespace-nowrap`; }});
+                    if(vfdL1 && vfdL2) { vfdL1.innerText = `LAT:${latStr}`; vfdL1.className = "vfd-text whitespace-nowrap vfd-ping"; vfdL2.innerText = `OPR:${oprStr}`; vfdL2.className = "vfd-text whitespace-nowrap vfd-opr"; }
+                    els.forEach(e => { if(e) { e.className = `text-3xl md:text-4xl font-black tracking-widest ${activeClockColor} whitespace-nowrap cursor-pointer hover:text-white transition-colors`; } }); 
+                }
+
+                
+                // [v5] ZEGAR LICZY W GÓRĘ od ostatniego wykrytego restartu (TIME-SINCE-RESTART)
+                let elapsed = Date.now() - lastRestartData[n];
+                if (elapsed < 0) elapsed = 0;
+                let lastDate = new Date(lastRestartData[n]);
+
+                // Bez ostrzeżeń 15-min: brak cyklicznego cyklu, restarty są ad-hoc
+                if (alert15Triggers[n]) { clearStickyAlertForServer(n); alert15Triggers[n] = false; }
+
+                const h = Math.floor(elapsed / 3600000);
+                const m = Math.floor((elapsed % 3600000) / 60000);
+                const s = Math.floor((elapsed % 60000) / 1000);
+
+                // [v6] Zegar zawsze pokazuje TIME-SINCE-RESTART (elapsed hh:mm:ss)
+                const elapsedStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                const lastStr = lastDate.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                const displayStr = clockMode[n] === 'restartTime' ? `RST ${lastStr}` : elapsedStr;
+                els.forEach(e => { if(e) { e.innerText = displayStr; e.title = `Last restart: ${lastDate.toLocaleString('en-GB', { hour12: false })}\n${_predTxt}\nClick: elapsed/restart-time view. Double-click: manual override.`; } });
+                etas.forEach(t=>{if(t) {
+                    t.className = clockMode[n] === 'restartTime'
+                        ? "text-[9px] font-black tracking-widest mt-1 uppercase text-yellow-400 warning-pulse whitespace-nowrap"
+                        : "text-[9px] opacity-60 font-bold tracking-widest mt-1 uppercase text-white whitespace-nowrap";
+                    t.innerText = clockMode[n] === 'restartTime' ? `APRX VIEW // ELAPSED ${elapsedStr}` : `SINCE LAST RESTART @ ${lastStr}`;
+                }});
+            });
+        }
+
+        function switchSquad(idx) { 
+            currentSquadIdx = idx; localStorage.setItem('jsoc_sq_idx', idx); 
+            document.querySelectorAll('.squad-btn').forEach((b, i) => {
+                const btnIdx = i + 1; const colors = SQUAD_COLORS[btnIdx];
+                if (btnIdx === idx) { b.classList.add('active'); b.style.backgroundColor = colors.text; b.style.color = '#0b0f14'; b.style.borderColor = colors.text; b.style.boxShadow = `0 0 15px ${colors.text}80`; } 
+                else { b.classList.remove('active'); b.style.backgroundColor = 'transparent'; b.style.color = colors.text; b.style.borderColor = `${colors.text}60`; b.style.boxShadow = 'none'; }
+            }); renderWatchList(); renderUI(); 
+        }
+        
+        function renderWatchList() { 
+            const rawList = ALL_SQUADS[currentSquadIdx] || []; 
+            let displayList = [...rawList];
+
+            if (sortMode === 'A-Z') {
+                displayList.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+            } else if (sortMode === 'ONLINE') {
+                let onlineMap = {};
+                displayList.forEach(n => {
+                    onlineMap[n.toLowerCase()] = ['EU1', 'EU2', 'EU3'].some(s => cache[s] && cache[s].list && cache[s].list.some(p => p.name.toLowerCase() === n.toLowerCase()));
+                });
+                displayList.sort((a, b) => {
+                    let aOnline = onlineMap[a.toLowerCase()];
+                    let bOnline = onlineMap[b.toLowerCase()];
+                    if (aOnline === bOnline) return a.toLowerCase().localeCompare(b.toLowerCase());
+                    return aOnline ? -1 : 1;
+                });
+            }
+
+            const div = document.getElementById("watchList");
+            if (!div) return;
+            const max = currentSquadIdx === 8 ? 210 : 11;
+            const colors = SQUAD_COLORS[currentSquadIdx];
+            const onlineFlags = displayList.map(n => ['EU1', 'EU2', 'EU3'].some(s => cache[s] && cache[s].list && cache[s].list.some(p => p.name.toLowerCase() === n.toLowerCase())) ? '1' : '0').join('');
+            const statMinuteBucket = showStats ? Math.floor(Date.now() / 60000) : 0;
+            const watchHash = `${currentSquadIdx}|${sortMode}|${showStats?'1':'0'}|${squadsVersion}|${displayList.join('|')}|${onlineFlags}|${statMinuteBucket}`;
+            const counterEl = document.getElementById("squadCounter");
+            if (counterEl) counterEl.innerText = `${rawList.length}/${max}`;
+            if (watchHash === lastWatchListHash) return;
+            lastWatchListHash = watchHash;
+
+            const scrollPos = div.scrollTop;
+            div.innerHTML = "";
+            
+            displayList.forEach((n, i) => { 
+                let isOnline = false; ['EU1', 'EU2', 'EU3'].forEach(server => { if (cache[server] && cache[server].list && cache[server].list.some(p => p.name.toLowerCase() === n.toLowerCase())) { isOnline = true; } });
+                const arrowStr = isOnline ? "◄◄" : "►►"; const arrowColor = isOnline ? "text-green-500" : "text-red-500"; const statusLabel = isOnline ? "ONLINE" : "OFFLINE"; let sessionTimeStr = "";
+                
+                const numClass = isOnline ? "squad-number-glow text-[1.15rem]" : "opacity-50 text-sm font-normal";
+                const item = document.createElement("div"); 
+
+                if (showStats) {
+                    item.className = "player-row p-2 font-bold tracking-wide border-l-2 transition-colors relative"; 
+                    item.style.backgroundColor = "rgba(255,255,255,0.02)"; item.style.borderColor = isOnline ? colors.border : '#555';
+                    
+                    const sessionTime = statsData[n]?.sessionTime || 0;
+                    const totalTime = statsData[n]?.totalTime || sessionTime; 
+                    
+                    const perc = Math.min(100, (sessionTime / (8 * 3600000)) * 100); // UPDATED TO 8H
+                    
+                    item.innerHTML = `<div class="stats-bar-fill" style="width: ${perc}%; background: ${isOnline ? colors.bg : 'rgba(255,255,255,0.05)'};"></div>`;
+                    
+                    const sH = Math.floor(sessionTime / 3600000); const sM = Math.floor((sessionTime % 3600000) / 60000);
+                    const tH = Math.floor(totalTime / 3600000); const tM = Math.floor((totalTime % 3600000) / 60000);
+                    
+                    item.innerHTML += `
+                        <div class="relative z-10 flex items-center flex-1 min-w-0">
+                            <span class="${numClass} mr-2 w-6 text-right shrink-0" style="color: ${colors.text}">${i + 1}.</span>
+                            <span class="${isOnline?'text-white':'text-gray-400'} text-sm md:text-base font-black tracking-wider truncate flex-1">${escapeHTML(n)}</span>
+                        </div>
+                        <div class="relative z-10 flex items-center shrink-0 ml-1">
+                            <div class="flex flex-col items-end mr-1">
+                                <span class="text-white font-black text-sm md:text-base tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] leading-none mb-1" title="Session Time">S: ${String(sH).padStart(2, '0')}h ${String(sM).padStart(2, '0')}m</span>
+                                <span class="text-yellow-500 font-bold text-[10px] tracking-widest leading-none" title="Total Time">T: ${String(tH).padStart(2, '0')}h ${String(tM).padStart(2, '0')}m</span>
+                            </div>
+                            <span class="cursor-pointer hover:text-red-500 px-2 text-lg ml-1" style="color: ${colors.text}" onclick="removeWatch(${escapeAttr(JSON.stringify(n))})">✖</span>
+                        </div>
+                    `;
+                } else {
+                    if (isOnline && playerSessions[n]) { let sessionMin = Math.floor((Date.now() - playerSessions[n]) / 60000); sessionTimeStr = `<span class="opacity-50 text-[9px] ml-1 tracking-widest shrink-0">[${sessionMin}m]</span>`; }
+                    item.className = `flex justify-between items-center p-2 rounded font-bold tracking-wide border-l-2 transition-colors ${isOnline?'':'opacity-70'}`; 
+                    item.style.backgroundColor = isOnline ? colors.bg : 'rgba(0,0,0,0.4)'; item.style.borderColor = isOnline ? colors.border : '#555';
+                    
+                    item.innerHTML = `<div class="flex items-center flex-1 min-w-0"><span class="${numClass} mr-2 w-6 text-right shrink-0" style="color: ${colors.text}">${i + 1}.</span><span class="${isOnline?'text-white':'text-gray-300'} text-sm md:text-base font-black tracking-wider truncate flex-1">${escapeHTML(n)}</span>${sessionTimeStr}</div><div class="flex items-center shrink-0 ml-1"><span class="${arrowColor} font-black text-sm mr-2 tracking-[-0.15em] drop-shadow-md" title="${statusLabel}">${arrowStr}</span><span class="cursor-pointer hover:text-red-500 px-2 text-lg" style="color: ${colors.text}" onclick="removeWatch(${escapeAttr(JSON.stringify(n))})">✖</span></div>`; 
+                }
+
+                div.appendChild(item); 
+            }); 
+            document.getElementById("squadCounter").innerText = `${rawList.length}/${max}`; div.scrollTop = scrollPos;
+        }
+        
+        function showInputError(input, placeholder, classes, sound = true) {
+            input.value = "";
+            const ogPlaceholder = input.placeholder;
+            input.placeholder = placeholder;
+            input.classList.remove("border-green-900");
+            input.classList.add(...classes);
+            if (sound) queueSound(SOUND_SQUAD, currentVolume * 0.2);
+            setTimeout(() => {
+                input.placeholder = ogPlaceholder;
+                input.classList.remove(...classes);
+                input.classList.add("border-green-900");
+            }, 2000);
+        }
+
+        function addWatch(val) { 
+            const input = document.getElementById("watchInput");
+            const nick = (val || input.value).trim();
+            const max = currentSquadIdx === 8 ? 210 : 11;
+            if (!nick) return;
+
+            let existingSquad = null;
+            for (let i = 1; i <= 8; i++) {
+                if ((ALL_SQUADS[i] || []).some(w => w.toLowerCase() === nick.toLowerCase())) {
+                    existingSquad = SQUAD_NAMES[i];
+                    break;
+                }
+            }
+
+            if (existingSquad) {
+                showInputError(input, `IN ${existingSquad}!`, ["border-yellow-500", "placeholder-yellow-500"]);
+                logEvent(`ADD FAILED: ALREADY IN ${existingSquad}`, "text-yellow-500");
+                return;
+            }
+
+            if (ALL_SQUADS[currentSquadIdx].length >= max) {
+                showInputError(input, "ROSTER AT MAX CAPACITY!", ["border-red-500", "placeholder-red-500"]);
+                logEvent("SQUAD ADD FAILED: CAPACITY REACHED", "text-red-500");
+                return;
+            }
+
+            ALL_SQUADS[currentSquadIdx].push(nick);
+            bumpSquads();
+            input.value = "";
+            renderWatchList();
+            renderUI();
+        }
+
+        function removeWatch(n) {
+            let changed = false;
+            for (let i = 1; i <= 8; i++) {
+                const before = ALL_SQUADS[i].length;
+                ALL_SQUADS[i] = ALL_SQUADS[i].filter(x => x !== n);
+                if (ALL_SQUADS[i].length !== before) changed = true;
+            }
+            if (changed) bumpSquads();
+            renderWatchList();
+            renderUI();
+        }
+
+        function clearAllWatch() {
+            if (ALL_SQUADS[currentSquadIdx].length > 0) {
+                ALL_SQUADS[currentSquadIdx] = [];
+                bumpSquads();
+            }
+            renderWatchList();
+            renderUI();
+        }
+
+        function addAllToWatchCurrent() {
+            const activePlayers = [];
+            ['EU1', 'EU2', 'EU3'].forEach(server => {
+                if (cache[server] && cache[server].list) {
+                    cache[server].list.forEach(p => {
+                        if (!activePlayers.some(n => n.toLowerCase() === p.name.toLowerCase())) activePlayers.push(p.name);
+                    });
+                }
+            });
+
+            const max = currentSquadIdx === 8 ? 210 : 11;
+            let addedCount = 0;
+
+            for (const nick of activePlayers) {
+                if (isInAnySquad(nick)) continue;
+                if (ALL_SQUADS[currentSquadIdx].length >= max) {
+                    logEvent(`SQUAD FULL: ADDED ${addedCount} PLAYERS`, "text-yellow-400");
+                    break;
+                }
+                ALL_SQUADS[currentSquadIdx].push(nick);
+                addedCount++;
+            }
+
+            if (addedCount > 0) {
+                bumpSquads();
+                renderWatchList();
+                renderUI();
+                logEvent(`SYNCED ${addedCount} ACTIVE UNASSIGNED PLAYERS TO SQUAD`, "text-green-400");
+            } else {
+                logEvent("SYNC FAILED: NO UNASSIGNED ACTIVE PLAYERS OR SQUAD FULL", "text-gray-500");
+            }
+        }
+        
+        function setVolume(v) { currentVolume = v; localStorage.setItem('jsoc_volume', v); updateVolumeUI(); queueSound(SOUND_SQUAD, currentVolume * 0.15); }
+        function updateVolumeUI() { document.querySelectorAll('.vol-level').forEach(el => { const val = parseFloat(el.dataset.vol); el.style.background = val <= currentVolume ? "#00ff9c" : "rgba(0, 255, 156, 0.1)"; el.style.boxShadow = val <= currentVolume ? "0 0 8px #00ff9c" : "none"; }); }
+        function toggleMute() { isMuted = !isMuted; localStorage.setItem('jsoc_muted', isMuted); updateMuteUI(); if (isMuted) { audioQueue = []; isPlayingQueue = false; if (currentAudioObj) { currentAudioObj.pause(); currentAudioObj = null; } if (window.speechSynthesis) { window.speechSynthesis.cancel(); } } }
+        function updateMuteUI() { document.getElementById('muteIcon').innerHTML = isMuted ? '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.41.32-.85.59-1.32.76v2.06c1.02-.21 1.97-.64 2.8-1.25L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>' : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77z"/>'; }
+        function clearAllAlerts() { document.getElementById("alertBox").innerHTML = ""; }
+        function toggleHelp() { const m = document.getElementById('helpModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
+        
+        let chart;
+        function initChart() {
+            const ctx = document.getElementById('popChart').getContext('2d');
+            chart = new Chart(ctx, { 
+                type: 'line', 
+                data: { labels: historyLabels, datasets: [{ data: historyData, borderColor: '#00ff9c', backgroundColor: 'rgba(0, 255, 156, 0.05)', fill: true, tension: 0.4, pointRadius: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#004400' }, ticks: { color: '#00ff9c', font: { size: 9 } } }, y: { beginAtZero: true, grid: { color: '#004400' }, ticks: { color: '#00ff9c', font: { size: 10 } } } } } 
+            });
+            const resizeObserver = new ResizeObserver(() => { chart.resize(); });
+            if (document.getElementById('chartParent')) { resizeObserver.observe(document.getElementById('chartParent')); }
+
+            ["EU1", "EU2", "EU3"].forEach(n => {
+                const mctx = document.getElementById(`miniChart-${n}`);
+                if (mctx) {
+                    miniCharts[n] = new Chart(mctx.getContext('2d'), {
+                        type: 'line',
+                        data: { labels: Array(30).fill(''), datasets: [ { data: pingHistory[n], borderColor: '#00ff9c', borderWidth: 2, pointRadius: 0, tension: 0.3, yAxisID: 'y' }, { data: playerHistory[n], borderColor: '#eab308', backgroundColor: 'rgba(234, 179, 8, 0.2)', borderWidth: 1, fill: true, pointRadius: 0, tension: 0.3, yAxisID: 'y1' } ] },
+                        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 10, bottom: 5 } }, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false, min: 0, suggestedMax: 100 }, y1: { display: false, min: 0, suggestedMax: 80 } } }
+                    });
+                }
+            });
+        }
+
+        (async function init() {
+            switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setRadarMode(radarMode);
+            initVoice();
+            
+            const btnSort = document.getElementById('btnSortToggle');
+            if(btnSort) { btnSort.innerText = `SORT: ${sortMode}`; if(sortMode !== 'ADDED') btnSort.classList.add('active'); else btnSort.classList.remove('active'); }
+            
+            const btnBackup = document.getElementById('btnAutoBackup');
+            if(btnBackup) {
+                btnBackup.innerText = `AUTO-BACKUP: ${autoBackupEnabled ? 'ON' : 'OFF'}`;
+                if (autoBackupEnabled) btnBackup.classList.add("active");
+            }
+            
+            worker.postMessage('start');
+            
+            // FIX v2: let zamiast implicit global (był wyciek do window.isUpdatingAll)
+            let isUpdatingAll = true;
+            updateAll().finally(() => { isUpdatingAll = false; });
+
+            addSystemAlert("VOICE COMMS STANDBY. CLICK [INIT COMM] TO ACTIVATE.", "alert-startup-voice"); 
+            logEvent("VOICE ENGINE DISABLED. AWAITING MANUAL OVERRIDE.", "text-cyan-400 font-bold"); 
+            logEvent(`[WD] STM PRO KERNEL V6.0 ACTIVE (SILENT HUNTER PROTOCOL)`, "text-cyan-400 font-bold");
+            logEvent(`[SYS] 12H QUARANTINE ENGAGED. AWAITING LOCK-ON.`, "text-yellow-500 font-bold");
+        })();
+    </script>
+</body>
+</html>
