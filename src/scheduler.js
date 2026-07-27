@@ -1,8 +1,25 @@
 class Scheduler {
 
     constructor(intervalMs, task) {
+
+        if (
+            !Number.isInteger(intervalMs) ||
+            intervalMs < 1
+        ) {
+            throw new Error(
+                "Scheduler interval must be a positive integer"
+            );
+        }
+
+        if (typeof task !== "function") {
+            throw new Error(
+                "Scheduler task must be a function"
+            );
+        }
+
         this.intervalMs = intervalMs;
         this.task = task;
+
         this.running = false;
         this.timer = null;
     }
@@ -24,8 +41,6 @@ class Scheduler {
             return;
         }
 
-        const startedAt = Date.now();
-
         try {
 
             await this.task();
@@ -35,23 +50,17 @@ class Scheduler {
             console.error(
                 `[SCHEDULER ERROR] ${error.message}`
             );
-
         }
 
         if (!this.running) {
             return;
         }
 
-        const elapsed = Date.now() - startedAt;
-
-        const delay = Math.max(
-            0,
-            this.intervalMs - elapsed
-        );
-
         this.timer = setTimeout(
-            () => this.runCycle(),
-            delay
+            () => {
+                void this.runCycle();
+            },
+            this.intervalMs
         );
     }
 
