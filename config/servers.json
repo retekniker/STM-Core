@@ -6,8 +6,21 @@
       "host": "213.239.205.71",
       "port": 2302,
       "type": "arma3"
+    },
+    {
+      "id": "EU2",
+      "name": "77th JSOC EU2",
+      "host": "94.130.23.36",
+      "port": 2302,
+      "type": "arma3"
+    },
+    {
+      "id": "EU3",
+      "name": "77th JSOC EU3",
+      "host": "195.201.245.156",
+      "port": 2302,
+      "type": "arma3"
     }
   ],
-
   "pollInterval": 5000
 }
