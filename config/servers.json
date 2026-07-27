@@ -1,0 +1,13 @@
+{
+  "servers": [
+    {
+      "id": "EU1",
+      "name": "77th JSOC EU1",
+      "host": "213.239.205.71",
+      "port": 2302,
+      "type": "arma3"
+    }
+  ],
+
+  "pollInterval": 5000
+}
