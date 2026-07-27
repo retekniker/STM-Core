@@ -1588,37 +1588,103 @@
             const start = performance.now();
             try {
                 recordApiCall();
-                const res = await abortableFetch(name, `https://api.battlemetrics.com/servers/${id}?include=player`, 8000);
-                const lat = Math.round(performance.now() - start);
-                
-                // WD-v2: ping baseline + spike detection
-                if (res.ok) { updatePingBaseline(name, lat); detectPingSpike(name, lat); }
-                
-                if (res.status === 429) { 
-                    rateLimitCooldown = Date.now() + 60000; 
-                    logEvent(`[WD] API LIMIT: 60S COOLDOWN`, "text-red-500 font-bold"); 
-                    pushToDMD(`[ ! ] API CONNECTION SEVERED: 429 TOO MANY REQUESTS [ ! ]`, 2, 'dmd-alarm-red');
-                    throw new Error("429"); 
+
+                const res = await abortableFetch(
+                    name,
+                    `/api/v1/community/servers/${encodeURIComponent(name)}`,
+                    8000
+                );
+
+                const httpLatency =
+                    Math.round(performance.now() - start);
+
+                if (!res.ok) {
+                    throw new Error(
+                        `STM CORE HTTP ${res.status}`
+                    );
                 }
 
-                const rawText = await res.text();
-                let json;
-                try {
-                    json = JSON.parse(rawText);
-                } catch (e) {
-                    logEvent(`[WD] ${name} BAD JSON FROM BATTLEMETRICS`, "text-red-500 font-bold");
-                    throw e;
+                const json = await res.json();
+                const core =
+                    json && json.server
+                        ? json.server
+                        : null;
+
+                if (!core) {
+                    throw new Error(
+                        "STM CORE INVALID RESPONSE"
+                    );
                 }
 
-                const attr = json.data ? json.data.attributes : {};
-                checkBattlemetricsFreshness(name, attr);
+                const corePing = Number(core.ping);
 
-                const players = (json.included || []).filter(x => x.type === "player").map(p => p.attributes.name);
-                const currentPlayers = attr.players || 0;
-                const maxPlayers = attr.maxPlayers || 0;
-                const currentUptime = getDetailsUptime(attr);
-                // [v8] 100% signal: Steam server ID rotation. Extracted as string from raw JSON to avoid 64-bit rounding.
-                const currentSteamId = getCurrentSteamId(rawText, attr);
+                const lat = Number.isFinite(corePing)
+                    ? Math.round(corePing)
+                    : httpLatency;
+
+                if (core.querySuccess) {
+                    updatePingBaseline(name, lat);
+                    detectPingSpike(name, lat);
+                }
+
+                const coreStatus =
+                    String(core.status || "")
+                        .toUpperCase();
+
+                const mappedStatus =
+                    coreStatus === "ONLINE"
+                        ? "online"
+                        : coreStatus === "DEGRADED"
+                            ? "degraded"
+                            : "offline";
+
+                const players =
+                    Array.isArray(core.playerList)
+                        ? core.playerList
+                            .map(player =>
+                                String(
+                                    player.name || ""
+                                ).trim()
+                            )
+                            .filter(Boolean)
+                        : [];
+
+                const reportedPlayers =
+                    Number(core.players);
+
+                const currentPlayers =
+                    Number.isFinite(reportedPlayers)
+                        ? reportedPlayers
+                        : players.length;
+
+                const reportedMaxPlayers =
+                    Number(core.maxPlayers);
+
+                const maxPlayers =
+                    Number.isFinite(reportedMaxPlayers)
+                        ? reportedMaxPlayers
+                        : 0;
+
+                const currentUptime = 0;
+
+                const currentSteamId =
+                    normalizeSteamId(core.steamId);
+
+                const attr = {
+                    status: mappedStatus,
+                    players: currentPlayers,
+                    maxPlayers,
+                    updatedAt:
+                        core.timestamp ||
+                        json.timestamp ||
+                        new Date().toISOString(),
+                    details: {
+                        map: core.map || "-",
+                        time: currentUptime,
+                        serverSteamId:
+                            currentSteamId
+                    }
+                };
                 
                 if (!lastRestartData[name]) {
                     lastRestartData[name] = currentUptime > 0 ? Date.now() - (currentUptime * 1000) : Date.now();
@@ -2007,7 +2073,7 @@
                 
                 if (c.status === 'online' || c.players > 0) {
                     if (isBooting[name]) { sEl.innerText = "BOOTING"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold warning-pulse"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
-                    else if (c.players > 0 && c.details?.time === 0) { sEl.innerText = "INITIALIZING / LOBBY"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); } 
+                    else if (c.status === 'degraded') { sEl.innerText = "DEGRADED"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
                     else if (isFull) { sEl.innerText = "SERVER FULL"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full text-red-500 full-text-blink font-bold uppercase"; container.classList.remove('soc-border'); container.classList.add('soc-border-pulse'); } 
                     else { sEl.innerText = "ONLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-green-500 text-right w-full uppercase text-green-500"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
                 } else { sEl.innerText = "OFFLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full uppercase opacity-50"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
