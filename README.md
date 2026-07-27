@@ -2,7 +2,7 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboards.
 
-Current release: **v0.8.1**
+Current release: **v0.8.2**
 
 ## Features
 
