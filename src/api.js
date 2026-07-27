@@ -5,18 +5,20 @@ class ApiServer {
     constructor(options = {}) {
 
         if (!options.stateEngine) {
-            throw new Error("ApiServer requires StateEngine");
+            throw new Error(
+                "ApiServer requires StateEngine"
+            );
         }
 
         this.stateEngine = options.stateEngine;
-        this.database = options.database || null;
+        this.historyRepository =
+            options.historyRepository || null;
 
         this.host = options.host || "0.0.0.0";
         this.port = options.port || 3000;
 
         this.app = express();
         this.server = null;
-
         this.startedAt = new Date();
 
         this.configureMiddleware();
@@ -54,13 +56,32 @@ class ApiServer {
         });
     }
 
+    requireHistoryRepository(
+        request,
+        response,
+        next
+    ) {
+
+        if (!this.historyRepository) {
+
+            response.status(503).json({
+                success: false,
+                error: "HISTORY_NOT_AVAILABLE"
+            });
+
+            return;
+        }
+
+        next();
+    }
+
     configureRoutes() {
 
         this.app.get("/", (request, response) => {
 
             response.json({
                 service: "STM Core API",
-                version: "0.4.0",
+                version: "0.6.0",
                 status: "running"
             });
         });
@@ -72,12 +93,14 @@ class ApiServer {
                 response.json({
                     success: true,
                     service: "STM Core API",
-                    version: "0.4.0",
+                    version: "0.6.0",
                     uptimeSeconds: Math.floor(
                         process.uptime()
                     ),
-                    startedAt: this.startedAt.toISOString(),
-                    timestamp: new Date().toISOString()
+                    startedAt:
+                        this.startedAt.toISOString(),
+                    timestamp:
+                        new Date().toISOString()
                 });
             }
         );
@@ -86,14 +109,123 @@ class ApiServer {
             "/api/v1/community/servers",
             (request, response) => {
 
-                const servers = this.stateEngine.getAll();
+                const servers =
+                    this.stateEngine.getAll();
 
                 response.json({
                     success: true,
                     count: servers.length,
-                    timestamp: new Date().toISOString(),
+                    timestamp:
+                        new Date().toISOString(),
                     servers
                 });
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/events",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+
+                try {
+
+                    const events =
+                        await this.historyRepository
+                            .getEvents({
+                                serverId:
+                                    request.query.serverId,
+                                type:
+                                    request.query.type,
+                                player:
+                                    request.query.player,
+                                before:
+                                    request.query.before,
+                                limit:
+                                    request.query.limit
+                            });
+
+                    response.json({
+                        success: true,
+                        count: events.length,
+                        timestamp:
+                            new Date().toISOString(),
+                        events
+                    });
+
+                } catch (error) {
+                    next(error);
+                }
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/servers/:serverId/history",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+
+                try {
+
+                    const snapshots =
+                        await this.historyRepository
+                            .getServerSnapshots({
+                                serverId:
+                                    request.params.serverId,
+                                before:
+                                    request.query.before,
+                                limit:
+                                    request.query.limit
+                            });
+
+                    response.json({
+                        success: true,
+                        serverId:
+                            request.params.serverId,
+                        count: snapshots.length,
+                        timestamp:
+                            new Date().toISOString(),
+                        snapshots
+                    });
+
+                } catch (error) {
+                    next(error);
+                }
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/players/:playerName/history",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+
+                try {
+
+                    const history =
+                        await this.historyRepository
+                            .getPlayerHistory(
+                                request.params.playerName,
+                                {
+                                    serverId:
+                                        request.query.serverId,
+                                    before:
+                                        request.query.before,
+                                    limit:
+                                        request.query.limit
+                                }
+                            );
+
+                    response.json({
+                        success: true,
+                        playerName:
+                            request.params.playerName,
+                        count: history.length,
+                        timestamp:
+                            new Date().toISOString(),
+                        history
+                    });
+
+                } catch (error) {
+                    next(error);
+                }
             }
         );
 
@@ -101,11 +233,10 @@ class ApiServer {
             "/api/v1/community/servers/:serverId",
             (request, response) => {
 
-                const serverId =
-                    request.params.serverId;
-
                 const server =
-                    this.stateEngine.get(serverId);
+                    this.stateEngine.get(
+                        request.params.serverId
+                    );
 
                 if (!server) {
 
@@ -113,7 +244,8 @@ class ApiServer {
                         success: false,
                         error: "SERVER_NOT_FOUND",
                         message:
-                            `Server ${serverId} has no recorded state`
+                            `Server ${request.params.serverId} ` +
+                            "has no recorded state"
                     });
 
                     return;
@@ -121,7 +253,8 @@ class ApiServer {
 
                 response.json({
                     success: true,
-                    timestamp: new Date().toISOString(),
+                    timestamp:
+                        new Date().toISOString(),
                     server
                 });
             }
@@ -134,10 +267,13 @@ class ApiServer {
                 response.json({
                     success: true,
                     mode: "admin",
-                    authentication: "not-configured",
+                    authentication:
+                        "not-configured",
                     message:
-                        "Admin API placeholder. Authentication will be added later.",
-                    timestamp: new Date().toISOString()
+                        "Admin API placeholder. " +
+                        "Authentication will be added later.",
+                    timestamp:
+                        new Date().toISOString()
                 });
             }
         );
@@ -158,7 +294,8 @@ class ApiServer {
             (error, request, response, next) => {
 
                 console.error(
-                    `[API ERROR] ${error.stack || error.message}`
+                    `[API ERROR] ` +
+                    `${error.stack || error.message}`
                 );
 
                 if (response.headersSent) {
@@ -177,7 +314,10 @@ class ApiServer {
     start() {
 
         if (this.server) {
-            return Promise.resolve();
+            return Promise.resolve({
+                host: this.host,
+                port: this.port
+            });
         }
 
         return new Promise((resolve, reject) => {
