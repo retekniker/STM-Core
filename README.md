@@ -14,15 +14,25 @@ Current release: **v0.8.2**
 - Secured administrator dashboard
 - REST API and WebSocket support
 
+## Quick installation
+
+Install STM Core with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash
+```
+
+Then open **STM Core** from the application menu.
+
 ## Requirements
 
-- Linux
-- Node.js 20.17.0 or newer
+- Linux with a systemd user session
+- Node.js 18 or newer
 - npm
 - Git
-- OpenSSL
+- curl
 
-## Installation
+## Manual installation
 
 ```bash
 git clone https://github.com/retekniker/STM-Core.git
