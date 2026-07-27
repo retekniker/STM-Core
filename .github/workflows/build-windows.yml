@@ -3,6 +3,8 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "feature/windows-installer"
     tags:
       - "v*"
 
