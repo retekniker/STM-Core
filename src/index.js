@@ -3,6 +3,7 @@ const path = require("path");
 
 const QueryEngine = require("./queryEngine");
 const EventEngine = require("./eventEngine");
+const ReliabilityEngine = require("./reliabilityEngine");
 const StateEngine = require("./stateEngine");
 const Scheduler = require("./scheduler");
 const Database = require("./database");
@@ -20,6 +21,7 @@ const config = JSON.parse(
 
 const queryEngine = new QueryEngine();
 const eventEngine = new EventEngine();
+const reliabilityEngine = new ReliabilityEngine(3);
 const stateEngine = new StateEngine();
 const database = new Database();
 
@@ -78,6 +80,30 @@ function printEvent(serverId, event) {
             );
             break;
 
+        case "SERVER_DEGRADED":
+            console.log(
+                `${prefix} [DEGRADED] ${event.message}`
+            );
+            break;
+
+        case "SERVER_OFFLINE":
+            console.log(
+                `${prefix} [OFFLINE] ${event.message}`
+            );
+            break;
+
+        case "SERVER_RECOVERED":
+            console.log(
+                `${prefix} [RECOVERED] ${event.message}`
+            );
+            break;
+
+        case "SERVER_ONLINE":
+            console.log(
+                `${prefix} [ONLINE] ${event.message}`
+            );
+            break;
+
         default:
             console.log(
                 `${prefix} [EVENT]`,
@@ -86,65 +112,95 @@ function printEvent(serverId, event) {
     }
 }
 
+async function saveEvent(serverId, timestamp, event) {
+    printEvent(serverId, event);
+
+    webSocketHub.broadcastEvent(
+        serverId,
+        event,
+        timestamp
+    );
+
+    try {
+        await database.saveEvent(
+            serverId,
+            event,
+            timestamp
+        );
+    } catch (error) {
+        console.error(
+            `[${getTime()}] [${serverId}] ` +
+            `[DATABASE ERROR] Event: ${error.message}`
+        );
+    }
+}
+
 async function pollServers() {
-    const results = await Promise.all(
+    const queryResults = await Promise.all(
         config.servers.map(server =>
             queryEngine.query(server)
         )
     );
 
-    for (const result of results) {
-        stateEngine.update(result);
+    for (const queryResult of queryResults) {
+        const reliabilityResult =
+            reliabilityEngine.process(queryResult);
 
-        webSocketHub.broadcastServerState(result);
+        const state = reliabilityResult.state;
+
+        stateEngine.update(state);
+        webSocketHub.broadcastServerState(state);
 
         try {
-            await database.saveSnapshot(result);
+            await database.saveSnapshot(state);
         } catch (error) {
             console.error(
-                `[${getTime()}] [${result.id}] ` +
+                `[${getTime()}] [${state.id}] ` +
                 `[DATABASE ERROR] Snapshot: ${error.message}`
             );
         }
 
-        if (!result.success) {
+        if (state.status === "ONLINE") {
             console.log(
-                `[${getTime()}] [${result.id}] ` +
-                `OFFLINE | ${result.error}`
+                `[${getTime()}] [${state.id}] ONLINE | ` +
+                `${state.players}/${state.maxPlayers} players | ` +
+                `${state.map} | ${state.ping} ms`
             );
+        } else if (state.status === "DEGRADED") {
+            console.log(
+                `[${getTime()}] [${state.id}] DEGRADED | ` +
+                `failed queries: ${state.consecutiveFailures}/3 | ` +
+                `${state.lastError}`
+            );
+        } else {
+            console.log(
+                `[${getTime()}] [${state.id}] OFFLINE | ` +
+                `failed queries: ${state.consecutiveFailures} | ` +
+                `${state.lastError}`
+            );
+        }
 
+        for (const event of reliabilityResult.events) {
+            await saveEvent(
+                state.id,
+                state.timestamp,
+                event
+            );
+        }
+
+        if (!queryResult.success) {
             continue;
         }
 
-        console.log(
-            `[${getTime()}] [${result.id}] ONLINE | ` +
-            `${result.players}/${result.maxPlayers} players | ` +
-            `${result.map} | ${result.ping} ms`
-        );
+        const serverEvents =
+            eventEngine.process(queryResult);
 
-        const events = eventEngine.process(result);
-
-        for (const event of events) {
-            printEvent(result.id, event);
-
-            webSocketHub.broadcastEvent(
-                result.id,
-                event,
-                result.timestamp
+        for (const event of serverEvents) {
+            await saveEvent(
+                state.id,
+                state.timestamp,
+                event
             );
-
-            try {
-                await database.saveEvent(
-                    result.id,
-                    event,
-                    result.timestamp
-                );
-            } catch (error) {
-                console.error(
-                    `[${getTime()}] [${result.id}] ` +
-                    `[DATABASE ERROR] Event: ${error.message}`
-                );
-            }
         }
     }
 }
@@ -216,9 +272,10 @@ async function start() {
     webSocketHub.start(apiServer.server);
 
     console.log("==========================================");
-    console.log("        STM CORE v0.5");
+    console.log("        STM CORE v0.5.1");
     console.log("==========================================");
     console.log(`Polling interval: ${config.pollInterval} ms`);
+    console.log("Offline threshold: 3 failed queries");
     console.log("SQLite database: database/stm.db");
     console.log(
         `REST API: http://${apiInfo.host}:${apiInfo.port}`

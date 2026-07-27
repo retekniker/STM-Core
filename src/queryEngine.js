@@ -14,6 +14,17 @@ class QueryEngine {
                 maxAttempts: 2
             });
 
+            const playerList = (state.players || [])
+                .map(player => ({
+                    name:
+                        typeof player.name === "string"
+                            ? player.name.trim()
+                            : "",
+                    score: player.raw?.score ?? 0,
+                    time: player.raw?.time ?? 0
+                }))
+                .filter(player => player.name.length > 0);
+
             return {
                 success: true,
                 timestamp: new Date().toISOString(),
@@ -31,20 +42,16 @@ class QueryEngine {
                 steamId: state.raw?.steamid || null,
                 queryPort: state.queryPort,
 
-                playerList: state.players.map(player => ({
-                    name: player.name,
-                    score: player.raw?.score ?? 0,
-                    time: player.raw?.time ?? 0
-                }))
+                playerList
             };
 
-        } catch (err) {
+        } catch (error) {
 
             return {
                 success: false,
                 timestamp: new Date().toISOString(),
                 id: server.id,
-                error: err.message
+                error: error.message
             };
 
         }
