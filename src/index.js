@@ -5,6 +5,7 @@ const QueryEngine = require("./queryEngine");
 const EventEngine = require("./eventEngine");
 const StateEngine = require("./stateEngine");
 const Scheduler = require("./scheduler");
+const Database = require("./database");
 
 const configPath = path.join(
     __dirname,
@@ -18,62 +19,46 @@ const config = JSON.parse(
 const queryEngine = new QueryEngine();
 const eventEngine = new EventEngine();
 const stateEngine = new StateEngine();
+const database = new Database();
+
+let shuttingDown = false;
 
 function getTime() {
-    return new Date().toLocaleTimeString(
-        "pl-PL",
-        {
-            hour12: false
-        }
-    );
+    return new Date().toLocaleTimeString("pl-PL", {
+        hour12: false
+    });
 }
 
 function printEvent(serverId, event) {
-
     const prefix = `[${getTime()}] [${serverId}]`;
 
     switch (event.type) {
-
         case "FIRST_SCAN":
-            console.log(
-                `${prefix} [INIT] Initial state recorded`
-            );
+            console.log(`${prefix} [INIT] Initial state recorded`);
             break;
 
         case "PLAYER_JOIN":
-            console.log(
-                `${prefix} [+] ${event.player} joined`
-            );
+            console.log(`${prefix} [+] ${event.player} joined`);
             break;
 
         case "PLAYER_LEFT":
-            console.log(
-                `${prefix} [-] ${event.player} left`
-            );
+            console.log(`${prefix} [-] ${event.player} left`);
             break;
 
         case "PLAYER_COUNT_CHANGED":
-            console.log(
-                `${prefix} [COUNT] ${event.message}`
-            );
+            console.log(`${prefix} [COUNT] ${event.message}`);
             break;
 
         case "MAP_CHANGED":
-            console.log(
-                `${prefix} [MAP] ${event.message}`
-            );
+            console.log(`${prefix} [MAP] ${event.message}`);
             break;
 
         default:
-            console.log(
-                `${prefix} [EVENT]`,
-                event
-            );
+            console.log(`${prefix} [EVENT]`, event);
     }
 }
 
 async function pollServers() {
-
     const results = await Promise.all(
         config.servers.map(server =>
             queryEngine.query(server)
@@ -81,13 +66,21 @@ async function pollServers() {
     );
 
     for (const result of results) {
-
         stateEngine.update(result);
 
-        if (!result.success) {
+        try {
+            await database.saveSnapshot(result);
+        } catch (error) {
+            console.error(
+                `[${getTime()}] [${result.id}] ` +
+                `[DATABASE ERROR] Snapshot: ${error.message}`
+            );
+        }
 
+        if (!result.success) {
             console.log(
-                `[${getTime()}] [${result.id}] OFFLINE | ${result.error}`
+                `[${getTime()}] [${result.id}] ` +
+                `OFFLINE | ${result.error}`
             );
 
             continue;
@@ -103,6 +96,19 @@ async function pollServers() {
 
         for (const event of events) {
             printEvent(result.id, event);
+
+            try {
+                await database.saveEvent(
+                    result.id,
+                    event,
+                    result.timestamp
+                );
+            } catch (error) {
+                console.error(
+                    `[${getTime()}] [${result.id}] ` +
+                    `[DATABASE ERROR] Event: ${error.message}`
+                );
+            }
         }
     }
 }
@@ -112,7 +118,12 @@ const scheduler = new Scheduler(
     pollServers
 );
 
-function shutdown(signal) {
+async function shutdown(signal) {
+    if (shuttingDown) {
+        return;
+    }
+
+    shuttingDown = true;
 
     console.log("");
     console.log(
@@ -120,24 +131,41 @@ function shutdown(signal) {
     );
 
     scheduler.stop();
+
+    try {
+        await database.close();
+        console.log("[STM] Database closed");
+    } catch (error) {
+        console.error(
+            `[STM] Database close error: ${error.message}`
+        );
+    }
+
     process.exit(0);
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
-console.log("==========================================");
-console.log("        STM CORE v0.2");
-console.log("==========================================");
-console.log(`Polling interval: ${config.pollInterval} ms`);
-console.log("Press Ctrl+C to stop");
-console.log("");
+async function start() {
+    await database.init();
 
-scheduler.start().catch(error => {
+    console.log("==========================================");
+    console.log("        STM CORE v0.3");
+    console.log("==========================================");
+    console.log(`Polling interval: ${config.pollInterval} ms`);
+    console.log("SQLite database: database/stm.db");
+    console.log("Press Ctrl+C to stop");
+    console.log("");
 
+    await scheduler.start();
+}
+
+start().catch(async error => {
     console.error(
         `[STM STARTUP ERROR] ${error.message}`
     );
 
+    await database.close().catch(() => {});
     process.exit(1);
 });
