@@ -1,0 +1,122 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feature/windows-installer"
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Download STM Core
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.17.0"
+          cache: npm
+
+      - name: Install Windows dependencies
+        shell: pwsh
+        run: npm ci --omit=dev
+
+      - name: Check PowerShell launcher
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+
+          [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path "windows/stm-core.ps1"),
+              [ref]$tokens,
+              [ref]$errors
+          ) | Out-Null
+
+          if ($errors.Count -gt 0) {
+              $errors | Format-List
+              exit 1
+          }
+
+      - name: Prepare Windows package
+        shell: pwsh
+        run: |
+          $dist = "windows/dist/STM-Core"
+
+          Remove-Item "windows/dist" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "windows/output" -Recurse -Force -ErrorAction SilentlyContinue
+
+          New-Item -ItemType Directory -Force -Path `
+              $dist, `
+              "$dist/windows", `
+              "$dist/runtime" | Out-Null
+
+          Copy-Item "src" "$dist/src" -Recurse
+          Copy-Item "dashboard" "$dist/dashboard" -Recurse
+          Copy-Item "config" "$dist/config" -Recurse
+          Copy-Item "node_modules" "$dist/node_modules" -Recurse
+
+          Copy-Item "package.json" "$dist/package.json"
+          Copy-Item "package-lock.json" "$dist/package-lock.json"
+          Copy-Item "README.md" "$dist/README.md"
+          Copy-Item "windows/stm-core.ps1" "$dist/windows/stm-core.ps1"
+
+          Copy-Item (Get-Command node).Source "$dist/runtime/node.exe"
+
+          & "$dist/runtime/node.exe" --version
+          & "$dist/runtime/node.exe" --check "$dist/src/index.js"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = (Get-Content "package.json" | ConvertFrom-Json).version
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+
+          if (-not (Test-Path $compiler)) {
+              $compiler = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          }
+
+          if (-not (Test-Path $compiler)) {
+              throw "Nie znaleziono kompilatora Inno Setup."
+          }
+
+          & $compiler "/DMyAppVersion=$version" "windows\STM-Core.iss"
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: STM-Core-Windows-Installer
+          path: windows/output/*.exe
+          if-no-files-found: error
+
+      - name: Attach installer to release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $installer = Get-ChildItem "windows/output/*.exe" |
+              Select-Object -First 1
+
+          gh release view $tag 2>$null
+
+          if ($LASTEXITCODE -ne 0) {
+              gh release create $tag `
+                  --title "STM Core $tag" `
+                  --generate-notes
+          }
+
+          gh release upload $tag $installer.FullName --clobber

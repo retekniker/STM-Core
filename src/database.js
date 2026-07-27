@@ -6,7 +6,7 @@ class Database {
 
     constructor(databasePath = null) {
 
-        this.databasePath = databasePath || path.join(
+        this.databasePath = databasePath || process.env.STM_DATABASE_PATH || path.join(
             __dirname,
             "../database/stm.db"
         );

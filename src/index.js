@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: process.env.STM_ENV_PATH || undefined });
 
 const fs = require("fs");
 const path = require("path");
@@ -13,7 +13,7 @@ const ApiServer = require("./api");
 const WebSocketHub = require("./websocket");
 const HistoryRepository = require("./historyRepository");
 
-const configPath = path.join(
+const configPath = process.env.STM_CONFIG_PATH || path.join(
     __dirname,
     "../config/servers.json"
 );
@@ -32,8 +32,8 @@ const historyRepository = new HistoryRepository(database);
 const apiServer = new ApiServer({
     stateEngine,
     historyRepository,
-    host: "0.0.0.0",
-    port: 3000
+    host: process.env.STM_HOST || "0.0.0.0",
+    port: Number(process.env.STM_PORT || 3000)
 });
 
 const webSocketHub = new WebSocketHub({
