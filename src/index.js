@@ -2,75 +2,142 @@ const fs = require("fs");
 const path = require("path");
 
 const QueryEngine = require("./queryEngine");
+const EventEngine = require("./eventEngine");
+const StateEngine = require("./stateEngine");
+const Scheduler = require("./scheduler");
 
-async function main() {
+const configPath = path.join(
+    __dirname,
+    "../config/servers.json"
+);
 
-    console.clear();
+const config = JSON.parse(
+    fs.readFileSync(configPath, "utf8")
+);
 
-    console.log("==========================================");
-    console.log("        STM CORE v0.1");
-    console.log("==========================================");
-    console.log("");
+const queryEngine = new QueryEngine();
+const eventEngine = new EventEngine();
+const stateEngine = new StateEngine();
 
-    const configPath = path.join(__dirname, "../config/servers.json");
+function getTime() {
+    return new Date().toLocaleTimeString(
+        "pl-PL",
+        {
+            hour12: false
+        }
+    );
+}
 
-    const config = JSON.parse(
-        fs.readFileSync(configPath, "utf8")
+function printEvent(serverId, event) {
+
+    const prefix = `[${getTime()}] [${serverId}]`;
+
+    switch (event.type) {
+
+        case "FIRST_SCAN":
+            console.log(
+                `${prefix} [INIT] Initial state recorded`
+            );
+            break;
+
+        case "PLAYER_JOIN":
+            console.log(
+                `${prefix} [+] ${event.player} joined`
+            );
+            break;
+
+        case "PLAYER_LEFT":
+            console.log(
+                `${prefix} [-] ${event.player} left`
+            );
+            break;
+
+        case "PLAYER_COUNT_CHANGED":
+            console.log(
+                `${prefix} [COUNT] ${event.message}`
+            );
+            break;
+
+        case "MAP_CHANGED":
+            console.log(
+                `${prefix} [MAP] ${event.message}`
+            );
+            break;
+
+        default:
+            console.log(
+                `${prefix} [EVENT]`,
+                event
+            );
+    }
+}
+
+async function pollServers() {
+
+    const results = await Promise.all(
+        config.servers.map(server =>
+            queryEngine.query(server)
+        )
     );
 
-    const engine = new QueryEngine();
+    for (const result of results) {
 
-    for (const server of config.servers) {
-
-        console.log("------------------------------------------");
-        console.log(`Checking ${server.id}`);
-        console.log("------------------------------------------");
-
-        const result = await engine.query(server);
+        stateEngine.update(result);
 
         if (!result.success) {
 
-            console.log("STATUS : OFFLINE");
-            console.log(result.error);
-            console.log("");
+            console.log(
+                `[${getTime()}] [${result.id}] OFFLINE | ${result.error}`
+            );
 
             continue;
-
         }
 
-        console.log("STATUS      : ONLINE");
-        console.log("SERVER      :", result.name);
-        console.log("MAP         :", result.map);
-        console.log("VERSION     :", result.version);
-        console.log("PLAYERS     :", `${result.players}/${result.maxPlayers}`);
-        console.log("PING        :", result.ping + " ms");
-        console.log("STEAM ID    :", result.steamId);
-        console.log("QUERY PORT  :", result.queryPort);
+        console.log(
+            `[${getTime()}] [${result.id}] ONLINE | ` +
+            `${result.players}/${result.maxPlayers} players | ` +
+            `${result.map} | ${result.ping} ms`
+        );
 
-        console.log("");
-        console.log("PLAYERS");
-        console.log("------------------------------------------");
+        const events = eventEngine.process(result);
 
-        if (result.playerList.length === 0) {
-
-            console.log("No players");
-
-        } else {
-
-            result.playerList.forEach((player, index) => {
-
-                console.log(
-                    `${index + 1}. ${player.name} | Score: ${player.score} | Time: ${Math.floor(player.time)} sec`
-                );
-
-            });
-
+        for (const event of events) {
+            printEvent(result.id, event);
         }
-
-        console.log("");
-
     }
-
 }
 
-main();
+const scheduler = new Scheduler(
+    config.pollInterval,
+    pollServers
+);
+
+function shutdown(signal) {
+
+    console.log("");
+    console.log(
+        `[STM] Received ${signal}. Stopping scheduler...`
+    );
+
+    scheduler.stop();
+    process.exit(0);
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+console.log("==========================================");
+console.log("        STM CORE v0.2");
+console.log("==========================================");
+console.log(`Polling interval: ${config.pollInterval} ms`);
+console.log("Press Ctrl+C to stop");
+console.log("");
+
+scheduler.start().catch(error => {
+
+    console.error(
+        `[STM STARTUP ERROR] ${error.message}`
+    );
+
+    process.exit(1);
+});
