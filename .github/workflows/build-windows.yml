@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - "feature/windows-installer"
+      - "feature/windows-tray"
     tags:
       - "v*"
 
