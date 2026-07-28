@@ -27,6 +27,10 @@ class RestartTracker {
         offlineSince = null
     ) {
         const data = restartEvent?.data || {};
+        const restartTimeUnknown =
+            data.timeKnown === false ||
+            data.classification ===
+                "PROCESS_RESTART_IN_OBSERVATION_GAP";
 
         const snapshotSucceeded =
             snapshot?.success === true ||
@@ -66,9 +70,11 @@ class RestartTracker {
             candidate: null,
 
             lastRestartAt:
-                data.restartAt ||
-                restartEvent?.timestamp ||
-                null,
+                restartTimeUnknown
+                    ? null
+                    : data.restartAt ||
+                        restartEvent?.timestamp ||
+                        null,
 
             lastRestartDetectedAt:
                 data.detectedAt ||

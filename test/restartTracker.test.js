@@ -363,3 +363,27 @@ test("Steam ID change across a long observation gap has no exact restart time", 
     );
     assert.equal(result.state.lastRestartAt, null);
 });
+
+test("hydration never invents restart time for an observation-gap event", () => {
+    const tracker = new RestartTracker();
+
+    tracker.hydrate("EU3", {
+        timestamp: "2026-07-28T00:22:10.049Z",
+        data: {
+            classification:
+                "PROCESS_RESTART_IN_OBSERVATION_GAP",
+            confidence: "CONFIRMED",
+            timeKnown: false,
+            restartAt: null,
+            detectedAt: "2026-07-28T00:22:10.049Z"
+        }
+    });
+
+    const state = tracker.getRecord("EU3");
+
+    assert.equal(state.lastRestartAt, null);
+    assert.equal(
+        state.lastRestartDetectedAt,
+        "2026-07-28T00:22:10.049Z"
+    );
+});
