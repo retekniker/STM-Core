@@ -149,6 +149,16 @@ class HistoryRepository {
             parameters.push(options.before);
         }
 
+        if (
+            options.success === true ||
+            options.success === false
+        ) {
+            conditions.push("success = ?");
+            parameters.push(
+                options.success ? 1 : 0
+            );
+        }
+
         const whereClause =
             conditions.length > 0
                 ? `WHERE ${conditions.join(" AND ")}`
@@ -271,6 +281,16 @@ class HistoryRepository {
     async getLatestServerSnapshot(serverId) {
         const snapshots = await this.getServerSnapshots({
             serverId,
+            limit: 1
+        });
+
+        return snapshots[0] || null;
+    }
+
+    async getLatestSuccessfulServerSnapshot(serverId) {
+        const snapshots = await this.getServerSnapshots({
+            serverId,
+            success: true,
             limit: 1
         });
 

@@ -2,57 +2,259 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const RestartTracker = require("../src/restartTracker");
 
-test("Steam ID rotation without confirmed offline state does not create a restart", () => {
+function processSample(tracker, {
+    serverId = "EU1",
+    timestamp,
+    success = true,
+    steamId = null,
+    players = 0,
+    playerList = [],
+    reliabilityEvents = []
+}) {
+    return tracker.process({
+        state: {
+            id: serverId,
+            timestamp,
+            players
+        },
+        queryResult: {
+            success,
+            steamId,
+            players,
+            playerList
+        },
+        reliabilityEvents
+    });
+}
+
+test("first changed Steam ID creates a candidate but not a restart", () => {
     const tracker = new RestartTracker();
 
-    tracker.process({
-        state: {
-            id: "EU1",
-            timestamp: "2026-07-28T03:20:00.000Z"
-        },
-        queryResult: {
-            success: true,
-            steamId: "111"
-        },
-        reliabilityEvents: []
+    processSample(tracker, {
+        timestamp: "2026-07-28T03:20:00.000Z",
+        steamId: "111",
+        players: 11
     });
 
-    const result = tracker.process({
-        state: {
-            id: "EU1",
-            timestamp: "2026-07-28T03:22:05.916Z"
-        },
-        queryResult: {
-            success: true,
-            steamId: "222"
-        },
-        reliabilityEvents: [
-            {
-                type: "SERVER_RECOVERED",
-                message: "Server query recovered"
-            }
-        ]
+    const result = processSample(tracker, {
+        timestamp: "2026-07-28T03:22:05.000Z",
+        steamId: "222",
+        players: 0
     });
 
-    assert.equal(
-        result.events.some(event => event.type === "SERVER_RESTART"),
-        false
-    );
-
+    assert.equal(result.events.length, 0);
+    assert.equal(result.state.restartDetectionStatus, "VERIFYING");
+    assert.equal(result.state.restartCandidateSteamId, "222");
     assert.equal(result.state.lastRestartAt, null);
 });
 
-test("Confirmed offline-to-online cycle creates exactly one restart", () => {
+test("second consecutive reading of changed Steam ID confirms a process restart", () => {
     const tracker = new RestartTracker();
 
-    tracker.process({
-        state: {
-            id: "EU1",
-            timestamp: "2026-07-28T04:00:00.000Z"
-        },
-        queryResult: {
-            success: false
-        },
+    processSample(tracker, {
+        timestamp: "2026-07-28T03:20:00.000Z",
+        steamId: "111",
+        players: 11
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T03:22:05.000Z",
+        steamId: "222",
+        players: 0
+    });
+
+    const result = processSample(tracker, {
+        timestamp: "2026-07-28T03:22:10.000Z",
+        steamId: "222",
+        players: 0
+    });
+
+    assert.equal(result.events.length, 1);
+
+    const event = result.events[0];
+
+    assert.equal(event.type, "SERVER_RESTART");
+    assert.equal(event.classification, "PROCESS_RESTART");
+    assert.equal(event.confidence, "CONFIRMED");
+    assert.equal(event.reason, "STEAM_ID_ROTATION");
+    assert.equal(event.previousSteamId, "111");
+    assert.equal(event.currentSteamId, "222");
+    assert.equal(event.restartAt, "2026-07-28T03:22:05.000Z");
+    assert.equal(event.detectedAt, "2026-07-28T03:22:10.000Z");
+    assert.equal(event.evidence.steamIdRotation.present, true);
+    assert.equal(event.evidence.steamIdRotation.consecutiveReadings, 2);
+    assert.equal(result.state.lastRestartAt, event.restartAt);
+});
+
+test("one failed query plus stable Steam ID rotation confirms a fast restart", () => {
+    const tracker = new RestartTracker();
+
+    processSample(tracker, {
+        timestamp: "2026-07-27T19:21:11.000Z",
+        steamId: "AAA",
+        players: 58
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-27T19:21:32.000Z",
+        success: false
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-27T19:21:42.000Z",
+        steamId: "BBB",
+        players: 0
+    });
+
+    const result = processSample(tracker, {
+        timestamp: "2026-07-27T19:21:47.000Z",
+        steamId: "BBB",
+        players: 0
+    });
+
+    const event = result.events[0];
+
+    assert.equal(event.classification, "PROCESS_RESTART");
+    assert.equal(event.confidence, "CONFIRMED");
+    assert.equal(event.restartAt, "2026-07-27T19:21:42.000Z");
+    assert.equal(event.evidence.queryInterruption.present, true);
+    assert.equal(event.evidence.queryInterruption.failedQueries, 1);
+    assert.equal(event.evidence.rosterReset.present, true);
+    assert.equal(event.evidence.rosterReset.before, 58);
+    assert.equal(event.evidence.rosterReset.after, 0);
+});
+
+test("player connection-time reset is recorded as restart evidence", () => {
+    const tracker = new RestartTracker();
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T03:21:20.000Z",
+        steamId: "OLD",
+        players: 2,
+        playerList: [
+            { name: "kranky", time: 1550 },
+            { name: "Nahku", time: 4305 }
+        ]
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T03:22:16.000Z",
+        steamId: "NEW",
+        players: 1,
+        playerList: [
+            { name: "kranky", time: 5 }
+        ]
+    });
+
+    const result = processSample(tracker, {
+        timestamp: "2026-07-28T03:22:21.000Z",
+        steamId: "NEW",
+        players: 2,
+        playerList: [
+            { name: "kranky", time: 10 },
+            { name: "Nahku", time: 7 }
+        ]
+    });
+
+    const evidence =
+        result.events[0].evidence.playerSessionReset;
+
+    assert.equal(evidence.present, true);
+    assert.deepEqual(
+        evidence.players.sort(),
+        ["Nahku", "kranky"]
+    );
+});
+
+test("transitional Steam ID is ignored and only the stable replacement is confirmed", () => {
+    const tracker = new RestartTracker();
+
+    processSample(tracker, {
+        timestamp: "2026-07-27T17:43:37.000Z",
+        steamId: "OLD",
+        players: 9
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-27T17:43:57.000Z",
+        success: false
+    });
+
+    const transitional = processSample(tracker, {
+        timestamp: "2026-07-27T17:44:07.000Z",
+        steamId: "90071992547409920",
+        players: 0
+    });
+
+    assert.equal(transitional.events.length, 0);
+    assert.equal(
+        transitional.state.restartDetectionStatus,
+        "VERIFYING"
+    );
+
+    const candidate = processSample(tracker, {
+        timestamp: "2026-07-27T17:44:12.000Z",
+        steamId: "NEW",
+        players: 0
+    });
+
+    assert.equal(candidate.events.length, 0);
+    assert.equal(candidate.state.restartCandidateSteamId, "NEW");
+
+    const confirmed = processSample(tracker, {
+        timestamp: "2026-07-27T17:44:18.000Z",
+        steamId: "NEW",
+        players: 0
+    });
+
+    const event = confirmed.events[0];
+
+    assert.equal(event.previousSteamId, "OLD");
+    assert.equal(event.currentSteamId, "NEW");
+    assert.equal(event.restartAt, "2026-07-27T17:44:07.000Z");
+    assert.equal(event.recoveredAt, "2026-07-27T17:44:07.000Z");
+    assert.equal(event.stableSteamIdAt, "2026-07-27T17:44:12.000Z");
+    assert.deepEqual(event.rejectedSteamIds, [
+        "90071992547409920"
+    ]);
+});
+
+test("candidate returning to the previous Steam ID is rejected", () => {
+    const tracker = new RestartTracker();
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T05:00:00.000Z",
+        steamId: "111"
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T05:00:05.000Z",
+        steamId: "222"
+    });
+
+    const result = processSample(tracker, {
+        timestamp: "2026-07-28T05:00:10.000Z",
+        steamId: "111"
+    });
+
+    assert.equal(result.events.length, 0);
+    assert.equal(result.state.restartDetectionStatus, "ONLINE");
+    assert.equal(result.state.restartCandidateSteamId, null);
+    assert.equal(result.state.lastRestartAt, null);
+});
+
+test("offline-to-online recovery with unchanged Steam ID is not a process restart", () => {
+    const tracker = new RestartTracker();
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T06:00:00.000Z",
+        steamId: "SAME",
+        players: 4
+    });
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T06:01:00.000Z",
+        success: false,
         reliabilityEvents: [
             {
                 type: "SERVER_OFFLINE",
@@ -61,31 +263,63 @@ test("Confirmed offline-to-online cycle creates exactly one restart", () => {
         ]
     });
 
-    const result = tracker.process({
-        state: {
-            id: "EU1",
-            timestamp: "2026-07-28T04:01:00.000Z"
-        },
-        queryResult: {
-            success: true,
-            steamId: "333"
-        },
+    const result = processSample(tracker, {
+        timestamp: "2026-07-28T06:02:00.000Z",
+        steamId: "SAME",
+        players: 4,
         reliabilityEvents: [
             {
                 type: "SERVER_ONLINE",
-                message: "Server is responding again"
+                message: "Server responding again"
             }
         ]
     });
 
-    const restarts = result.events.filter(
-        event => event.type === "SERVER_RESTART"
+    assert.equal(result.events.length, 0);
+    assert.equal(result.state.lastRestartAt, null);
+    assert.equal(result.state.restartDetectionStatus, "ONLINE");
+});
+
+test("Steam ID change across a long observation gap has no exact restart time", () => {
+    const tracker = new RestartTracker();
+
+    tracker.hydrate(
+        "EU3",
+        null,
+        {
+            success: true,
+            timestamp: "2026-07-27T21:49:22.590Z",
+            steamId: "OLD"
+        }
     );
 
-    assert.equal(restarts.length, 1);
-    assert.equal(restarts[0].reason, "OFFLINE_ONLINE_CYCLE");
+    processSample(tracker, {
+        serverId: "EU3",
+        timestamp: "2026-07-28T00:22:04.696Z",
+        steamId: "NEW"
+    });
+
+    const result = processSample(tracker, {
+        serverId: "EU3",
+        timestamp: "2026-07-28T00:22:10.049Z",
+        steamId: "NEW"
+    });
+
+    const event = result.events[0];
+
     assert.equal(
-        restarts[0].restartAt,
-        "2026-07-28T04:00:00.000Z"
+        event.classification,
+        "PROCESS_RESTART_IN_OBSERVATION_GAP"
     );
+    assert.equal(event.timeKnown, false);
+    assert.equal(event.restartAt, null);
+    assert.equal(
+        event.observationWindow.start,
+        "2026-07-27T21:49:22.590Z"
+    );
+    assert.equal(
+        event.observationWindow.end,
+        "2026-07-28T00:22:04.696Z"
+    );
+    assert.equal(result.state.lastRestartAt, null);
 });

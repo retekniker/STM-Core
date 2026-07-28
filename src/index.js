@@ -293,13 +293,19 @@ async function start() {
     await database.init();
 
     for (const server of config.servers) {
-        const [restartEvent, offlineEvent, onlineEvent, snapshot] =
-            await Promise.all([
-                historyRepository.getLatestEvent(server.id, "SERVER_RESTART"),
-                historyRepository.getLatestEvent(server.id, "SERVER_OFFLINE"),
-                historyRepository.getLatestEvent(server.id, "SERVER_ONLINE"),
-                historyRepository.getLatestServerSnapshot(server.id)
-            ]);
+        const [
+            restartEvent,
+            offlineEvent,
+            onlineEvent,
+            snapshot,
+            successfulSnapshot
+        ] = await Promise.all([
+            historyRepository.getLatestEvent(server.id, "SERVER_RESTART"),
+            historyRepository.getLatestEvent(server.id, "SERVER_OFFLINE"),
+            historyRepository.getLatestEvent(server.id, "SERVER_ONLINE"),
+            historyRepository.getLatestServerSnapshot(server.id),
+            historyRepository.getLatestSuccessfulServerSnapshot(server.id)
+        ]);
 
         const unresolvedOffline =
             offlineEvent &&
@@ -311,7 +317,7 @@ async function start() {
         restartTracker.hydrate(
             server.id,
             restartEvent,
-            snapshot,
+            successfulSnapshot,
             unresolvedOffline
         );
     }
