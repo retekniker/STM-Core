@@ -13,6 +13,7 @@ const ApiServer = require("./api");
 const WebSocketHub = require("./websocket");
 const HistoryRepository = require("./historyRepository");
 const RestartTracker = require("./restartTracker");
+const RestartPrediction = require("./restartPrediction");
 
 const configPath = process.env.STM_CONFIG_PATH || path.join(
     __dirname,
@@ -30,6 +31,7 @@ const stateEngine = new StateEngine();
 const database = new Database();
 const historyRepository = new HistoryRepository(database);
 const restartTracker = new RestartTracker();
+const restartPrediction = new RestartPrediction();
 
 const apiServer = new ApiServer({
     stateEngine,
@@ -165,6 +167,13 @@ async function pollServers() {
             reliabilityEvents: reliabilityResult.events
         });
 
+        for (const event of restartResult.events) {
+            restartPrediction.addEvent(state.id, event);
+        }
+
+        state.restartPrediction =
+            restartPrediction.getPrediction(state.id);
+
         stateEngine.update(state);
         webSocketHub.broadcastServerState(state);
 
@@ -298,14 +307,25 @@ async function start() {
             offlineEvent,
             onlineEvent,
             snapshot,
-            successfulSnapshot
+            successfulSnapshot,
+            restartEvents
         ] = await Promise.all([
             historyRepository.getLatestEvent(server.id, "SERVER_RESTART"),
             historyRepository.getLatestEvent(server.id, "SERVER_OFFLINE"),
             historyRepository.getLatestEvent(server.id, "SERVER_ONLINE"),
             historyRepository.getLatestServerSnapshot(server.id),
-            historyRepository.getLatestSuccessfulServerSnapshot(server.id)
+            historyRepository.getLatestSuccessfulServerSnapshot(server.id),
+            historyRepository.getEvents({
+                serverId: server.id,
+                type: "SERVER_RESTART",
+                limit: 500
+            })
         ]);
+
+        restartPrediction.hydrate(
+            server.id,
+            restartEvents
+        );
 
         const unresolvedOffline =
             offlineEvent &&

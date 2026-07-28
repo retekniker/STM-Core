@@ -1200,6 +1200,23 @@
             if (c.status === 'degraded') return 'DEGRADED';
             if (c.status !== 'online') return 'OFFLINE';
 
+            const prediction = c.restartPrediction || {};
+            if (prediction.status === 'PREDICTED') {
+                const predictedAt = Date.parse(prediction.predictedAt || '');
+                const windowStart = Date.parse(prediction.predictedWindowStart || '');
+                const windowEnd = Date.parse(prediction.predictedWindowEnd || '');
+                const now = Date.now();
+
+                if (Number.isFinite(windowStart) && Number.isFinite(windowEnd) && now >= windowStart && now <= windowEnd) {
+                    return 'RESTART WINDOW';
+                }
+
+                if (Number.isFinite(predictedAt) && predictedAt > now && predictedAt - now <= 30 * 60 * 1000) {
+                    const minutes = Math.max(1, Math.ceil((predictedAt - now) / 60000));
+                    return `POSSIBLE RESTART IN ${minutes}M`;
+                }
+            }
+
             const detectedMs = Date.parse(c.lastRestartDetectedAt || '');
             const newCycle = Number.isFinite(detectedMs) && Date.now() - detectedMs < 120000;
             if (newCycle && c.players === 0) return 'SERVER BOOTING';
@@ -1717,7 +1734,8 @@
                     uptimeSinceRestartSeconds: currentUptime,
                     restartDetectionStatus: core.restartDetectionStatus || coreStatus || 'OFFLINE',
                     restartCandidateSteamId: core.restartCandidateSteamId || null,
-                    restartCandidateSince: core.restartCandidateSince || null
+                    restartCandidateSince: core.restartCandidateSince || null,
+                    restartPrediction: core.restartPrediction || { status: 'INSUFFICIENT_DATA' }
                 };
             } catch (err) {
                 const state = wdState[name]; updateMiniChart(name, 0, 0, state);
@@ -1897,7 +1915,10 @@
                 const state = wdState[n]; const c = cache[n]; const activeClockColor = WD_COLORS[n]; const activeTitleColor = TITLE_COLORS[n];
 
                 const _hp = computeHealthScore(n);
-                const _predTxt = 'Restart prediction: awaiting backend model';
+                const prediction = c?.restartPrediction || {};
+                const _predTxt = prediction.status === 'PREDICTED'
+                    ? `Restart prediction: ${new Date(prediction.predictedAt).toLocaleString('en-GB', { hour12: false })} | ${prediction.cycleHours}h | confidence ${Math.round((prediction.confidence || 0) * 100)}%`
+                    : `Restart prediction: ${prediction.status || 'awaiting backend model'}`;
                 if (vfdL1) vfdL1.title = `Health: ${_hp}/100 | ${_predTxt}`;
                 etas.forEach(t => { if (t) t.title = _predTxt; });
 

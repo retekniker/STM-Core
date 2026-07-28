@@ -50,7 +50,8 @@ test("dashboard delegates restart confirmation to the backend", () => {
         "uptimeSinceRestartSeconds",
         "restartDetectionStatus",
         "restartCandidateSteamId",
-        "restartCandidateSince"
+        "restartCandidateSince",
+        "restartPrediction"
     ]) {
         assert.equal(
             html.includes(backendField),
