@@ -12,6 +12,7 @@ const Database = require("./database");
 const ApiServer = require("./api");
 const WebSocketHub = require("./websocket");
 const HistoryRepository = require("./historyRepository");
+const RestartTracker = require("./restartTracker");
 
 const configPath = process.env.STM_CONFIG_PATH || path.join(
     __dirname,
@@ -28,6 +29,7 @@ const reliabilityEngine = new ReliabilityEngine(3);
 const stateEngine = new StateEngine();
 const database = new Database();
 const historyRepository = new HistoryRepository(database);
+const restartTracker = new RestartTracker();
 
 const apiServer = new ApiServer({
     stateEngine,
@@ -102,6 +104,12 @@ function printEvent(serverId, event) {
             );
             break;
 
+        case "SERVER_RESTART":
+            console.log(
+                `${prefix} [RESTART] ${event.message}`
+            );
+            break;
+
         case "SERVER_ONLINE":
             console.log(
                 `${prefix} [ONLINE] ${event.message}`
@@ -151,6 +159,11 @@ async function pollServers() {
             reliabilityEngine.process(queryResult);
 
         const state = reliabilityResult.state;
+        const restartResult = restartTracker.process({
+            state,
+            queryResult,
+            reliabilityEvents: reliabilityResult.events
+        });
 
         stateEngine.update(state);
         webSocketHub.broadcastServerState(state);
@@ -185,6 +198,14 @@ async function pollServers() {
         }
 
         for (const event of reliabilityResult.events) {
+            await saveEvent(
+                state.id,
+                state.timestamp,
+                event
+            );
+        }
+
+        for (const event of restartResult.events) {
             await saveEvent(
                 state.id,
                 state.timestamp,
@@ -270,6 +291,30 @@ process.on(
 
 async function start() {
     await database.init();
+
+    for (const server of config.servers) {
+        const [restartEvent, offlineEvent, onlineEvent, snapshot] =
+            await Promise.all([
+                historyRepository.getLatestEvent(server.id, "SERVER_RESTART"),
+                historyRepository.getLatestEvent(server.id, "SERVER_OFFLINE"),
+                historyRepository.getLatestEvent(server.id, "SERVER_ONLINE"),
+                historyRepository.getLatestServerSnapshot(server.id)
+            ]);
+
+        const unresolvedOffline =
+            offlineEvent &&
+            (!onlineEvent || offlineEvent.timestamp > onlineEvent.timestamp) &&
+            snapshot?.success === false
+                ? offlineEvent.timestamp
+                : null;
+
+        restartTracker.hydrate(
+            server.id,
+            restartEvent,
+            snapshot,
+            unresolvedOffline
+        );
+    }
 
     const apiInfo = await apiServer.start();
 

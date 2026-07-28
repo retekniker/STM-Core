@@ -268,6 +268,25 @@ class HistoryRepository {
         }));
     }
 
+    async getLatestServerSnapshot(serverId) {
+        const snapshots = await this.getServerSnapshots({
+            serverId,
+            limit: 1
+        });
+
+        return snapshots[0] || null;
+    }
+
+    async getLatestEvent(serverId, type) {
+        const events = await this.getEvents({
+            serverId,
+            type,
+            limit: 1
+        });
+
+        return events[0] || null;
+    }
+
 }
 
 module.exports = HistoryRepository;

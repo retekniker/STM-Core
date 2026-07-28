@@ -1665,7 +1665,13 @@
                         ? reportedMaxPlayers
                         : 0;
 
-                const currentUptime = 0;
+                const currentUptime = Number.isFinite(Number(core.uptimeSinceRestartSeconds))
+                    ? Number(core.uptimeSinceRestartSeconds)
+                    : 0;
+
+                const coreRestartAt = core.lastRestartAt
+                    ? Date.parse(core.lastRestartAt)
+                    : 0;
 
                 const currentSteamId =
                     normalizeSteamId(core.steamId);
@@ -1686,6 +1692,17 @@
                     }
                 };
                 
+                let coreRestartSynced = false;
+
+                if (Number.isFinite(coreRestartAt) && coreRestartAt > 0 && lastRestartData[name] !== coreRestartAt) {
+                    lastRestartData[name] = coreRestartAt;
+                    lsSet("jsoc_last_restarts", JSON.stringify(lastRestartData));
+                    isApprox[name] = false;
+                    lsSet("jsoc_approx_state", JSON.stringify(isApprox));
+                    coreRestartSynced = true;
+                    logEvent(`[STM CORE] ${name} RESTART CLOCK SYNCED`, "text-cyan-400 font-bold");
+                }
+
                 if (!lastRestartData[name]) {
                     lastRestartData[name] = currentUptime > 0 ? Date.now() - (currentUptime * 1000) : Date.now();
                     lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData));
@@ -1737,7 +1754,7 @@
                 let hasPassedQuarantine = (Date.now() - systemStartTime) >= QUARANTINE_MS;
                 if(localStorage.getItem('jsoc_last_restarts')) { hasPassedQuarantine = true; }
 
-                if (!isFirstLoad && state !== 'OFF') {
+                if (!isFirstLoad && state !== "OFF" && !coreRestartSynced) {
 
                     // [v5] COOLDOWN: blokuje ponowną detekcję restartu zaraz po wykryciu (anti-storm)
                     let inCooldown = (Date.now() - lastRestartDetected[name]) < RESTART_DETECTION_COOLDOWN_MS;
