@@ -81,6 +81,11 @@ class HistoryRepository {
             parameters.push(options.before);
         }
 
+        if (options.after) {
+            conditions.push("timestamp >= ?");
+            parameters.push(options.after);
+        }
+
         const whereClause =
             conditions.length > 0
                 ? `WHERE ${conditions.join(" AND ")}`
@@ -208,6 +213,49 @@ class HistoryRepository {
             steamId: row.steam_id,
             queryPort: row.query_port,
             error: row.error
+        }));
+    }
+
+    async getServerSnapshotsBetween(options = {}) {
+        const conditions = [
+            "timestamp >= ?",
+            "timestamp <= ?"
+        ];
+        const parameters = [
+            options.after,
+            options.before
+        ];
+
+        if (options.serverId) {
+            conditions.push("server_id = ?");
+            parameters.push(options.serverId);
+        }
+
+        const rows = await this.all(
+            `
+            SELECT
+                id,
+                server_id,
+                timestamp,
+                success,
+                players,
+                max_players,
+                ping
+            FROM server_snapshots
+            WHERE ${conditions.join(" AND ")}
+            ORDER BY timestamp ASC, id ASC
+            `,
+            parameters
+        );
+
+        return rows.map(row => ({
+            id: row.id,
+            serverId: row.server_id,
+            timestamp: row.timestamp,
+            success: row.success === 1,
+            players: row.players,
+            maxPlayers: row.max_players,
+            ping: row.ping
         }));
     }
 

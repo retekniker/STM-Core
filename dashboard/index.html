@@ -360,6 +360,15 @@
                 <div class="hidden lg:block cyber-cable h-[6px] w-[32px] top-[50%] -right-[28px] delay-1"></div>
 
                 <div class="flex flex-col gap-3 flex-1 min-w-0 relative z-20 xl:border-r border-green-900/40 xl:pr-6">
+                    <div class="flex items-center justify-between gap-3 flex-wrap border border-white/10 bg-black/20 rounded px-3 py-2">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-green-400">Telemetry history</span>
+                        <div class="flex gap-1" id="telemetryRangeControls">
+                            <button class="btn-system-led telemetry-range" data-range="30m" onclick="setTelemetryRange('30m')">30 MIN</button>
+                            <button class="btn-system-led telemetry-range" data-range="2h" onclick="setTelemetryRange('2h')">2 H</button>
+                            <button class="btn-system-led telemetry-range" data-range="6h" onclick="setTelemetryRange('6h')">6 H</button>
+                            <button class="btn-system-led telemetry-range" data-range="12h" onclick="setTelemetryRange('12h')">12 H</button>
+                        </div>
+                    </div>
                     
                     <div class="server-grid-row border border-white/10 bg-black/20 rounded p-2">
                         <div class="pr-3 border-r border-white/10">
@@ -637,8 +646,9 @@
         let lastBackupTime = parseInt(localStorage.getItem('jsoc_last_backup_time')) || Date.now();
 
         let miniCharts = {};
-        let pingHistory = { EU1: Array(30).fill(0), EU2: Array(30).fill(0), EU3: Array(30).fill(0) };
-        let playerHistory = { EU1: Array(30).fill(0), EU2: Array(30).fill(0), EU3: Array(30).fill(0) };
+        let telemetryRange = localStorage.getItem('jsoc_telemetry_range') || '30m';
+        let telemetryHistoryInFlight = false;
+        let lastTelemetryHistoryFetch = 0;
 
         let currentSquadIdx = parseInt(localStorage.getItem('jsoc_sq_idx')) || 1;
         let ALL_SQUADS = safeJsonGet('jsoc_all_squads', { 1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] });
@@ -793,6 +803,10 @@
                     lastFetchTime = now;
                     updateAll().finally(() => { renderDirty = true; });
                 }
+
+                if (now - lastTelemetryHistoryFetch >= 30000) {
+                    loadTelemetryHistory();
+                }
             }
         };
 
@@ -905,6 +919,7 @@
                     "jsoc_approx_state",
                     "jsoc_radar_mode",
                     "jsoc_telemetry_log",
+                    "jsoc_telemetry_range",
                     "jsoc_auto_backup",
                     "jsoc_last_backup_time",
                     "jsoc_all_squads",
@@ -1395,12 +1410,6 @@
             b.insertBefore(d, b.firstChild); if (b.children.length > 80) { b.removeChild(b.lastChild); } b.scrollTop = 0; 
         }
 
-        function updateMiniChart(server, ping, players, state) {
-            pingHistory[server].push(ping); if (pingHistory[server].length > 30) pingHistory[server].shift(); 
-            playerHistory[server].push(players); if (playerHistory[server].length > 30) playerHistory[server].shift();
-            if(miniCharts[server]) { miniCharts[server].update('none'); }
-        }
-
         // ===== THROTTLED LOCALSTORAGE (zapis maks raz/3s) =====
         const _lsPending = {};
         let _lsTimer = null;
@@ -1615,7 +1624,6 @@
                 }
 
                 const backendRestartConfirmed = handleBackendRestart(name, core);
-                const state = wdState[name];
                 
                 let finalStatus = attr.status;
                 if ((finalStatus === 'offline' || finalStatus === 'dead' || finalStatus === 'booting')) {
@@ -1626,9 +1634,6 @@
                 }
                 
                 updateServerBuffer(name, lat, finalStatus);
-
-                if (state === 'OFF') { updateMiniChart(name, 0, 0, state); } 
-                else { updateMiniChart(name, (finalStatus === 'online' ? lat : 0), (finalStatus === 'online' ? currentPlayers : 0), state); }
 
                 if (advMode) { logEvent(`[ADV] ${name} SYNC OK | LAT: ${lat}MS | STAT: ${finalStatus || 'UNKNOWN'}`, "text-gray-500", true); }
 
@@ -1738,7 +1743,6 @@
                     restartPrediction: core.restartPrediction || { status: 'INSUFFICIENT_DATA' }
                 };
             } catch (err) {
-                const state = wdState[name]; updateMiniChart(name, 0, 0, state);
                 if (advMode && err.message !== "429") { logEvent(`[ADV] ${name} FETCH FAILED`, "text-red-900", true); }
                 if (!cache[name]) { cache[name] = { status: 'offline', players: 0, maxPlayers: 0, details: {}, list: [], ping: 0 }; } else { cache[name].status = 'offline'; cache[name].players = 0; cache[name].list = []; }
             }
@@ -2334,6 +2338,125 @@
 
         function clearAllAlerts() { document.getElementById("alertBox").innerHTML = ""; }
         function toggleHelp() { const m = document.getElementById('helpModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
+
+        function formatTelemetryMarker(marker) {
+            if (marker.kind === 'prediction') {
+                return `PREDICTED RESTART\n${new Date(marker.timestamp).toLocaleString('en-GB', { hour12: false })}\nConfidence: ${Math.round((marker.confidence || 0) * 100)}%`;
+            }
+
+            const evidence = marker.evidence || {};
+            const interruption = evidence.queryInterruption?.present
+                ? `${evidence.queryInterruption.failedQueries || 0} failed queries`
+                : 'no query interruption';
+            const roster = evidence.rosterReset?.present
+                ? `roster ${evidence.rosterReset.before} → ${evidence.rosterReset.after}`
+                : 'no roster reset';
+            const sessions = evidence.playerSessionReset?.present
+                ? `sessions: ${(evidence.playerSessionReset.players || []).join(', ')}`
+                : 'no player session reset';
+
+            return `CONFIRMED RESTART\n${new Date(marker.timestamp).toLocaleString('en-GB', { hour12: false })}\n${marker.classification} // ${marker.confidence}\n${interruption}; ${roster}; ${sessions}`;
+        }
+
+        const telemetryMarkerPlugin = {
+            id: 'telemetryMarkers',
+            afterDatasetsDraw(chartInstance) {
+                const telemetry = chartInstance.$telemetry;
+                if (!telemetry || !chartInstance.chartArea) return;
+
+                const { ctx, chartArea } = chartInstance;
+                const duration = telemetry.endMs - telemetry.startMs;
+                if (!(duration > 0)) return;
+
+                const drawMarker = (marker, color, dashed) => {
+                    const timestamp = Date.parse(marker.timestamp);
+                    if (!Number.isFinite(timestamp) || timestamp < telemetry.startMs || timestamp > telemetry.endMs) return;
+                    const ratio = (timestamp - telemetry.startMs) / duration;
+                    const x = chartArea.left + ratio * chartArea.width;
+                    marker.pixelX = x;
+
+                    ctx.save();
+                    ctx.strokeStyle = color;
+                    ctx.fillStyle = color;
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash(dashed ? [5, 4] : []);
+                    ctx.beginPath();
+                    ctx.moveTo(x, chartArea.top);
+                    ctx.lineTo(x, chartArea.bottom);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.translate(x, chartArea.top + 8);
+                    ctx.rotate(Math.PI / 4);
+                    ctx.fillRect(-4, -4, 8, 8);
+                    ctx.restore();
+                };
+
+                telemetry.restarts.forEach(marker => drawMarker(marker, '#ff4d4d', false));
+                if (telemetry.prediction) drawMarker(telemetry.prediction, '#eab308', true);
+            },
+            afterEvent(chartInstance, args) {
+                const telemetry = chartInstance.$telemetry;
+                if (!telemetry || !args.event) return;
+                const markers = telemetry.prediction
+                    ? telemetry.restarts.concat(telemetry.prediction)
+                    : telemetry.restarts;
+                const nearest = markers.find(marker => Number.isFinite(marker.pixelX) && Math.abs(marker.pixelX - args.event.x) <= 7);
+                chartInstance.canvas.title = nearest ? formatTelemetryMarker(nearest) : '';
+            }
+        };
+
+        window.setTelemetryRange = function(range) {
+            if (!['30m', '2h', '6h', '12h'].includes(range)) return;
+            telemetryRange = range;
+            localStorage.setItem('jsoc_telemetry_range', range);
+            document.querySelectorAll('.telemetry-range').forEach(button => {
+                button.classList.toggle('active', button.dataset.range === range);
+            });
+            loadTelemetryHistory(true);
+        };
+
+        async function loadTelemetryHistory(force = false) {
+            if (telemetryHistoryInFlight) return;
+            if (!force && Date.now() - lastTelemetryHistoryFetch < 30000) return;
+
+            telemetryHistoryInFlight = true;
+            try {
+                const response = await fetch(`/api/v1/community/telemetry?range=${encodeURIComponent(telemetryRange)}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const payload = await response.json();
+                const startMs = Date.parse(payload.start);
+                const endMs = Date.parse(payload.end);
+
+                (payload.series || []).forEach(serverSeries => {
+                    const chartInstance = miniCharts[serverSeries.serverId];
+                    if (!chartInstance) return;
+                    const points = serverSeries.points || [];
+                    chartInstance.data.labels = points.map(point => new Date(point.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+                    chartInstance.data.datasets[0].data = points.map(point => point.ping);
+                    chartInstance.data.datasets[1].data = points.map(point => point.players);
+                    chartInstance.$telemetry = {
+                        startMs,
+                        endMs,
+                        points,
+                        restarts: (serverSeries.restarts || []).map(marker => ({ ...marker, kind: 'restart' })),
+                        prediction: serverSeries.prediction?.status === 'PREDICTED'
+                            ? {
+                                kind: 'prediction',
+                                timestamp: serverSeries.prediction.predictedAt,
+                                confidence: serverSeries.prediction.confidence
+                            }
+                            : null
+                    };
+                    chartInstance.update('none');
+                });
+
+                lastTelemetryHistoryFetch = Date.now();
+            } catch (error) {
+                if (advMode) logEvent(`[HISTORY] TELEMETRY LOAD FAILED: ${error.message}`, 'text-red-500', true);
+            } finally {
+                telemetryHistoryInFlight = false;
+            }
+        }
         
         let chart;
         function initChart() {
@@ -2351,15 +2474,16 @@
                 if (mctx) {
                     miniCharts[n] = new Chart(mctx.getContext('2d'), {
                         type: 'line',
-                        data: { labels: Array(30).fill(''), datasets: [ { data: pingHistory[n], borderColor: '#00ff9c', borderWidth: 2, pointRadius: 0, tension: 0.3, yAxisID: 'y' }, { data: playerHistory[n], borderColor: '#eab308', backgroundColor: 'rgba(234, 179, 8, 0.2)', borderWidth: 1, fill: true, pointRadius: 0, tension: 0.3, yAxisID: 'y1' } ] },
-                        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 10, bottom: 5 } }, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false, min: 0, suggestedMax: 100 }, y1: { display: false, min: 0, suggestedMax: 80 } } }
+                        data: { labels: [], datasets: [ { label: 'Ping', data: [], borderColor: '#00ff9c', borderWidth: 2, pointRadius: 0, tension: 0.2, spanGaps: false, yAxisID: 'y' }, { label: 'Players', data: [], borderColor: '#eab308', backgroundColor: 'rgba(234, 179, 8, 0.2)', borderWidth: 1, fill: true, pointRadius: 0, tension: 0.2, spanGaps: false, yAxisID: 'y1' } ] },
+                        options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 10, bottom: 5 } }, plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { afterBody(items) { const point = miniCharts[n]?.$telemetry?.points?.[items[0]?.dataIndex]; return point ? [`Status: ${point.status}`, `Samples: ${point.samples}`] : []; } } } }, scales: { x: { display: true, grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 }, maxTicksLimit: 6 } }, y: { display: false, min: 0, suggestedMax: 100 }, y1: { display: false, min: 0, suggestedMax: 80 } } },
+                        plugins: [telemetryMarkerPlugin]
                     });
                 }
             });
         }
 
         (async function init() {
-            switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setRadarMode(radarMode);
+            switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setRadarMode(radarMode); setTelemetryRange(telemetryRange);
             initVoice();
             
             const btnSort = document.getElementById('btnSortToggle');

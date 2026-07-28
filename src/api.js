@@ -1,6 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const path = require("path");
+const TelemetryHistory = require("./telemetryHistory");
 
 class ApiServer {
 
@@ -15,6 +16,9 @@ class ApiServer {
         this.stateEngine = options.stateEngine;
         this.historyRepository =
             options.historyRepository || null;
+        this.telemetryHistory =
+            options.telemetryHistory ||
+            new TelemetryHistory();
 
         this.host = options.host || "0.0.0.0";
         this.port = options.port || 3000;
@@ -189,6 +193,90 @@ class ApiServer {
                         new Date().toISOString(),
                     servers
                 });
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/telemetry",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+
+                try {
+                    const range =
+                        String(request.query.range || "30m")
+                            .toLowerCase();
+                    const rangeMs =
+                        this.telemetryHistory
+                            .getRangeMs(range);
+
+                    if (!rangeMs) {
+                        response.status(400).json({
+                            success: false,
+                            error: "INVALID_TELEMETRY_RANGE",
+                            allowedRanges:
+                                Object.keys(
+                                    TelemetryHistory.RANGE_MS
+                                )
+                        });
+                        return;
+                    }
+
+                    const endMs = Date.now();
+                    const startMs = endMs - rangeMs;
+                    const after =
+                        new Date(startMs).toISOString();
+                    const before =
+                        new Date(endMs).toISOString();
+                    const states =
+                        this.stateEngine.getAll();
+                    const serverIds = states.map(
+                        state => state.id
+                    );
+                    const [snapshotGroups, events] =
+                        await Promise.all([
+                            Promise.all(
+                                serverIds.map(serverId =>
+                                    this.historyRepository
+                                        .getServerSnapshotsBetween({
+                                            serverId,
+                                            after,
+                                            before
+                                        })
+                                )
+                            ),
+                            this.historyRepository.getEvents({
+                                type: "SERVER_RESTART",
+                                after,
+                                before,
+                                limit: 500
+                            })
+                        ]);
+                    const snapshots =
+                        snapshotGroups.flat();
+                    const series =
+                        this.telemetryHistory.buildSeries({
+                            serverIds,
+                            snapshots,
+                            events,
+                            states,
+                            startMs,
+                            endMs
+                        });
+
+                    response.json({
+                        success: true,
+                        range,
+                        start: after,
+                        end: before,
+                        maximumPoints:
+                            this.telemetryHistory
+                                .maximumPoints,
+                        series
+                    });
+
+                } catch (error) {
+                    next(error);
+                }
             }
         );
 

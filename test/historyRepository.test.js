@@ -108,3 +108,49 @@ test("event queries do not contain the server snapshot success filter", async t 
     assert.equal(events.length, 1);
     assert.equal(events[0].type, "SERVER_RESTART");
 });
+
+test("snapshot range query is chronological and not pagination limited", async t => {
+    const database = new Database(":memory:");
+    await database.init();
+
+    t.after(async () => {
+        await database.close();
+    });
+
+    for (let index = 0; index < 3; index += 1) {
+        await database.run(
+            `
+            INSERT INTO server_snapshots (
+                server_id,
+                timestamp,
+                success,
+                players,
+                max_players,
+                ping
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            `,
+            [
+                "EU1",
+                `2026-07-28T0${index + 1}:00:00.000Z`,
+                1,
+                index,
+                64,
+                20 + index
+            ]
+        );
+    }
+
+    const history = new HistoryRepository(database);
+    const snapshots =
+        await history.getServerSnapshotsBetween({
+            serverId: "EU1",
+            after: "2026-07-28T01:30:00.000Z",
+            before: "2026-07-28T03:30:00.000Z"
+        });
+
+    assert.deepEqual(
+        snapshots.map(snapshot => snapshot.players),
+        [1, 2]
+    );
+});

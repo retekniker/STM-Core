@@ -71,3 +71,22 @@ test("dashboard retains A2S player connection time and CRLF layout", () => {
     assert.match(html, /formatPlayerConnectionTime\(p\.time\)/);
     assert.ok(crlfCount > loneLfCount * 20);
 });
+
+test("dashboard oscilloscope uses SQLite telemetry ranges and markers", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+
+    for (const range of ["30m", "2h", "6h", "12h"]) {
+        assert.match(
+            html,
+            new RegExp(`data-range="${range}"`)
+        );
+    }
+
+    assert.match(
+        html,
+        /\/api\/v1\/community\/telemetry\?range=/
+    );
+    assert.match(html, /telemetryMarkerPlugin/);
+    assert.equal(html.includes("pingHistory"), false);
+    assert.equal(html.includes("playerHistory"), false);
+});
