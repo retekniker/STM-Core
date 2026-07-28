@@ -29,21 +29,29 @@ jobs:
         shell: pwsh
         run: npm ci --omit=dev
 
-      - name: Check PowerShell launcher
+      - name: Check PowerShell launchers
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
+          $scriptFiles = @(
+              "windows/stm-core.ps1",
+              "windows/stm-core-tray.ps1"
+          )
 
-          [System.Management.Automation.Language.Parser]::ParseFile(
-              (Resolve-Path "windows/stm-core.ps1"),
-              [ref]$tokens,
-              [ref]$errors
-          ) | Out-Null
+          foreach ($scriptFile in $scriptFiles) {
+              $tokens = $null
+              $errors = $null
 
-          if ($errors.Count -gt 0) {
-              $errors | Format-List
-              exit 1
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  (Resolve-Path $scriptFile),
+                  [ref]$tokens,
+                  [ref]$errors
+              ) | Out-Null
+
+              if ($errors.Count -gt 0) {
+                  Write-Host "PowerShell syntax errors in $scriptFile"
+                  $errors | Format-List
+                  exit 1
+              }
           }
 
       - name: Prepare Windows package
@@ -68,6 +76,7 @@ jobs:
           Copy-Item "package-lock.json" "$dist/package-lock.json"
           Copy-Item "README.md" "$dist/README.md"
           Copy-Item "windows/stm-core.ps1" "$dist/windows/stm-core.ps1"
+          Copy-Item "windows/stm-core-tray.ps1" "$dist/windows/stm-core-tray.ps1"
 
           Copy-Item (Get-Command node).Source "$dist/runtime/node.exe"
 
