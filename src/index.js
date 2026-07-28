@@ -14,6 +14,7 @@ const WebSocketHub = require("./websocket");
 const HistoryRepository = require("./historyRepository");
 const RestartTracker = require("./restartTracker");
 const RestartPrediction = require("./restartPrediction");
+const { version } = require("../package.json");
 
 const configPath = process.env.STM_CONFIG_PATH || path.join(
     __dirname,
@@ -304,14 +305,12 @@ async function start() {
 
     for (const server of config.servers) {
         const [
-            restartEvent,
             offlineEvent,
             onlineEvent,
             snapshot,
             successfulSnapshot,
             restartEvents
         ] = await Promise.all([
-            historyRepository.getLatestEvent(server.id, "SERVER_RESTART"),
             historyRepository.getLatestEvent(server.id, "SERVER_OFFLINE"),
             historyRepository.getLatestEvent(server.id, "SERVER_ONLINE"),
             historyRepository.getLatestServerSnapshot(server.id),
@@ -322,6 +321,12 @@ async function start() {
                 limit: 500
             })
         ]);
+
+        const restartEvent =
+            restartEvents.find(event =>
+                restartTracker
+                    .isVerifiedRestartEvent(event)
+            ) || null;
 
         restartPrediction.hydrate(
             server.id,
@@ -348,7 +353,7 @@ async function start() {
     webSocketHub.start(apiServer.server);
 
     console.log("==========================================");
-    console.log("        STM CORE v0.8.8");
+    console.log(`        STM CORE v${version}`);
     console.log("==========================================");
     console.log(`Polling interval: ${config.pollInterval} ms`);
     console.log("Offline threshold: 3 failed queries");

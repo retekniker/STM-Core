@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "0.8.8"
+  #define MyAppVersion "0.8.9"
 #endif
 
 #define MyAppName "STM Core"

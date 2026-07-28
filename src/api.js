@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const path = require("path");
 const TelemetryHistory = require("./telemetryHistory");
 const RestartLog = require("./restartLog");
+const { version } = require("../package.json");
 
 class ApiServer {
 
@@ -159,7 +160,7 @@ class ApiServer {
 
             response.json({
                 service: "STM Core API",
-                version: "0.8.8",
+                version,
                 status: "running",
                 dashboard: "/community/"
             });
@@ -172,7 +173,7 @@ class ApiServer {
                 response.json({
                     success: true,
                     service: "STM Core API",
-                    version: "0.8.8",
+                    version,
                     uptimeSeconds: Math.floor(
                         process.uptime()
                     ),
@@ -513,7 +514,7 @@ class ApiServer {
                         success: true,
                         service: {
                             name: "STM Core",
-                            version: "0.8.8",
+                            version,
                             uptimeSeconds:
                                 Math.floor(process.uptime()),
                             startedAt:

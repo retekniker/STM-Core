@@ -87,6 +87,34 @@ class RestartTracker {
         });
     }
 
+    isVerifiedRestartEvent(event) {
+        const data = event?.data || event || {};
+
+        if (
+            data.classification === "PROCESS_RESTART" ||
+            data.classification ===
+                "PROCESS_RESTART_IN_OBSERVATION_GAP"
+        ) {
+            return true;
+        }
+
+        if (data.reason === "STEAM_ID_ROTATION") {
+            return true;
+        }
+
+        const previousSteamId = data.previousSteamId;
+        const currentSteamId = data.currentSteamId;
+
+        return (
+            previousSteamId !== null &&
+            previousSteamId !== undefined &&
+            currentSteamId !== null &&
+            currentSteamId !== undefined &&
+            String(previousSteamId) !==
+                String(currentSteamId)
+        );
+    }
+
     getRecord(serverId) {
         if (!this.servers.has(serverId)) {
             this.hydrate(serverId);

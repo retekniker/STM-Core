@@ -76,6 +76,7 @@ jobs:
           Copy-Item "package.json" "$dist/package.json"
           Copy-Item "package-lock.json" "$dist/package-lock.json"
           Copy-Item "README.md" "$dist/README.md"
+          Copy-Item "CHANGELOG.md" "$dist/CHANGELOG.md"
           Copy-Item "windows/stm-core.ps1" "$dist/windows/stm-core.ps1"
           Copy-Item "windows/stm-core-tray.ps1" "$dist/windows/stm-core-tray.ps1"
           Copy-Item "windows/stm-core-tray.vbs" "$dist/windows/stm-core-tray.vbs"

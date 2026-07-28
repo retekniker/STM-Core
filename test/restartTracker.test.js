@@ -387,3 +387,34 @@ test("hydration never invents restart time for an observation-gap event", () => 
         "2026-07-28T00:22:10.049Z"
     );
 });
+
+test("legacy hydration rejects offline-online events with unchanged Steam ID", () => {
+    const tracker = new RestartTracker();
+    const falseRestart = {
+        timestamp: "2026-07-28T13:56:16.257Z",
+        data: {
+            reason: "OFFLINE_ONLINE_CYCLE",
+            restartAt: "2026-07-28T13:56:11.111Z",
+            previousSteamId: "SAME",
+            currentSteamId: "SAME"
+        }
+    };
+    const changedInstance = {
+        timestamp: "2026-07-28T12:00:50.021Z",
+        data: {
+            reason: "OFFLINE_ONLINE_CYCLE",
+            restartAt: "2026-07-28T11:59:44.704Z",
+            previousSteamId: "OLD",
+            currentSteamId: "NEW"
+        }
+    };
+
+    assert.equal(
+        tracker.isVerifiedRestartEvent(falseRestart),
+        false
+    );
+    assert.equal(
+        tracker.isVerifiedRestartEvent(changedInstance),
+        true
+    );
+});

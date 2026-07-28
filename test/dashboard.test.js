@@ -107,3 +107,28 @@ test("restart log renders backend evidence without inventing gap time", () => {
         false
     );
 });
+
+test("dashboard exposes backend status and prediction presentations", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+
+    for (const status of [
+        "ONLINE",
+        "DEGRADED",
+        "VERIFYING",
+        "RESTART_CONFIRMED"
+    ]) {
+        assert.equal(
+            html.includes(status),
+            true,
+            `${status} presentation should remain available`
+        );
+    }
+
+    assert.match(html, /marker\.kind === 'prediction'/);
+    assert.match(html, /telemetry\.restarts/);
+    assert.equal(/const\s+CYCLE\s*=/.test(html), false);
+    assert.equal(
+        /(?<!\d)8\s*\*\s*60\s*\*\s*60\s*\*\s*1000/.test(html),
+        false
+    );
+});

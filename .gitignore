@@ -2,3 +2,5 @@ node_modules/
 database/
 logs/
 .env
+windows/dist/
+windows/output/
