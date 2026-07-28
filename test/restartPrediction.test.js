@@ -77,6 +77,32 @@ test("eight hour model marks an additional restart as an outlier", () => {
     );
 });
 
+test("only the closest restart can occupy a cycle slot", () => {
+    const prediction = new RestartPrediction();
+
+    for (const restartAt of [
+        "2026-07-27T19:21:42.207Z",
+        "2026-07-28T03:22:05.916Z",
+        "2026-07-28T03:43:17.006Z",
+        "2026-07-28T11:43:28.627Z"
+    ]) {
+        prediction.addEvent("EU1", event(restartAt));
+    }
+
+    const result = prediction.getPrediction(
+        "EU1",
+        Date.parse("2026-07-28T12:00:00.000Z")
+    );
+
+    assert.equal(result.status, "LEARNING");
+    assert.equal(result.inliers.length, 3);
+    assert.equal(result.outliers.length, 1);
+    assert.equal(
+        result.outliers[0].restartAt,
+        "2026-07-28T03:43:17.006Z"
+    );
+});
+
 test("custom cycle is learned independently for each server", () => {
     const prediction = new RestartPrediction();
 

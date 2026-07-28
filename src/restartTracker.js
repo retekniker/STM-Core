@@ -1,3 +1,6 @@
+const RestartEvidenceScorer =
+    require("./restartEvidenceScorer");
+
 class RestartTracker {
 
     constructor(options = {}) {
@@ -11,6 +14,10 @@ class RestartTracker {
 
         this.sessionResetMinimumDropSeconds =
             options.sessionResetMinimumDropSeconds ?? 30;
+
+        this.evidenceScorer =
+            options.evidenceScorer ||
+            new RestartEvidenceScorer();
     }
 
     hydrate(
@@ -319,6 +326,41 @@ class RestartTracker {
         };
     }
 
+    getPlayerSessionContinuityEvidence(candidate) {
+        const players = [];
+        const details = [];
+
+        for (
+            const [name, previousTime]
+            of candidate.baselinePlayerTimes.entries()
+        ) {
+            const currentTime =
+                candidate.postRestartPlayerTimes.get(name);
+
+            if (
+                !Number.isFinite(currentTime) ||
+                currentTime < previousTime
+            ) {
+                continue;
+            }
+
+            players.push(name);
+            details.push({
+                player: name,
+                beforeSeconds: previousTime,
+                afterSeconds: currentTime,
+                increasedBySeconds:
+                    currentTime - previousTime
+            });
+        }
+
+        return {
+            present: players.length > 0,
+            players,
+            details
+        };
+    }
+
     confirmCandidate(record, timestamp) {
         const candidate =
             record.candidate;
@@ -343,6 +385,11 @@ class RestartTracker {
 
         const rosterReset =
             this.getRosterResetEvidence(
+                candidate
+            );
+
+        const playerSessionContinuity =
+            this.getPlayerSessionContinuityEvidence(
                 candidate
             );
 
@@ -419,6 +466,8 @@ class RestartTracker {
 
                 playerSessionReset,
 
+                playerSessionContinuity,
+
                 observationGap: {
                     present:
                         candidate.observationGap,
@@ -431,6 +480,11 @@ class RestartTracker {
                 }
             }
         };
+
+        event.evidenceScore =
+            this.evidenceScorer.score({
+                evidence: event.evidence
+            });
 
         if (restartAt) {
             record.lastRestartAt =

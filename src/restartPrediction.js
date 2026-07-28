@@ -192,9 +192,8 @@ class RestartPrediction {
         let best = null;
 
         for (const anchor of samples) {
-            const inliers = [];
+            const slots = new Map();
             const outliers = [];
-            let totalErrorMs = 0;
 
             for (const sample of samples) {
                 const cycles = Math.round(
@@ -209,19 +208,37 @@ class RestartPrediction {
                 );
 
                 if (errorMs <= toleranceMs) {
-                    inliers.push({
+                    const candidateSample = {
                         ...sample,
                         cycleIndex: cycles,
                         errorMs
-                    });
-                    totalErrorMs += errorMs;
+                    };
+                    const occupied = slots.get(cycles);
+
+                    if (
+                        !occupied ||
+                        candidateSample.errorMs <
+                            occupied.errorMs
+                    ) {
+                        if (occupied) {
+                            outliers.push(occupied);
+                        }
+                        slots.set(cycles, candidateSample);
+                    } else {
+                        outliers.push(candidateSample);
+                    }
                 } else {
                     outliers.push(sample);
                 }
             }
 
+            const inliers = [...slots.values()];
             inliers.sort((left, right) =>
                 left.timestamp - right.timestamp
+            );
+            const totalErrorMs = inliers.reduce(
+                (sum, sample) => sum + sample.errorMs,
+                0
             );
 
             const intervalSamples = Math.max(

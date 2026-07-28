@@ -100,6 +100,8 @@ test("restart log renders backend evidence without inventing gap time", () => {
     assert.match(html, /REJECTED TRANSITIONAL STEAM IDS/);
     assert.match(html, /PLAYER SESSION RESET/);
     assert.match(html, /ADDITIONAL \/ OUTLIER/);
+    assert.match(html, /EVIDENCE SCORE:/);
+    assert.match(html, /score\.breakdown/);
     assert.equal(
         html.includes("eventData.restartAt ||"),
         false

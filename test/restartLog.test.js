@@ -33,6 +33,7 @@ test("restart log derives regular and outlier labels without mutating events", (
         "REGULAR"
     );
     assert.equal(source.predictionAssessment, undefined);
+    assert.equal(enriched.evidenceScore.role, "EXPLANATORY_ONLY");
 
     prediction.inliers = [];
     prediction.outliers = [{ restartAt: source.data.restartAt }];

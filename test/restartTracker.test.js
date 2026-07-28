@@ -83,6 +83,9 @@ test("second consecutive reading of changed Steam ID confirms a process restart"
     assert.equal(event.detectedAt, "2026-07-28T03:22:10.000Z");
     assert.equal(event.evidence.steamIdRotation.present, true);
     assert.equal(event.evidence.steamIdRotation.consecutiveReadings, 2);
+    assert.equal(event.evidenceScore.role, "EXPLANATORY_ONLY");
+    assert.equal(event.evidenceScore.total, 70);
+    assert.equal(event.evidenceScore.level, "CONFIRMED");
     assert.equal(result.state.lastRestartAt, event.restartAt);
 });
 
@@ -164,6 +167,40 @@ test("player connection-time reset is recorded as restart evidence", () => {
         evidence.players.sort(),
         ["Nahku", "kranky"]
     );
+});
+
+test("session continuity lowers evidence score but cannot veto stable rotation", () => {
+    const tracker = new RestartTracker();
+
+    processSample(tracker, {
+        timestamp: "2026-07-28T04:00:00.000Z",
+        steamId: "OLD",
+        players: 1,
+        playerList: [{ name: "Player", time: 300 }]
+    });
+    processSample(tracker, {
+        timestamp: "2026-07-28T04:00:05.000Z",
+        steamId: "NEW",
+        players: 1,
+        playerList: [{ name: "Player", time: 305 }]
+    });
+    const result = processSample(tracker, {
+        timestamp: "2026-07-28T04:00:10.000Z",
+        steamId: "NEW",
+        players: 1,
+        playerList: [{ name: "Player", time: 310 }]
+    });
+    const event = result.events[0];
+
+    assert.equal(event.type, "SERVER_RESTART");
+    assert.equal(event.confidence, "CONFIRMED");
+    assert.equal(
+        event.evidence.playerSessionContinuity.present,
+        true
+    );
+    assert.equal(event.evidenceScore.total, 40);
+    assert.equal(event.evidenceScore.level, "PROBABLE");
+    assert.equal(result.state.lastRestartAt, event.restartAt);
 });
 
 test("transitional Steam ID is ignored and only the stable replacement is confirmed", () => {
@@ -313,6 +350,9 @@ test("Steam ID change across a long observation gap has no exact restart time", 
     );
     assert.equal(event.timeKnown, false);
     assert.equal(event.restartAt, null);
+    assert.equal(event.confidence, "CONFIRMED");
+    assert.equal(event.evidenceScore.total, 45);
+    assert.equal(event.evidenceScore.level, "HIGH");
     assert.equal(
         event.observationWindow.start,
         "2026-07-27T21:49:22.590Z"

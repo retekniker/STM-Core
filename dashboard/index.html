@@ -2305,6 +2305,7 @@
             const sessions = evidence.playerSessionReset || {};
             const gap = data.observationWindow || evidence.observationGap || {};
             const assessment = event.predictionAssessment || {};
+            const score = event.evidenceScore || data.evidenceScore || {};
             const isGap = data.classification === 'PROCESS_RESTART_IN_OBSERVATION_GAP' || data.timeKnown === false;
             const restartAt = formatRestartLogDate(data.restartAt);
             const detectedAt = formatRestartLogDate(data.detectedAt || event.timestamp);
@@ -2319,6 +2320,9 @@
             const timeBlock = isGap
                 ? `<div class="text-yellow-300 font-black mt-2">RESTART OCCURRED BETWEEN ${escapeHTML(formatRestartLogDate(gap.start, true))} AND ${escapeHTML(formatRestartLogDate(gap.end, true))}</div><div class="text-yellow-500 font-black">EXACT TIME UNKNOWN</div>`
                 : `<div class="mt-2"><span class="text-gray-500">RESTART AT:</span> <span class="text-red-300">${escapeHTML(restartAt)}</span></div>`;
+            const scoreBreakdown = Array.isArray(score.breakdown)
+                ? score.breakdown.map(point => `<div><span class="text-gray-400">${escapeHTML(point.name)}</span> <span class="${point.value >= 0 ? 'text-green-400' : 'text-red-400'}">${point.value >= 0 ? '+' : ''}${escapeHTML(point.value)}</span><div class="text-gray-600 pl-2">${escapeHTML(point.justification || '')}</div></div>`).join('')
+                : '<div class="text-gray-600">NO SCORE BREAKDOWN</div>';
 
             return `<div class="flex justify-between gap-2"><span class="text-red-400 font-black">${escapeHTML(event.serverId || 'UNKNOWN')}</span><span class="text-orange-300 font-bold">${escapeHTML(data.classification || 'UNKNOWN')} // ${escapeHTML(confidence)}</span></div>` +
                 timeBlock +
@@ -2331,7 +2335,8 @@
                     restartEvidenceLine('OBSERVATION GAP', Boolean(gap.present || isGap), isGap ? `${formatRestartLogDate(gap.start)} → ${formatRestartLogDate(gap.end)}` : '') +
                 `</div>` +
                 `<div class="text-[10px] mt-2"><span class="text-gray-500">REJECTED TRANSITIONAL STEAM IDS:</span> <span class="text-purple-300">${escapeHTML(rejected || 'NONE')}</span></div>` +
-                `<div class="text-[10px] mt-1"><span class="text-gray-500">PREDICTOR:</span> <span class="text-yellow-300 font-bold">${escapeHTML(predictor)}</span></div>`;
+                `<div class="text-[10px] mt-1"><span class="text-gray-500">PREDICTOR:</span> <span class="text-yellow-300 font-bold">${escapeHTML(predictor)}</span></div>` +
+                `<div class="text-[10px] mt-2 border-t border-gray-800 pt-2"><span class="text-gray-500">EVIDENCE SCORE:</span> <span class="text-cyan-300 font-black">${escapeHTML(score.total ?? 'UNKNOWN')} // ${escapeHTML(score.level || 'UNKNOWN')}</span>${scoreBreakdown}</div>`;
         }
 
         function clearAllAlerts() { document.getElementById("alertBox").innerHTML = ""; }

@@ -1,4 +1,13 @@
+const RestartEvidenceScorer =
+    require("./restartEvidenceScorer");
+
 class RestartLog {
+
+    constructor(options = {}) {
+        this.evidenceScorer =
+            options.evidenceScorer ||
+            new RestartEvidenceScorer();
+    }
 
     classify(event, prediction) {
         const data = event?.data || {};
@@ -51,6 +60,12 @@ class RestartLog {
     enrich(event, prediction) {
         return {
             ...event,
+            evidenceScore:
+                event?.data?.evidenceScore ||
+                this.evidenceScorer.score({
+                    evidence:
+                        event?.data?.evidence || {}
+                }),
             predictionAssessment:
                 this.classify(event, prediction)
         };
