@@ -370,7 +370,7 @@
                                         <span id="title-EU1-side">EU1 UPTIME</span>
                                         <span id="aprx-EU1" class="ml-2 text-[10px] font-black hidden tracking-widest px-1 rounded-sm aprx-clock-badge" title="Second clock view active">APRX</span>
                                     </div>
-                                    <div id="clock-EU1-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time | Double-click: Manual Override" onclick="handleClockClick('EU1')">--:--:--</div>
+                                    <div id="clock-EU1-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time" onclick="handleClockClick('EU1')">--:--:--</div>
                                     <div id="eta-EU1-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
@@ -398,7 +398,7 @@
                                         <span id="title-EU2-side">EU2 UPTIME</span>
                                         <span id="aprx-EU2" class="ml-2 text-[10px] font-black hidden tracking-widest px-1 rounded-sm aprx-clock-badge" title="Second clock view active">APRX</span>
                                     </div>
-                                    <div id="clock-EU2-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time | Double-click: Manual Override" onclick="handleClockClick('EU2')">--:--:--</div>
+                                    <div id="clock-EU2-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time" onclick="handleClockClick('EU2')">--:--:--</div>
                                     <div id="eta-EU2-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
@@ -426,7 +426,7 @@
                                         <span id="title-EU3-side">EU3 UPTIME</span>
                                         <span id="aprx-EU3" class="ml-2 text-[10px] font-black hidden tracking-widest px-1 rounded-sm aprx-clock-badge" title="Second clock view active">APRX</span>
                                     </div>
-                                    <div id="clock-EU3-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time | Double-click: Manual Override" onclick="handleClockClick('EU3')">--:--:--</div>
+                                    <div id="clock-EU3-side" class="text-3xl md:text-4xl font-black clock-wait opacity-30 tracking-widest text-gray-500 whitespace-nowrap cursor-pointer hover:text-white transition-colors" title="Click: Toggle elapsed/restart time" onclick="handleClockClick('EU3')">--:--:--</div>
                                     <div id="eta-EU3-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
@@ -583,9 +583,6 @@
         let wdLogCounter = 0;
         let blackBoxLogs = [];
         
-        const systemStartTime = Date.now();
-        const QUARANTINE_MS = 12 * 60 * 60 * 1000;
-        
         let serverBuffers = { EU1: [], EU2: [], EU3: [] };
 
         const SERVERS = { EU1: "14808491", EU2: "28825461", EU3: "30137964" };
@@ -624,11 +621,9 @@
         }
         
         let wdState = safeJsonGet('jsoc_wd_state', { EU1: 'AUTO', EU2: 'AUTO', EU3: 'AUTO' });
-        let isApprox = safeJsonGet('jsoc_approx_state', { EU1: false, EU2: false, EU3: false });
         // Clock mode controls only the display: elapsed uptime or secondary restart-time view.
         // APRX badge is tied to this click-toggle view, not to watchdog AUTO/ON state.
         let clockMode = { EU1: 'elapsed', EU2: 'elapsed', EU3: 'elapsed' };
-        let clockClickTimers = { EU1: null, EU2: null, EU3: null };
 
         let apiHeatLog = safeJsonGet('jsoc_api_heat', []);
         let updateAllInFlight = false;
@@ -659,10 +654,6 @@
             return false;
         }
         let previous = { EU1: [], EU2: [], EU3: [] };
-        
-        let prevUptime = { EU1: -1, EU2: -1, EU3: -1 }; 
-        // [v8] Steam server ID - rotuje przy KAŻDYM restarcie procesu serwera. 100% pewny sygnał.
-        let prevSteamId = safeJsonGet('jsoc_steam_ids', { EU1: null, EU2: null, EU3: null });
         let cache = {}; let historyData = []; let historyLabels = [];
         let lastRenderedHash = { EU1: '', EU2: '', EU3: '' }; 
         let isFirstLoad = true;
@@ -677,13 +668,8 @@
         let storedVol = localStorage.getItem('jsoc_volume');
         let currentVolume = storedVol !== null ? parseFloat(storedVol) : 1.0;
         
-        let isBooting = { EU1: false, EU2: false, EU3: false };
         let alert15Triggers = { EU1: false, EU2: false, EU3: false };
-
-        // [v5] COOLDOWN: blokuje ponowną detekcję restartu zaraz po wykryciu (anti-storm)
-        const RESTART_DETECTION_COOLDOWN_MS = 30 * 60 * 1000; // 30 min
-        let lastRestartDetected = { EU1: 0, EU2: 0, EU3: 0 };
-        let lastBmStaleAlert = { EU1: 0, EU2: 0, EU3: 0 };
+        let lastRestartAlerted = safeJsonGet('jsoc_last_restart_alerts', { EU1: null, EU2: null, EU3: null });
 
         let advMode = localStorage.getItem('jsoc_adv_mode') === 'true';
         let audioUnlocked = false; let voiceEnabled = false; let ttsVoice = null;
@@ -811,56 +797,7 @@
         };
 
         window.handleClockClick = function(server) {
-            // Single click: toggle elapsed/restart time. Double click: manual override.
-            if (clockClickTimers[server]) {
-                clearTimeout(clockClickTimers[server]);
-                clockClickTimers[server] = null;
-                resetClock(server);
-                return;
-            }
-
-            clockClickTimers[server] = setTimeout(() => {
-                clockClickTimers[server] = null;
-                clockMode[server] = clockMode[server] === 'restartTime' ? 'elapsed' : 'restartTime';
-                updateClock();
-            }, 250);
-        };
-
-        window.resetClock = function(server) {
-            const input = prompt(`[MANUAL OVERRIDE]\nPodaj dokładną godzinę ostatniego restartu dla ${server} (format HH:MM):\n\nZostaw puste, aby użyć obecnego czasu (TERAZ).`);
-            if (input === null) return; 
-
-            let newRestartTime = Date.now();
-            
-            if (input.trim() !== "") {
-                const match = input.trim().match(/^(\d{1,2}):(\d{2})$/);
-                if (match) {
-                    const now = new Date();
-                    now.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
-                    newRestartTime = now.getTime();
-                    
-                    if (newRestartTime > Date.now()) {
-                        newRestartTime -= 24 * 60 * 60 * 1000;
-                    }
-                } else {
-                    alert("Błędny format! Wymagany format to HH:MM (np. 05:36)");
-                    return;
-                }
-            }
-            
-            lastRestartData[server] = newRestartTime;
-            localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
-            
-            isApprox[server] = true;
-            localStorage.setItem('jsoc_approx_state', JSON.stringify(isApprox));
-            
-            if (wdState[server] !== 'ON') {
-                setWdState(server, 'ON');
-            }
-            
-            const timeStr = new Date(newRestartTime).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-            logEvent(`[OVERRIDE] ${server} CYCLE SECURED FOR ${timeStr} (APRX)`, "text-orange-500 font-bold");
-            pushToDMD(`[ ! ] MANUAL OVERRIDE: ${server} SYNCED TO ${timeStr} [APRX] [ ! ]`, 2, 'dmd-alarm-yellow');
+            clockMode[server] = clockMode[server] === 'restartTime' ? 'elapsed' : 'restartTime';
             updateClock();
         };
 
@@ -976,6 +913,7 @@
                     "jsoc_stats",
                     "jsoc_calibration_data",
                     "jsoc_last_restarts",
+                    "jsoc_last_restart_alerts",
                     "jsoc_muted",
                     "jsoc_volume",
                     "jsoc_adv_mode",
@@ -1219,9 +1157,54 @@
             if (!cache[server]) cache[server] = { status: 'booting', players: 0, maxPlayers: 0, details: {}, list: [], ping: 0 };
             cache[server].players = 0;
             cache[server].list = [];
-            cache[server].status = isBooting[server] ? 'booting' : (cache[server].status || 'online');
+            cache[server].status = cache[server].status || 'online';
             lastRenderedHash[server] = `restart-clear-${Date.now()}`;
             renderDirty = true;
+        }
+
+        function handleBackendRestart(server, core) {
+            const detectedAt = core.lastRestartDetectedAt || null;
+            if (!lastRestartAlerted[server]) {
+                lastRestartAlerted[server] = detectedAt || 'NO_RESTART_BASELINE';
+                lsSet('jsoc_last_restart_alerts', JSON.stringify(lastRestartAlerted));
+                return false;
+            }
+
+            if (!detectedAt || lastRestartAlerted[server] === detectedAt) return false;
+
+            lastRestartAlerted[server] = detectedAt;
+            lsSet('jsoc_last_restart_alerts', JSON.stringify(lastRestartAlerted));
+
+            clearServerRosterAfterRestart(server);
+            const reason = core.lastRestartReason || 'BACKEND CONFIRMATION';
+            logEvent(`[STM CORE] ${server} RESTART CONFIRMED (${reason}).`, "text-red-500 font-bold");
+            addSystemAlert(`CRITICAL: ${server} RESTART CONFIRMED`);
+            queueSound(SOUND_SQUAD, currentVolume * 0.3);
+            if (audioUnlocked && voiceEnabled && !isMuted) {
+                queueSpeech(`Critical alert. ${server.replace('EU1', 'EU One')} restart confirmed.`);
+            }
+            if (wdState[server] === 'ON') {
+                pushToDMD(`[ ! ] CRITICAL: ${server} RESTART CONFIRMED [ ! ]`, 2, 'dmd-alarm-red');
+            }
+
+            return true;
+        }
+
+        function getBackendDisplayStatus(server) {
+            const c = cache[server];
+            if (!c) return 'OFFLINE';
+
+            const detection = String(c.restartDetectionStatus || '').toUpperCase();
+            if (detection === 'VERIFYING') return 'RESTART DETECTED // VERIFYING';
+            if (detection === 'RESTART_CONFIRMED') return 'RESTART CONFIRMED';
+            if (c.status === 'degraded') return 'DEGRADED';
+            if (c.status !== 'online') return 'OFFLINE';
+
+            const detectedMs = Date.parse(c.lastRestartDetectedAt || '');
+            const newCycle = Number.isFinite(detectedMs) && Date.now() - detectedMs < 120000;
+            if (newCycle && c.players === 0) return 'SERVER BOOTING';
+            if (newCycle) return 'ONLINE // NEW CYCLE';
+            return 'ONLINE';
         }
 
         function setWdState(server, state) {
@@ -1424,7 +1407,6 @@
         let pingSpikeStrike = { EU1: 0, EU2: 0, EU3: 0 };
         let lastSpikeAlert = { EU1: 0, EU2: 0, EU3: 0 };
         let healthScore = { EU1: 100, EU2: 100, EU3: 100 };
-        let restartPattern = safeJsonGet('jsoc_restart_pattern', { EU1: {}, EU2: {}, EU3: {} });
 
         function updatePingBaseline(server, ping) {
             if (ping <= 0 || ping > 2000) return;
@@ -1458,7 +1440,6 @@
             if (!c) return 0;
             let s = 100;
             if (c.status !== 'online') s -= 60;
-            if (isBooting[server]) s -= 30;
             const b = pingBaseline[server];
             if (b && c.ping > 0) {
                 const ratio = c.ping / b;
@@ -1471,40 +1452,6 @@
             if (c.maxPlayers > 0 && c.players >= c.maxPlayers) s -= 5;
             healthScore[server] = Math.max(0, Math.min(100, Math.round(s)));
             return healthScore[server];
-        }
-
-        function recordRestartPattern(server) {
-            const h = new Date().getHours();
-            if (!restartPattern[server]) restartPattern[server] = {};
-            restartPattern[server][h] = (restartPattern[server][h] || 0) + 1;
-            lsSet('jsoc_restart_pattern', JSON.stringify(restartPattern));
-        }
-
-        window.resetRestartPattern = function(server) {
-            if (server && restartPattern[server]) {
-                restartPattern[server] = {};
-            } else {
-                restartPattern = { EU1: {}, EU2: {}, EU3: {} };
-            }
-            lsSet('jsoc_restart_pattern', JSON.stringify(restartPattern));
-            try { localStorage.removeItem('jsoc_last_restarts'); } catch(e){}
-            console.log('%c[RESET] restartPattern wyczyszczony' + (server?` (${server})`:' (ALL)'), 'color:#0f0;font-weight:bold');
-            return restartPattern;
-        };
-        window.resetSteamIds = function() {
-            prevSteamId = { EU1: null, EU2: null, EU3: null };
-            try { localStorage.removeItem('jsoc_steam_ids'); } catch(e){}
-            console.log('%c[RESET] Steam ID baseline wyczyszczony - następny tick ustawi nowe', 'color:#0f0;font-weight:bold');
-            return prevSteamId;
-        };
-
-        function predictNextRestartWindow(server) {
-            const hist = restartPattern[server] || {};
-            const entries = Object.entries(hist).map(([h,c]) => [parseInt(h), c]);
-            if (entries.length < 3) return null;
-            const total = entries.reduce((a,[,c]) => a+c, 0);
-            entries.sort((a,b) => b[1] - a[1]);
-            return entries.slice(0, 3).map(([h,c]) => ({ hour: h, prob: Math.round(c/total*100) }));
         }
 
         setInterval(() => {
@@ -1527,63 +1474,17 @@
             });
         }
 
-        // ===== STM v8: deterministic restart signal from BattleMetrics/Steam =====
-        function normalizeSteamId(value) {
-            if (value === undefined || value === null || value === '') return null;
-            return String(value).trim();
-        }
+        function formatPlayerConnectionTime(value) {
+            const seconds = Math.max(0, Math.floor(Number(value)));
+            if (!Number.isFinite(seconds)) return '--';
+            if (seconds < 60) return `${seconds}s`;
 
-        function extractSteamIdFromRawJson(rawText) {
-            // serverSteamId can exceed Number.MAX_SAFE_INTEGER, so read it from raw JSON before JSON.parse can round it.
-            const m = rawText.match(/\"serverSteamId\"\s*:\s*\"?(\d{8,})\"?/);
-            return m ? m[1] : null;
-        }
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
 
-        function getCurrentSteamId(rawText, attr) {
-            return extractSteamIdFromRawJson(rawText) ||
-                normalizeSteamId(attr.details?.serverSteamId) ||
-                normalizeSteamId(attr.details?.steamId) ||
-                normalizeSteamId(attr.details?.serverId);
-        }
-
-        function getDetailsUptime(attr) {
-            const t = Number(attr.details?.time);
-            return Number.isFinite(t) && t > 0 ? t : 0;
-        }
-
-        function getBattlemetricsUpdatedAtMs(attr) {
-            const stamp = attr.updatedAt ? Date.parse(attr.updatedAt) : 0;
-            if (!stamp || !Number.isFinite(stamp)) return 0;
-            // Ignore impossible future timestamps. Small clock skew tolerance: 30s.
-            if (stamp > Date.now() + 30000) return 0;
-            return stamp;
-        }
-
-        function checkBattlemetricsFreshness(server, attr) {
-            const stamp = getBattlemetricsUpdatedAtMs(attr);
-            if (!stamp) return;
-            const ageMs = Date.now() - stamp;
-            if (ageMs > 5 * 60 * 1000 && Date.now() - lastBmStaleAlert[server] > 5 * 60 * 1000) {
-                lastBmStaleAlert[server] = Date.now();
-                const ageMin = Math.round(ageMs / 60000);
-                logEvent(`[BM] ${server} DATA STALE: UPDATED ${ageMin}M AGO`, "text-yellow-500 font-bold");
-                pushToDMD(`[BM] ${server} DATA STALE: ${ageMin}M`, 1, 'dmd-alarm-yellow');
-            }
-        }
-
-        function getRestartTimestampFromBm(server, attr, fallbackTs) {
-            const bmUpdatedAt = getBattlemetricsUpdatedAtMs(attr);
-            if (!bmUpdatedAt) return fallbackTs;
-
-            const previousRestart = lastRestartData[server] || 0;
-
-            // For serverSteamId rotation, BM updatedAt is the closest timestamp we get from the same API response.
-            // It prevents the clock from being late by the browser polling delay or BM cache age.
-            if (bmUpdatedAt > previousRestart && bmUpdatedAt <= fallbackTs) {
-                return bmUpdatedAt;
-            }
-
-            return fallbackTs;
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            return `${hours}h ${String(remainingMinutes).padStart(2, '0')}m`;
         }
 
         async function fetchServer(name, id) {
@@ -1640,16 +1541,18 @@
                             ? "degraded"
                             : "offline";
 
-                const players =
+                const playerList =
                     Array.isArray(core.playerList)
                         ? core.playerList
-                            .map(player =>
-                                String(
-                                    player.name || ""
-                                ).trim()
-                            )
-                            .filter(Boolean)
+                            .map(player => ({
+                                name: String(player.name || "").trim(),
+                                score: Number.isFinite(Number(player.score)) ? Number(player.score) : 0,
+                                time: Number.isFinite(Number(player.time)) ? Number(player.time) : 0
+                            }))
+                            .filter(player => player.name)
                         : [];
+
+                const players = playerList.map(player => player.name);
 
                 const reportedPlayers =
                     Number(core.players);
@@ -1675,9 +1578,6 @@
                     ? Date.parse(core.lastRestartAt)
                     : 0;
 
-                const currentSteamId =
-                    normalizeSteamId(core.steamId);
-
                 const attr = {
                     status: mappedStatus,
                     players: currentPlayers,
@@ -1688,33 +1588,17 @@
                         new Date().toISOString(),
                     details: {
                         map: core.map || "-",
-                        time: currentUptime,
-                        serverSteamId:
-                            currentSteamId
+                        time: currentUptime
                     }
                 };
                 
-                let coreRestartSynced = false;
-
                 if (Number.isFinite(coreRestartAt) && coreRestartAt > 0 && lastRestartData[name] !== coreRestartAt) {
                     lastRestartData[name] = coreRestartAt;
                     lsSet("jsoc_last_restarts", JSON.stringify(lastRestartData));
-                    isApprox[name] = false;
-                    lsSet("jsoc_approx_state", JSON.stringify(isApprox));
-                    coreRestartSynced = true;
-                    logEvent(`[STM CORE] ${name} RESTART CLOCK SYNCED`, "text-cyan-400 font-bold");
                 }
 
-                if (!lastRestartData[name]) {
-                    lastRestartData[name] = currentUptime > 0 ? Date.now() - (currentUptime * 1000) : Date.now();
-                    lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData));
-                    isApprox[name] = false;
-                    lsSet('jsoc_approx_state', JSON.stringify(isApprox));
-                    logEvent(`[WD] INITIAL K.M.S. SYNC (${name})`, "text-cyan-400 font-bold");
-                }
-
+                const backendRestartConfirmed = handleBackendRestart(name, core);
                 const state = wdState[name];
-                let CYCLE = 8 * 60 * 60 * 1000; // UPDATED TO 8H
                 
                 let finalStatus = attr.status;
                 if ((finalStatus === 'offline' || finalStatus === 'dead' || finalStatus === 'booting')) {
@@ -1734,186 +1618,18 @@
                 let joinedPlayers = []; let leftPlayers = [];
                 if (!isFirstLoad) {
                     players.forEach(pName => { if (!previous[name].includes(pName)) joinedPlayers.push(pName); });
-                    if (!isBooting[name]) previous[name].forEach(pName => { if (!players.includes(pName)) leftPlayers.push(pName); });
-                }
-                
-                let isMassEvent = (joinedPlayers.length > 10 || leftPlayers.length > 10);
-                let isCrash = (finalStatus === 'dead' || finalStatus === 'offline');
-                // [v7] Czuły uptime-reset: każdy realny SPADEK uptime > 60s = restart procesu.
-                // Stary warunek (>300 && <120) wymagał, by API zawsze zwracało uptime - dla wielu gier nie zwraca, więc detekcja nigdy nie odpalała.
-                let isUptimeReset = (prevUptime[name] > 60 && currentUptime >= 0 && currentUptime < prevUptime[name] - 60);
-
-                let droppedPlayersCount = leftPlayers.length;
-                let prevPlayerSnapshot = previous[name] ? previous[name].length : 0;
-                let isConfirmedRestart = false;
-                let restartSignalLevel = "NONE"; // TRUE = deterministic, PROBABLE/SUSPECTED = visual/log only
-                let heuristicReason = "";
-                let forceEmptyRosterThisCycle = false;
-                const bmUpdatedAtForHeuristics = getBattlemetricsUpdatedAtMs(attr);
-                const bmAgeMsForHeuristics = bmUpdatedAtForHeuristics ? (Date.now() - bmUpdatedAtForHeuristics) : 0;
-                const isBmStaleForHeuristics = bmAgeMsForHeuristics > 5 * 60 * 1000;
-
-                let hasPassedQuarantine = (Date.now() - systemStartTime) >= QUARANTINE_MS;
-                if(localStorage.getItem('jsoc_last_restarts')) { hasPassedQuarantine = true; }
-
-                if (!isFirstLoad && state !== "OFF" && !coreRestartSynced) {
-
-                    // [v5] COOLDOWN: blokuje ponowną detekcję restartu zaraz po wykryciu (anti-storm)
-                    let inCooldown = (Date.now() - lastRestartDetected[name]) < RESTART_DETECTION_COOLDOWN_MS;
-                    let crashConfirmCount = serverBuffers[name].filter(e => e.status === 'offline' || e.status === 'dead').length;
-                    let hasLagOrOfflineInRam = serverBuffers[name].some(entry => entry.ping > 500 || entry.status === 'offline' || entry.status === 'dead');
-
-                    // P1 / v8: serverSteamId rotation is deterministic and must bypass cooldown.
-                    // Cooldown only suppresses heuristic fallback signals, never the Steam ID signal.
-                    if (prevSteamId[name] && currentSteamId && prevSteamId[name] !== currentSteamId) {
-                        isConfirmedRestart = true;
-                        restartSignalLevel = "TRUE";
-                        heuristicReason = `STEAM ID ROTATION (${prevSteamId[name]} -> ${currentSteamId})`;
-                    }
-                    else if (!inCooldown) {
-                        // P2: jawny reset uptime z API (deterministyczny sygnał, jeśli dana gra wspiera details.time)
-                        if (isUptimeReset) {
-                            isConfirmedRestart = true;
-                            restartSignalLevel = "TRUE";
-                            heuristicReason = `UPTIME RESET (${prevUptime[name]}s -> ${currentUptime}s)`;
-                        }
-                        // P3: API DEAD/OFFLINE to tylko PROBABLE. Nie resetuje zegara bez SteamID/uptime.
-                        // Przy starych danych BM wymagamy mocniejszego potwierdzenia.
-                        else if (isCrash && crashConfirmCount >= (isBmStaleForHeuristics ? 3 : 2)) {
-                            restartSignalLevel = "PROBABLE";
-                            heuristicReason = `API DEAD/OFFLINE x${crashConfirmCount}${isBmStaleForHeuristics ? ' + BM STALE' : ''}`;
-                        }
-                        // P4: Mass-leave fallback = SUSPECTED, nie TRUE. Wyłączone przy stale BM data.
-                        else if (
-                            !isBmStaleForHeuristics
-                            && (droppedPlayersCount >= 8 || (prevPlayerSnapshot >= 5 && droppedPlayersCount >= prevPlayerSnapshot * 0.7))
-                            && currentPlayers <= 3
-                            && hasLagOrOfflineInRam
-                        ) {
-                            restartSignalLevel = "SUSPECTED";
-                            heuristicReason = `MASS LEAVE (${droppedPlayersCount}/${prevPlayerSnapshot}) + LAG`;
-                        }
-                        // P5: Veteran shock = SUSPECTED, nie TRUE. Wyłączone przy stale BM data.
-                        else if (!isBmStaleForHeuristics && droppedPlayersCount >= 4 && hasLagOrOfflineInRam && currentPlayers < prevPlayerSnapshot - 3) {
-                            let veteranCount = 0;
-                            leftPlayers.forEach(pName => {
-                                if (statsData[pName] && statsData[pName].totalTime > 90 * 60 * 1000) veteranCount++;
-                            });
-                            if (veteranCount >= 2) {
-                                restartSignalLevel = "SUSPECTED";
-                                heuristicReason = `VETERAN SHOCK (${veteranCount} ELITE) + LAG`;
-                            }
-                        }
-                        else if (isBmStaleForHeuristics && (droppedPlayersCount >= 4 || isCrash)) {
-                            if (advMode) {
-                                const bmAgeMin = Math.round(bmAgeMsForHeuristics / 60000);
-                                logEvent(`[WD] ${name} HEURISTIC WEAKENED: BM DATA STALE ${bmAgeMin}M`, "text-yellow-900", true);
-                            }
-                        }
-                    }
-                    // W cooldownie: log diagnostyczny tylko w advMode
-                    else if (isCrash || droppedPlayersCount > 5) {
-                        if (advMode) {
-                            const remainCd = Math.ceil((RESTART_DETECTION_COOLDOWN_MS - (Date.now() - lastRestartDetected[name])) / 60000);
-                            logEvent(`[WD] ${name} EVENT IGNORED - RESTART COOLDOWN (${remainCd}m left)`, "text-gray-500", true);
-                        }
-                    }
-
-                    if (!isConfirmedRestart && restartSignalLevel !== "NONE") {
-                        lastRestartDetected[name] = Date.now();
-                        const signalColor = restartSignalLevel === "PROBABLE" ? "text-orange-400 font-bold" : "text-yellow-500 font-bold";
-                        logEvent(`[TELEMETRY] ${name} ${restartSignalLevel} RESTART SIGNAL (${heuristicReason}). CLOCK NOT RESET.`, signalColor);
-                        pushToDMD(`[ ${restartSignalLevel} ] ${name}: ${heuristicReason}`, 1, restartSignalLevel === "PROBABLE" ? 'dmd-alarm-yellow' : 'dmd-alarm-yellow');
-                        if (state === 'ON' || (state === 'AUTO' && hasPassedQuarantine)) {
-                            addSystemAlert(`${restartSignalLevel}: ${name} RESTART SIGNAL (${heuristicReason})`);
-                            if (!isMuted) queueSound(SOUND_SQUAD, currentVolume * 0.15);
-                        }
-                    }
-
-                    if (isConfirmedRestart) {
-                        const restartDetectedAt = Date.now();
-                        const isSteamIdRotation = currentSteamId && heuristicReason.startsWith('STEAM ID ROTATION');
-                        const restartEventAt = isSteamIdRotation ? getRestartTimestampFromBm(name, attr, restartDetectedAt) : restartDetectedAt;
-                        const correctionSec = Math.max(0, Math.round((restartDetectedAt - restartEventAt) / 1000));
-
-                        // If Steam ID changed and BM already reports ONLINE, the process has already returned.
-                        // Do not force a fake BOOTING state that would shift the restart clock on the next sample.
-                        isBooting[name] = !(finalStatus === 'online' && isSteamIdRotation);
-                        lastRestartData[name] = restartEventAt;
-                        lastRestartDetected[name] = restartDetectedAt;  // cooldown for heuristic fallbacks only
-                        lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData)); recordRestartPattern(name);
-                        
-                        isApprox[name] = false;
-                        lsSet('jsoc_approx_state', JSON.stringify(isApprox));
-                        
-                        const correctionText = correctionSec >= 10 ? ` | BM TIME CORRECTION: -${correctionSec}s` : '';
-                        logEvent(`[TELEMETRY] ${name} TRUE RESTART DETECTED (${heuristicReason})${correctionText}.`, "text-red-500 font-bold");
-
-                        // Restart means the old roster is invalid. Clear this server immediately and
-                        // treat the current BM roster as stale for this cycle. Next poll will show
-                        // players as fresh joins after the restart instead of keeping ghosts online.
-                        forceEmptyRosterThisCycle = true;
-                        joinedPlayers = [];
-                        leftPlayers = [];
-                        isMassEvent = true;
-                        clearServerRosterAfterRestart(name);
-                        logEvent(`[ROSTER] ${name} CLEARED AFTER RESTART. AWAITING FRESH JOINS.`, "text-orange-400 font-bold");
-
-                        if (state === 'AUTO' && hasPassedQuarantine) {
-                            setWdState(name, 'ON');
-                            logEvent(`[ ! ] ${name} CYCLE SECURED // LOCK-ON [ ! ]`, "text-green-400 font-bold");
-                            pushToDMD(`[ ! ] ${name} CYCLE SECURED // LOCK-ON [ ! ]`, 2, 'dmd-alarm-green');
-                        } else if (state === 'AUTO' && !hasPassedQuarantine) {
-                            logEvent(`[SYS] ${name} RESTART DETECTED BUT QUARANTINE ACTIVE. AWAITING 12H DATA.`, "text-yellow-500");
-                        }
-
-                        if (state === 'ON' || (state === 'AUTO' && hasPassedQuarantine)) {
-                            addSystemAlert(`CRITICAL: ${name} RESTART (${heuristicReason})`);
-                            queueSound(SOUND_SQUAD, currentVolume * 0.3);
-                            if (audioUnlocked && voiceEnabled && !isMuted) { queueSpeech(`Critical alert. ${name.replace('EU1', 'EU One')} restart detected.`); }
-                            if (wdState[name] === 'ON') pushToDMD(`[ ! ] CRITICAL: ${name} RESTARTING [ ! ]`, 2, 'dmd-alarm-red');
-                        }
-                    } 
-                    else if (isUptimeReset && finalStatus === 'online') {
-                        logEvent(`[ANOMALY] ${name} SOFT RESTART DETECTED. IGNORING CYCLE RESET.`, "text-yellow-400 font-bold");
-                    } 
-                    // [POPRAWKA BOOT]: Usuwamy blokadę "currentUptime > 0". Ufamy samemu PINGOWI (lat > 0) i graczom.
-                    else if (finalStatus === 'online' && lat > 0) {
-                        if (isBooting[name]) {
-                            isBooting[name] = false;
-                            // Zabezpieczenie przed błędem z brakiem "time" z API Battlemetrics.
-                            if (currentUptime > 0) {
-                                let restartOffset = currentUptime * 1000;
-                                lastRestartData[name] = Date.now() - restartOffset;
-                                lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData));
-                            }
-                            
-                            addSystemAlert(`${name} SYSTEM ONLINE. CYCLE LOCKED.`); 
-                            if(audioUnlocked && voiceEnabled && !isMuted) { queueSpeech(`System online. ${name.replace('EU1', 'EU One')} cycle locked.`); }
-                            // Dodatkowo wymuszamy wyczyszczenie komunikatu o 15 minutach!
-                            clearStickyAlertForServer(name);
-                        }
-                    }
-                }
-                
-                prevUptime[name] = currentUptime;
-                // [v8] Zapamiętaj Steam ID jako string. Pierwszy odczyt = baseline, nie alarm.
-                if (currentSteamId) {
-                    if (prevSteamId[name] !== currentSteamId) {
-                        const wasEmpty = !prevSteamId[name];
-                        prevSteamId[name] = currentSteamId;
-                        lsSet('jsoc_steam_ids', JSON.stringify(prevSteamId));
-                        if (advMode) {
-                            const label = wasEmpty ? 'STEAM ID BASELINE' : 'STEAM ID UPDATED';
-                            logEvent(`[ADV] ${name} ${label}: ${currentSteamId}`, "text-gray-500", true);
-                        }
-                    }
-                } else if (advMode) {
-                    logEvent(`[ADV] ${name} STEAM ID MISSING IN BM RESPONSE`, "text-yellow-900", true);
+                    previous[name].forEach(pName => { if (!players.includes(pName)) leftPlayers.push(pName); });
                 }
 
-                const effectivePlayers = forceEmptyRosterThisCycle ? [] : players;
-                const effectiveCurrentPlayers = forceEmptyRosterThisCycle ? 0 : currentPlayers;
+                let isMassEvent = backendRestartConfirmed || joinedPlayers.length > 10 || leftPlayers.length > 10;
+
+                if (backendRestartConfirmed) {
+                    leftPlayers = [];
+                    logEvent(`[ROSTER] ${name} CLEARED AFTER BACKEND-CONFIRMED RESTART.`, "text-orange-400 font-bold");
+                }
+
+                const effectivePlayers = players;
+                const effectiveCurrentPlayers = currentPlayers;
 
                 if (maxPlayers > 0 && effectiveCurrentPlayers >= maxPlayers) {
                     if (!isServerFullAlerted[name]) {
@@ -1987,7 +1703,22 @@
                         queueSound(SOUND_SQUAD, currentVolume * 0.3);
                     }
                 }
-                previous[name] = effectivePlayers; cache[name] = { status: finalStatus || 'offline', players: effectiveCurrentPlayers, maxPlayers: maxPlayers, details: attr.details || {}, list: effectivePlayers.map(n => ({name: n})), ping: lat };
+                previous[name] = effectivePlayers;
+                cache[name] = {
+                    status: finalStatus || 'offline',
+                    players: effectiveCurrentPlayers,
+                    maxPlayers,
+                    details: attr.details || {},
+                    list: playerList,
+                    ping: lat,
+                    lastRestartAt: core.lastRestartAt || null,
+                    lastRestartDetectedAt: core.lastRestartDetectedAt || null,
+                    lastRestartReason: core.lastRestartReason || null,
+                    uptimeSinceRestartSeconds: currentUptime,
+                    restartDetectionStatus: core.restartDetectionStatus || coreStatus || 'OFFLINE',
+                    restartCandidateSteamId: core.restartCandidateSteamId || null,
+                    restartCandidateSince: core.restartCandidateSince || null
+                };
             } catch (err) {
                 const state = wdState[name]; updateMiniChart(name, 0, 0, state);
                 if (advMode && err.message !== "429") { logEvent(`[ADV] ${name} FETCH FAILED`, "text-red-900", true); }
@@ -2013,10 +1744,6 @@
             }
             
             try {
-                ["EU1", "EU2", "EU3"].forEach(n => {
-                    if(!lastRestartData[n]) { lastRestartData[n] = Date.now(); lsSet('jsoc_last_restarts', JSON.stringify(lastRestartData)); }
-                });
-
                 // PARALLEL FETCH (Promise.allSettled) - błąd jednego serwera nie wywala innych
                 const fetchResults = await Promise.allSettled([
                     fetchServer("EU1", SERVERS.EU1),
@@ -2039,7 +1766,7 @@
                     const perc = c.maxPlayers > 0 ? Math.round((c.players / c.maxPlayers) * 100) : 0;
                     
                     const isOnline = (c.status === 'online');
-                    const isBoot = isBooting[n];
+                    const displayStatus = getBackendDisplayStatus(n);
                     
                     const percEl = document.getElementById(`perc${n}`);
                     if(percEl) {
@@ -2056,15 +1783,16 @@
                     const fullText = document.getElementById(`full${n}`); if(fullText) { fullText.style.display = perc >= 100 && isOnline ? "block" : "none"; }
                     const satStatus = document.getElementById(`satStatus${n}`);
                     if(satStatus) {
-                        if (isOnline && !isBoot) { 
-                            satStatus.innerText = "ONLINE"; satStatus.className = "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-online"; 
-                        } 
-                        else if (isBoot) { 
-                            satStatus.innerText = "BOOTING"; satStatus.className = "text-[9px] mt-1 font-bold uppercase tracking-widest text-yellow-400 warning-pulse"; 
-                        } 
-                        else { 
-                            satStatus.innerText = "OFFLINE"; satStatus.className = "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline"; 
-                        }
+                        satStatus.innerText = displayStatus;
+                        const warning = displayStatus === 'RESTART DETECTED // VERIFYING' || displayStatus === 'SERVER BOOTING' || displayStatus === 'DEGRADED';
+                        const confirmed = displayStatus === 'RESTART CONFIRMED';
+                        satStatus.className = warning
+                            ? "text-[9px] mt-1 font-bold uppercase tracking-widest text-yellow-400 warning-pulse"
+                            : confirmed
+                                ? "text-[9px] mt-1 font-bold uppercase tracking-widest text-red-500 warning-pulse"
+                                : displayStatus === 'OFFLINE'
+                                    ? "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline"
+                                    : "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-online";
                     }
                 });
                 
@@ -2091,7 +1819,8 @@
                 const sEl = document.getElementById(`status${name}`); const container = document.getElementById(`container${name}`); const alertsContainer = document.getElementById(`alerts${name}`); const isFull = c.players >= c.maxPlayers && c.maxPlayers > 0;
                 
                 if (c.status === 'online' || c.players > 0) {
-                    if (isBooting[name]) { sEl.innerText = "BOOTING"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold warning-pulse"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
+                    if (c.restartDetectionStatus === 'VERIFYING') { sEl.innerText = "VERIFYING"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold warning-pulse"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
+                    else if (c.restartDetectionStatus === 'RESTART_CONFIRMED') { sEl.innerText = "RESTART CONFIRMED"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full uppercase text-red-500 font-bold warning-pulse"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
                     else if (c.status === 'degraded') { sEl.innerText = "DEGRADED"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-yellow-500 text-right w-full uppercase text-yellow-500 font-bold"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
                     else if (isFull) { sEl.innerText = "SERVER FULL"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full text-red-500 full-text-blink font-bold uppercase"; container.classList.remove('soc-border'); container.classList.add('soc-border-pulse'); } 
                     else { sEl.innerText = "ONLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-green-500 text-right w-full uppercase text-green-500"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
@@ -2100,7 +1829,7 @@
                 document.getElementById(`players${name}`).innerText = `${c.players || 0}/${c.maxPlayers || 0}`; document.getElementById(`map${name}`).innerText = c.details?.map || "-"; document.getElementById(`ping${name}`).innerText = `${c.ping || 0}ms`;
                 // Hash check: skip full DOM rebuild if player list unchanged
                 // FIX v2: dodajemy squadsVersion - reassign gracza zmienia jego kolor nawet bez zmiany rosteru
-                const listHash = (c.list || []).map(p => p.name).join('|') + '|' + currentSquadIdx + '|' + squadsVersion;
+                const listHash = (c.list || []).map(p => `${p.name}:${Math.floor(Number(p.time) || 0)}`).join('|') + '|' + currentSquadIdx + '|' + squadsVersion;
                 const listEl = document.getElementById(`list${name}`);
                 
                 if (listHash === lastRenderedHash[name]) {
@@ -2143,7 +1872,7 @@
                     }
                     
                     row.className = rClass; 
-                    row.innerHTML = `<span class="${numClass}" style="${numStyle}">${i+1}.</span><span class="truncate">${escapeHTML(p.name)}</span>`; 
+                    row.innerHTML = `<span class="${numClass}" style="${numStyle}">${i+1}.</span><span class="truncate flex-1">${escapeHTML(p.name)}</span><span class="ml-2 shrink-0 text-[9px] opacity-60 tabular-nums" title="A2S player connection time">${formatPlayerConnectionTime(p.time)}</span>`;
                     row.ondblclick = () => addWatch(p.name);  // p.name is already a string, safe for function arg 
                     listEl.appendChild(row);
                 });
@@ -2156,8 +1885,6 @@
         function updateClock() { 
             const now = new Date(); 
             const dmdTime = document.getElementById('dmd-time'); if (dmdTime) dmdTime.innerText = now.toLocaleTimeString('en-US', { hour12: false }); 
-            const CYCLE = 8 * 60 * 60 * 1000; // UPDATED TO 8H
-            
             ["EU1", "EU2", "EU3"].forEach(n => {
                 const els = [document.getElementById(`clock-${n}`), document.getElementById(`clock-${n}-side`)]; 
                 const etas = [document.getElementById(`eta-${n}`), document.getElementById(`eta-${n}-side`)]; 
@@ -2169,19 +1896,16 @@
                 
                 const state = wdState[n]; const c = cache[n]; const activeClockColor = WD_COLORS[n]; const activeTitleColor = TITLE_COLORS[n];
 
-                // === WD-v2 HUD: health score + restart prediction (jako tooltip) ===
                 const _hp = computeHealthScore(n);
-                const _pred = predictNextRestartWindow(n);
-                const _predTxt = _pred ? `WD-v2 PREDICTION: ${_pred.map(p=>p.hour.toString().padStart(2,'0')+':00 ('+p.prob+'%)').join(' • ')}` : 'WD-v2: collecting restart pattern...';
+                const _predTxt = 'Restart prediction: awaiting backend model';
                 if (vfdL1) vfdL1.title = `Health: ${_hp}/100 | ${_predTxt}`;
                 etas.forEach(t => { if (t) t.title = _predTxt; });
 
                 if (aprxEl) {
-                    // APRX blinks only when the operator toggles the watchdog clock to its secondary view.
-                    // Manual override still uses isApprox internally, but it no longer forces the badge on during normal uptime display.
+                    // APRX marks the secondary restart-time view.
                     if (clockMode[n] === 'restartTime') {
                         aprxEl.classList.remove('hidden');
-                        aprxEl.title = isApprox[n] ? 'Approx/manual restart-time view active' : 'Secondary restart-time view active';
+                        aprxEl.title = 'Secondary restart-time view active';
                     } else {
                         aprxEl.classList.add('hidden');
                     }
@@ -2198,7 +1922,7 @@
                     return;
                 }
 
-                if (isBooting[n]) { 
+                if (c && c.restartDetectionStatus === 'VERIFYING') {
                     leds.forEach(l => { if(l) { l.className = "led-indicator led-red-blink " + (l.id.includes('side') ? "w-3 h-3 md:w-4 md:h-4 mr-2 border-2" : ""); } }); 
                     els.forEach(e => { if(e) { e.className = `text-3xl md:text-4xl font-black clock-wait tracking-widest ${activeClockColor} whitespace-nowrap`; e.innerText = "BOOTING"; } }); 
                     etas.forEach(t=>{if(t) { t.className = "text-[9px] font-bold tracking-widest mt-1 text-red-400 uppercase whitespace-nowrap"; t.innerText = `AWAITING...`; }}); 
@@ -2229,6 +1953,12 @@
 
                 
                 // [v5] ZEGAR LICZY W GÓRĘ od ostatniego wykrytego restartu (TIME-SINCE-RESTART)
+                if (!lastRestartData[n]) {
+                    els.forEach(e => { if(e) { e.innerText = "--:--:--"; e.title = 'No confirmed restart timestamp available'; } });
+                    etas.forEach(t => { if(t) t.innerText = 'AWAITING BACKEND HISTORY'; });
+                    return;
+                }
+
                 let elapsed = Date.now() - lastRestartData[n];
                 if (elapsed < 0) elapsed = 0;
                 let lastDate = new Date(lastRestartData[n]);
@@ -2244,7 +1974,7 @@
                 const elapsedStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                 const lastStr = lastDate.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
                 const displayStr = clockMode[n] === 'restartTime' ? `RST ${lastStr}` : elapsedStr;
-                els.forEach(e => { if(e) { e.innerText = displayStr; e.title = `Last restart: ${lastDate.toLocaleString('en-GB', { hour12: false })}\n${_predTxt}\nClick: elapsed/restart-time view. Double-click: manual override.`; } });
+                els.forEach(e => { if(e) { e.innerText = displayStr; e.title = `Last restart: ${lastDate.toLocaleString('en-GB', { hour12: false })}\n${_predTxt}\nClick: elapsed/restart-time view.`; } });
                 etas.forEach(t=>{if(t) {
                     t.className = clockMode[n] === 'restartTime'
                         ? "text-[9px] font-black tracking-widest mt-1 uppercase text-yellow-400 warning-pulse whitespace-nowrap"
