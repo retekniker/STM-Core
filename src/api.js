@@ -227,17 +227,112 @@ class ApiServer {
                         return;
                     }
 
-                    const endMs = Date.now();
-                    const startMs = endMs - rangeMs;
+                    const hasFrom = request.query.from !== undefined;
+                    const hasTo = request.query.to !== undefined;
+                    if (hasFrom !== hasTo) {
+                        response.status(400).json({
+                            success: false,
+                            error: "TELEMETRY_WINDOW_REQUIRES_FROM_AND_TO"
+                        });
+                        return;
+                    }
+
+                    const requestedFrom = hasFrom
+                        ? Date.parse(request.query.from)
+                        : Date.now() - rangeMs;
+                    const requestedTo = hasTo
+                        ? Date.parse(request.query.to)
+                        : Date.now();
+
+                    if (!Number.isFinite(requestedFrom) || !Number.isFinite(requestedTo)) {
+                        response.status(400).json({
+                            success: false,
+                            error: "INVALID_TELEMETRY_DATE"
+                        });
+                        return;
+                    }
+
+                    if (requestedFrom >= requestedTo) {
+                        response.status(400).json({
+                            success: false,
+                            error: "INVALID_TELEMETRY_WINDOW_ORDER"
+                        });
+                        return;
+                    }
+
+                    const requestedDuration = requestedTo - requestedFrom;
+                    if (requestedDuration > TelemetryHistory.MAX_RANGE_MS) {
+                        response.status(400).json({
+                            success: false,
+                            error: "TELEMETRY_WINDOW_TOO_LARGE",
+                            maximumRangeMs: TelemetryHistory.MAX_RANGE_MS
+                        });
+                        return;
+                    }
+
+                    const resolution = String(
+                        request.query.resolution || "auto"
+                    ).toLowerCase();
+                    if (!["auto", "overview", "raw"].includes(resolution)) {
+                        response.status(400).json({
+                            success: false,
+                            error: "INVALID_TELEMETRY_RESOLUTION",
+                            allowedResolutions: ["auto", "overview", "raw"]
+                        });
+                        return;
+                    }
+
+                    if (
+                        resolution === "raw" &&
+                        requestedDuration > TelemetryHistory.MAX_RAW_RANGE_MS
+                    ) {
+                        response.status(413).json({
+                            success: false,
+                            error: "RAW_TELEMETRY_WINDOW_TOO_LARGE",
+                            maximumRawRangeMs: TelemetryHistory.MAX_RAW_RANGE_MS
+                        });
+                        return;
+                    }
+
+                    const effectiveResolution = resolution === "auto"
+                        ? "overview"
+                        : resolution;
+                    const defaultMaximumPoints = range === "24h" || range === "48h"
+                        ? this.telemetryHistory.overviewMaximumPoints
+                        : this.telemetryHistory.maximumPoints;
+                    const maximumPoints = this.telemetryHistory
+                        .normalizeMaximumPoints(
+                            request.query.maxPoints,
+                            defaultMaximumPoints
+                        );
+                    const startMs = requestedFrom;
+                    const endMs = requestedTo;
                     const after =
                         new Date(startMs).toISOString();
                     const before =
                         new Date(endMs).toISOString();
                     const states =
                         this.stateEngine.getAll();
-                    const serverIds = states.map(
+                    const knownServerIds = states.map(
                         state => state.id
                     );
+                    const requestedServerId = request.query.serverId
+                        ? String(request.query.serverId)
+                        : null;
+                    if (
+                        requestedServerId &&
+                        !knownServerIds.includes(requestedServerId)
+                    ) {
+                        response.status(404).json({
+                            success: false,
+                            error: "UNKNOWN_SERVER_ID",
+                            serverId: requestedServerId
+                        });
+                        return;
+                    }
+                    const serverIds = requestedServerId
+                        ? [requestedServerId]
+                        : knownServerIds;
                     const [snapshotGroups, events] =
                         await Promise.all([
                             Promise.all(
@@ -266,17 +361,46 @@ class ApiServer {
                             events,
                             states,
                             startMs,
-                            endMs
+                            endMs,
+                            resolution: effectiveResolution,
+                            maximumPoints
                         });
+                    const allTimestamps = snapshots
+                        .map(snapshot => Date.parse(snapshot.timestamp))
+                        .filter(Number.isFinite)
+                        .sort((left, right) => left - right);
+                    const returnedPointCount = series.reduce(
+                        (total, item) => total + item.points.length,
+                        0
+                    );
+                    const sourceSnapshotCount = snapshots.length;
+                    const bucketSizeMs = series.reduce(
+                        (maximum, item) => Math.max(
+                            maximum,
+                            item.metadata.bucketSizeMs || 0
+                        ),
+                        0
+                    );
 
                     response.json({
                         success: true,
                         range,
                         start: after,
                         end: before,
-                        maximumPoints:
-                            this.telemetryHistory
-                                .maximumPoints,
+                        maximumPoints,
+                        requestedFrom: after,
+                        requestedTo: before,
+                        actualFrom: allTimestamps.length > 0
+                            ? new Date(allTimestamps[0]).toISOString()
+                            : null,
+                        actualTo: allTimestamps.length > 0
+                            ? new Date(allTimestamps.at(-1)).toISOString()
+                            : null,
+                        resolution: effectiveResolution,
+                        bucketSizeMs,
+                        sourceSnapshotCount,
+                        returnedPointCount,
+                        truncated: series.some(item => item.metadata.truncated),
                         series
                     });
 

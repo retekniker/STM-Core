@@ -82,6 +82,9 @@ test("telemetry endpoint returns bounded series for all servers", async () => {
     assert.equal(response.statusCode, 200);
     assert.equal(response.body.range, "2h");
     assert.equal(response.body.maximumPoints, 360);
+    assert.equal(response.body.resolution, "overview");
+    assert.equal(response.body.sourceSnapshotCount, 2);
+    assert.equal(response.body.returnedPointCount, 2);
     assert.deepEqual(
         response.body.series.map(series => series.serverId),
         ["EU1", "EU2"]
@@ -117,8 +120,111 @@ test("telemetry endpoint rejects unsupported ranges", async () => {
     );
     assert.deepEqual(
         response.body.allowedRanges,
-        ["30m", "2h", "6h", "12h"]
+        ["30m", "2h", "6h", "12h", "24h", "48h"]
     );
+});
+
+test("telemetry endpoint supports 24h and 48h overview windows", async () => {
+    const calls = [];
+    const api = new ApiServer({
+        stateEngine: {
+            getAll: () => [{ id: "EU1" }],
+            get: () => null
+        },
+        historyRepository: {
+            getServerSnapshotsBetween: async options => {
+                calls.push(options);
+                return [];
+            },
+            getEvents: async () => []
+        }
+    });
+
+    for (const range of ["24h", "48h"]) {
+        const response = createResponse();
+        await getTelemetryHandler(api)(
+            { query: { range, serverId: "EU1", maxPoints: "720" } },
+            response,
+            error => { throw error; }
+        );
+        assert.equal(response.statusCode, 200);
+        assert.equal(response.body.maximumPoints, 720);
+        assert.equal(response.body.series.length, 1);
+        assert.equal(response.body.series[0].serverId, "EU1");
+    }
+
+    assert.ok(Date.parse(calls[0].before) - Date.parse(calls[0].after) >= 86399950);
+    assert.ok(Date.parse(calls[1].before) - Date.parse(calls[1].after) >= 172799950);
+});
+
+test("telemetry endpoint supports custom raw window and metadata", async () => {
+    const from = "2026-07-28T10:00:00.000Z";
+    const to = "2026-07-28T10:30:00.000Z";
+    const snapshots = [from, to].map((timestamp, index) => ({
+        serverId: "EU2",
+        timestamp,
+        success: true,
+        players: index,
+        maxPlayers: 64,
+        ping: 20 + index
+    }));
+    const api = new ApiServer({
+        stateEngine: {
+            getAll: () => [{ id: "EU2" }],
+            get: () => null
+        },
+        historyRepository: {
+            getServerSnapshotsBetween: async () => snapshots,
+            getEvents: async () => []
+        }
+    });
+    const response = createResponse();
+
+    await getTelemetryHandler(api)(
+        { query: { range: "30m", from, to, resolution: "raw", serverId: "EU2" } },
+        response,
+        error => { throw error; }
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.requestedFrom, from);
+    assert.equal(response.body.requestedTo, to);
+    assert.equal(response.body.actualFrom, from);
+    assert.equal(response.body.actualTo, to);
+    assert.equal(response.body.resolution, "raw");
+    assert.equal(response.body.bucketSizeMs, 0);
+    assert.equal(response.body.sourceSnapshotCount, 2);
+    assert.equal(response.body.returnedPointCount, 2);
+});
+
+test("telemetry endpoint rejects oversized raw and invalid requests", async () => {
+    const api = new ApiServer({
+        stateEngine: {
+            getAll: () => [{ id: "EU1" }],
+            get: () => null
+        },
+        historyRepository: {
+            getServerSnapshotsBetween: async () => [],
+            getEvents: async () => []
+        }
+    });
+    const cases = [
+        [{ range: "2h", resolution: "raw" }, 413, "RAW_TELEMETRY_WINDOW_TOO_LARGE"],
+        [{ range: "30m", from: "invalid", to: new Date().toISOString() }, 400, "INVALID_TELEMETRY_DATE"],
+        [{ range: "30m", from: "2026-07-28T10:00:00Z", to: "2026-07-28T09:00:00Z" }, 400, "INVALID_TELEMETRY_WINDOW_ORDER"],
+        [{ range: "30m", serverId: "EU9" }, 404, "UNKNOWN_SERVER_ID"]
+    ];
+
+    for (const [query, status, error] of cases) {
+        const response = createResponse();
+        await getTelemetryHandler(api)(
+            { query },
+            response,
+            routeError => { throw routeError; }
+        );
+        assert.equal(response.statusCode, status);
+        assert.equal(response.body.error, error);
+    }
 });
 
 test("restart endpoint dynamically enriches stored event data", async () => {

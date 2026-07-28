@@ -240,7 +240,8 @@ class HistoryRepository {
                 success,
                 players,
                 max_players,
-                ping
+                ping,
+                error
             FROM server_snapshots
             WHERE ${conditions.join(" AND ")}
             ORDER BY timestamp ASC, id ASC
@@ -255,7 +256,8 @@ class HistoryRepository {
             success: row.success === 1,
             players: row.players,
             maxPlayers: row.max_players,
-            ping: row.ping
+            ping: row.ping,
+            error: row.error
         }));
     }
 
