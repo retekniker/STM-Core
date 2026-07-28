@@ -1,85 +1,188 @@
+<p align="center">
+  <img src="dashboard/assets/jsoc-logo.png" alt="77th JSOC" width="420">
+</p>
+
 # STM Core
 
-Self-hosted Arma 3 server telemetry, event history and monitoring dashboards.
+Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-Current release: **v0.8.4**
+**Current release: [v0.8.7](https://github.com/retekniker/STM-Core/releases/latest)**
+
+STM Core monitors Arma 3 servers directly through GameDig/A2S without depending on BattleMetrics. It runs locally in the background, stores historical data in SQLite and provides a browser-based community dashboard.
 
 ## Features
 
-- Monitors multiple Arma 3 servers through GameDig/A2S
+- Monitors multiple Arma 3 servers
 - Tracks server status, map, latency and player count
+- Displays current player lists
 - Detects player joins and disconnects
-- Stores historical events and snapshots in SQLite
-- Community dashboard
-- Secured administrator dashboard
-- REST API and WebSocket support
+- Detects server restarts through Steam ID rotation
+- Detects confirmed offline-to-online restart cycles
+- Stores restart events, server events and snapshots in SQLite
+- Restores restart clocks after STM Core is restarted
+- Continues monitoring after the browser is closed
+- Provides live dashboard updates through REST API and WebSocket
+- Windows system tray controller
+- Optional automatic startup with Windows
+- Linux background service through systemd
+- Local configuration and data storage
 
-## Quick installation
+## Windows installation
 
-Install STM Core with:
+Download the latest Windows installer:
+
+**https://github.com/retekniker/STM-Core/releases/latest**
+
+Run the downloaded installer:
+
+`STM-Core-Setup-0.8.7-x64.exe`
+
+Installing a newer version over an existing installation preserves the database and configuration.
+
+The Windows system tray icon provides:
+
+- Open Dashboard
+- Start STM Core
+- Stop STM Core
+- Restart STM Core
+- Start with Windows
+- Current running status
+- Exit STM Core
+
+## Linux installation
+
+Install or update STM Core with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash
 ```
 
-Then open **STM Core** from the application menu.
+After installation, open STM Core from the application menu or run:
 
-## Requirements
+```bash
+stm-core open
+```
 
-- Linux with a systemd user session
+Available commands:
+
+```bash
+stm-core open
+stm-core start
+stm-core stop
+stm-core restart
+stm-core status
+stm-core logs
+```
+
+The Linux version runs as a systemd user service and continues monitoring after the browser is closed.
+
+Running the installer again updates STM Core while preserving the existing configuration and database.
+
+## Dashboard
+
+Open the community dashboard at:
+
+```text
+http://127.0.0.1:3000/community/
+```
+
+The dashboard displays live server status, connected players, restart clocks, activity events and voice notifications.
+
+Browser-based voice notifications must be enabled from the dashboard after opening the page.
+
+## Manual installation
+
+Requirements:
+
 - Node.js 18 or newer
 - npm
 - Git
-- curl
 
-## Manual installation
+Clone and install:
 
 ```bash
 git clone https://github.com/retekniker/STM-Core.git
 cd STM-Core
 npm ci
-```
-
-Create the administrator token:
-
-```bash
-printf 'STM_ADMIN_TOKEN=%s\n' "$(openssl rand -hex 32)" > .env
-chmod 600 .env
-```
-
-Start STM Core:
-
-```bash
 npm start
 ```
 
-## Dashboards
+Then open:
 
-- Community: `http://127.0.0.1:3000/community/`
-- Administrator: `http://127.0.0.1:3000/community/admin/`
-
-Display the administrator token locally:
-
-```bash
-sed -n 's/^STM_ADMIN_TOKEN=//p' .env
+```text
+http://127.0.0.1:3000/community/
 ```
-
-Never publish or commit the `.env` file.
 
 ## Server configuration
 
-Servers are configured in `config/servers.json`.
+Monitored servers are configured in:
+
+```text
+config/servers.json
+```
+
+Each server entry contains its identifier, display name, address and query port.
 
 ## Data storage
 
-Runtime data is stored locally in `database/stm.db`.
+STM Core stores runtime data locally in SQLite.
 
-The database, `.env`, logs and `node_modules` are excluded from Git.
+Default project database:
 
-## Stop STM Core
+```text
+database/stm.db
+```
 
-Press `Ctrl+C` in the terminal running STM Core.
+Windows application data:
+
+```text
+%LOCALAPPDATA%\STM-Core
+```
+
+Linux installation directory:
+
+```text
+~/.local/share/stm-core
+```
+
+The database contains server snapshots, detected events and restart history.
+
+Runtime databases, environment files, logs and installed dependencies are excluded from Git.
+
+## Background monitoring
+
+STM Core operates independently from the browser.
+
+Closing the dashboard does not stop monitoring. Server polling, restart detection and event storage continue in the background as long as STM Core is running and the computer is not turned off or suspended.
+
+## Updating
+
+### Windows
+
+Download the newest installer from:
+
+**https://github.com/retekniker/STM-Core/releases/latest**
+
+Install it over the existing version.
+
+### Linux
+
+Run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash
+```
+
+Existing data and configuration are preserved during updates.
+
+## Project status
+
+STM Core is the current actively maintained successor to the original browser-only STM dashboard.
+
+The legacy version was archived because changes introduced by BattleMetrics made its previous monitoring method unreliable.
 
 ## License
 
-No open-source license has been selected yet. All rights reserved.
+No open-source license has been selected.
+
+All rights reserved.
