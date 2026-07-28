@@ -96,6 +96,25 @@ test("dashboard inline scripts have valid JavaScript syntax", () => {
     }
 });
 
+test("dashboard loads the pinned local Chart.js asset without a CDN", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    const chartPath = path.join(
+        __dirname,
+        "../dashboard/vendor/chart.js/chart.umd.min.js"
+    );
+    const licensePath = path.join(
+        __dirname,
+        "../dashboard/vendor/chart.js/LICENSE.md"
+    );
+
+    assert.match(html, /src="vendor\/chart\.js\/chart\.umd\.min\.js"/);
+    assert.equal(/cdn[^"']*chart\.js/i.test(html), false);
+    assert.equal(fs.existsSync(chartPath), true);
+    assert.equal(fs.existsSync(licensePath), true);
+    assert.match(fs.readFileSync(chartPath, "utf8"), /Chart\.js v4\.5\.1/);
+    assert.match(fs.readFileSync(licensePath, "utf8"), /MIT License/);
+});
+
 test("dashboard delegates restart confirmation to the backend", () => {
     const html = fs.readFileSync(dashboardPath, "utf8");
 

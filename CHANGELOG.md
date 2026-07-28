@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.8.10
+
+### Restart clock
+
+- Fixed automatic clock transition from AUTO to ON after a confirmed restart.
+- Preserves OFF and ON modes, updates the clock base for consecutive restarts and leaves a historical session baseline unchanged.
+- Persists the automatic ON transition in browser localStorage.
+
+### Telemetry Inspector
+
+- Added fullscreen Telemetry Inspector opened from each server oscilloscope.
+- Added 24-hour and 48-hour telemetry views.
+- Added horizontal pan, cursor-centered zoom and a timeline navigator with adjustable handles.
+- Added LIVE, RESET VIEW, previous/next restart navigation and a focused -15/+30 minute restart view.
+- Added automatic raw-detail loading for short time windows.
+- Added synchronized player, ping and query/status telemetry with bucket extrema and sample metadata.
+- Added detailed restart, observation-gap and prediction markers.
+
+### API and offline dashboard
+
+- Extended telemetry API with custom time windows, per-server queries, bounded point counts and selectable auto, overview or raw resolution.
+- Added request validation and response metadata describing source snapshots, returned points and bucket resolution.
+- Bundled Chart.js 4.5.1 locally for offline dashboard operation.
+
 ## 0.8.9 - Release candidate
 
 ### Restart detection
