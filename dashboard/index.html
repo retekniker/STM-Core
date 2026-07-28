@@ -503,8 +503,9 @@
             <div class="soc-border-red p-4 bg-red-950/10 relative z-10">
                 <div class="hidden md:block cyber-cable cyber-cable-red w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-3"></div>
                 <div class="hidden md:block cyber-cable cyber-cable-red w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-2"></div>
-                <div class="flex justify-between items-center mb-3 relative z-20"><h3 class="text-sm font-bold uppercase text-white">ACTIVITY FEED</h3><button onclick="clearAllAlerts()" class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Clear All</button></div>
+                <div class="flex justify-between items-center mb-3 relative z-20"><h3 class="text-sm font-bold uppercase text-white">ACTIVITY FEED</h3><div class="flex gap-2"><button id="restartLogButton" onclick="toggleRestartLog()" class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Restart Log</button><button onclick="clearAllAlerts()" class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Clear All</button></div></div>
                 <div id="alertBox" class="text-[11px] h-56 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 pr-1 relative z-20"></div>
+                <div id="restartLogBox" class="hidden text-[11px] h-56 overflow-y-auto custom-scrollbar flex-col gap-0.5 pr-1 relative z-20"></div>
             </div>
 
             <div class="soc-border p-4 bg-black flex-1 min-h-[380px] min-w-0 relative z-10">
@@ -2448,6 +2449,138 @@
         function updateVolumeUI() { document.querySelectorAll('.vol-level').forEach(el => { const val = parseFloat(el.dataset.vol); el.style.background = val <= currentVolume ? "#00ff9c" : "rgba(0, 255, 156, 0.1)"; el.style.boxShadow = val <= currentVolume ? "0 0 8px #00ff9c" : "none"; }); }
         function toggleMute() { isMuted = !isMuted; localStorage.setItem('jsoc_muted', isMuted); updateMuteUI(); if (isMuted) { audioQueue = []; isPlayingQueue = false; if (currentAudioObj) { currentAudioObj.pause(); currentAudioObj = null; } if (window.speechSynthesis) { window.speechSynthesis.cancel(); } } }
         function updateMuteUI() { document.getElementById('muteIcon').innerHTML = isMuted ? '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.41.32-.85.59-1.32.76v2.06c1.02-.21 1.97-.64 2.8-1.25L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>' : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77z"/>'; }
+        window.toggleRestartLog = function() {
+            const feed = document.getElementById("alertBox");
+            const restartBox = document.getElementById("restartLogBox");
+            const button = document.getElementById("restartLogButton");
+
+            if (!feed || !restartBox || !button) return;
+
+            const restartLogVisible =
+                restartBox.style.display === "flex";
+
+            if (restartLogVisible) {
+                restartBox.style.display = "none";
+                feed.style.display = "flex";
+                button.textContent = "Restart Log";
+                return;
+            }
+
+            feed.style.display = "none";
+            restartBox.style.display = "flex";
+            button.textContent = "Activity Feed";
+            window.showRestartLog();
+        };
+
+        window.showRestartLog = async function() {
+            const box = document.getElementById("restartLogBox");
+            if (!box) return;
+
+            box.innerHTML =
+                '<div class="text-cyan-400 font-bold py-2">LOADING RESTART HISTORY...</div>';
+
+            try {
+                const response = await fetch(
+                    '/api/v1/community/events?type=SERVER_RESTART&limit=100',
+                    { cache: 'no-store' }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const events =
+                    Array.isArray(payload.events)
+                        ? payload.events
+                        : [];
+
+                box.innerHTML = '';
+
+                if (events.length === 0) {
+                    box.innerHTML =
+                        '<div class="text-gray-500 font-bold py-2">NO RESTART EVENTS RECORDED</div>';
+                    return;
+                }
+
+                events.forEach(event => {
+                    const eventData = event.data || {};
+
+                    const restartDate =
+                        new Date(
+                            eventData.restartAt ||
+                            event.timestamp
+                        );
+
+                    const detectedDate =
+                        new Date(
+                            eventData.detectedAt ||
+                            event.timestamp
+                        );
+
+                    const restartTime =
+                        Number.isNaN(restartDate.getTime())
+                            ? 'UNKNOWN'
+                            : restartDate.toLocaleString(
+                                'en-GB',
+                                { hour12: false }
+                            );
+
+                    const detectedTime =
+                        Number.isNaN(detectedDate.getTime())
+                            ? 'UNKNOWN'
+                            : detectedDate.toLocaleString(
+                                'en-GB',
+                                { hour12: false }
+                            );
+
+                    const reason =
+                        eventData.reason === 'STEAM_ID_ROTATION'
+                            ? 'STEAM ID ROTATION'
+                            : eventData.reason === 'OFFLINE_ONLINE_CYCLE'
+                                ? 'OFFLINE → ONLINE CYCLE'
+                                : eventData.reason || 'UNKNOWN';
+
+                    const delay =
+                        !Number.isNaN(restartDate.getTime()) &&
+                        !Number.isNaN(detectedDate.getTime())
+                            ? Math.max(
+                                0,
+                                Math.round(
+                                    (
+                                        detectedDate -
+                                        restartDate
+                                    ) / 1000
+                                )
+                            )
+                            : null;
+
+                    const row =
+                        document.createElement('div');
+
+                    row.className =
+                        'border-l-2 border-red-500 bg-red-950/30 px-3 py-2 mb-1';
+
+                    row.innerHTML =
+                        `<div class="flex justify-between gap-2">` +
+                            `<span class="text-red-400 font-black">${escapeHTML(event.serverId || 'UNKNOWN')}</span>` +
+                            `<span class="text-gray-500">${escapeHTML(restartTime)}</span>` +
+                        `</div>` +
+                        `<div class="text-orange-400 font-bold mt-1">${escapeHTML(reason)}</div>` +
+                        `<div class="text-gray-500 text-[10px] mt-1">DETECTED: ${escapeHTML(detectedTime)}` +
+                            `${delay !== null ? ` | DELAY: ${delay}s` : ''}` +
+                        `</div>`;
+
+                    box.appendChild(row);
+                });
+
+                box.scrollTop = 0;
+            } catch (error) {
+                box.innerHTML =
+                    `<div class="text-red-500 font-bold py-2">RESTART LOG ERROR: ${escapeHTML(error.message)}</div>`;
+            }
+        };
+
         function clearAllAlerts() { document.getElementById("alertBox").innerHTML = ""; }
         function toggleHelp() { const m = document.getElementById('helpModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
         

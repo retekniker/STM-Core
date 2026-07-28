@@ -59,12 +59,6 @@ class RestartTracker {
                     event.type === "SERVER_OFFLINE"
             );
 
-        const becameOnline =
-            reliabilityEvents.some(
-                event =>
-                    event.type === "SERVER_ONLINE"
-            );
-
         if (becameOffline) {
             record.offlineSince = timestamp;
         }
@@ -77,22 +71,10 @@ class RestartTracker {
                     ? String(queryResult.steamId)
                     : null;
 
-            const steamIdChanged =
-                record.previousSteamId &&
-                currentSteamId &&
-                record.previousSteamId !==
-                    currentSteamId;
-
             let reason = null;
             let restartAt = null;
 
-            if (steamIdChanged) {
-                reason = "STEAM_ID_ROTATION";
-                restartAt = timestamp;
-            } else if (
-                queryResult.success &&
-                record.offlineSince
-            ) {
+            if (record.offlineSince) {
                 reason = "OFFLINE_ONLINE_CYCLE";
                 restartAt = record.offlineSince;
             }

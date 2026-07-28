@@ -1,10 +1,10 @@
 {
   "name": "stm-core",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "description": "Self-hosted Arma 3 server telemetry and monitoring dashboard",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "start": "node src/index.js"
   },
   "keywords": [],

@@ -321,7 +321,7 @@ async function start() {
     webSocketHub.start(apiServer.server);
 
     console.log("==========================================");
-    console.log("        STM CORE v0.8.4");
+    console.log("        STM CORE v0.8.8");
     console.log("==========================================");
     console.log(`Polling interval: ${config.pollInterval} ms`);
     console.log("Offline threshold: 3 failed queries");
