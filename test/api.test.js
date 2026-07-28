@@ -210,8 +210,10 @@ test("telemetry endpoint rejects oversized raw and invalid requests", async () =
     });
     const cases = [
         [{ range: "2h", resolution: "raw" }, 413, "RAW_TELEMETRY_WINDOW_TOO_LARGE"],
+        [{ range: "30m", from: "2026-07-28T10:00:00Z" }, 400, "TELEMETRY_WINDOW_REQUIRES_FROM_AND_TO"],
         [{ range: "30m", from: "invalid", to: new Date().toISOString() }, 400, "INVALID_TELEMETRY_DATE"],
         [{ range: "30m", from: "2026-07-28T10:00:00Z", to: "2026-07-28T09:00:00Z" }, 400, "INVALID_TELEMETRY_WINDOW_ORDER"],
+        [{ range: "30m", resolution: "average" }, 400, "INVALID_TELEMETRY_RESOLUTION"],
         [{ range: "30m", serverId: "EU9" }, 404, "UNKNOWN_SERVER_ID"]
     ];
 

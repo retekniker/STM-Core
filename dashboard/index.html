@@ -714,12 +714,18 @@
         let telemetryInspectorOverview = null;
         let telemetryInspectorDetail = null;
         let telemetryInspectorAbort = null;
+        let telemetryInspectorDetailAbort = null;
+        let telemetryInspectorDetailTimer = null;
         let telemetryInspectorRequest = 0;
+        let telemetryInspectorDetailRequest = 0;
         let telemetryInspectorBackdropPointerDown = false;
         const telemetryInspectorController = new TelemetryInspectorController({
-            onChange: () => {
+            onChange: (state, reason) => {
                 if (document.getElementById('telemetryInspector')?.classList.contains('open')) {
                     renderTelemetryInspector();
+                    if (['pan', 'zoom', 'navigator', 'restart', 'live', 'reset'].includes(reason)) {
+                        scheduleTelemetryInspectorDetail();
+                    }
                 }
             }
         });
@@ -2456,6 +2462,30 @@
             return telemetryInspectorDetail || telemetryInspectorOverview;
         }
 
+        function formatInspectorMarker(marker) {
+            if (marker.kind === 'prediction') {
+                return `PREDICTED RESTART\n${formatInspectorTime(marker.timestamp)}\nConfidence: ${Math.round((marker.confidence || 0) * 100)}%`;
+            }
+            if (marker.timeKnown === false) {
+                return `RESTART OCCURRED BETWEEN ${formatInspectorTime(marker.observationWindow?.start)} AND ${formatInspectorTime(marker.observationWindow?.end)}\nEXACT TIME UNKNOWN\n${marker.classification} // ${marker.confidence}`;
+            }
+            const evidence = marker.evidence || {};
+            const score = marker.evidenceScore || {};
+            const query = evidence.queryInterruption || {};
+            const roster = evidence.rosterReset || {};
+            const sessions = evidence.playerSessionReset || {};
+            return [
+                `RESTART ${formatInspectorTime(marker.restartAt || marker.timestamp)}`,
+                `Detected: ${formatInspectorTime(marker.detectedAt)}`,
+                `${marker.classification} // ${marker.confidence}`,
+                `Evidence: ${score.total ?? 'UNKNOWN'} // ${score.level || 'UNKNOWN'}`,
+                `Steam ID: ${marker.previousSteamId || 'UNKNOWN'} → ${marker.currentSteamId || 'UNKNOWN'}`,
+                `Query: ${query.present ? `${query.failedQueries || 0} failed` : 'no interruption'}`,
+                `Roster reset: ${roster.present ? `${roster.before ?? '?'} → ${roster.after ?? '?'}` : 'no'}`,
+                `Session reset: ${sessions.present ? (sessions.players || []).join(', ') || 'yes' : 'no'}`
+            ].join('\n');
+        }
+
         const telemetryInspectorOverlayPlugin = {
             id: 'telemetryInspectorOverlay',
             beforeDatasetsDraw(chartInstance) {
@@ -2667,11 +2697,181 @@
                 telemetryInspectorDetail = null;
                 telemetryInspectorController.setOverview(Date.parse(payload.requestedFrom), Date.parse(payload.requestedTo), telemetryInspectorOverview.restarts || []);
                 renderTelemetryInspector();
+                scheduleTelemetryInspectorDetail();
             } catch (error) {
                 if (error.name !== 'AbortError') logEvent(`[INSPECTOR] TELEMETRY LOAD FAILED: ${error.message}`, 'text-red-500', true);
             } finally {
                 if (requestId === telemetryInspectorRequest) document.getElementById('telemetryInspectorLoading').classList.remove('visible');
             }
+        }
+
+        function scheduleTelemetryInspectorDetail() {
+            clearTimeout(telemetryInspectorDetailTimer);
+            if (telemetryInspectorDetailAbort) telemetryInspectorDetailAbort.abort();
+            const state = telemetryInspectorController.snapshot();
+            if (!state.needsDetail || !telemetryInspectorOverview) {
+                telemetryInspectorDetail = null;
+                renderTelemetryInspector();
+                return;
+            }
+            telemetryInspectorDetailTimer = setTimeout(loadTelemetryInspectorDetail, 180);
+        }
+
+        async function loadTelemetryInspectorDetail() {
+            const state = telemetryInspectorController.snapshot();
+            if (!state.serverId || !state.needsDetail) return;
+            const requestId = ++telemetryInspectorDetailRequest;
+            if (telemetryInspectorDetailAbort) telemetryInspectorDetailAbort.abort();
+            telemetryInspectorDetailAbort = new AbortController();
+            try {
+                const query = new URLSearchParams({
+                    serverId: state.serverId,
+                    range: '30m',
+                    from: new Date(state.viewStart).toISOString(),
+                    to: new Date(state.viewEnd).toISOString(),
+                    resolution: 'raw',
+                    maxPoints: '2000'
+                });
+                const response = await fetch(`/api/v1/community/telemetry?${query}`, { cache: 'no-store', signal: telemetryInspectorDetailAbort.signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const payload = await response.json();
+                const current = telemetryInspectorController.snapshot();
+                if (requestId !== telemetryInspectorDetailRequest || current.viewStart !== state.viewStart || current.viewEnd !== state.viewEnd) return;
+                telemetryInspectorDetail = payload.series?.[0] || null;
+                renderTelemetryInspector();
+            } catch (error) {
+                if (error.name !== 'AbortError') logEvent(`[INSPECTOR] DETAIL LOAD FAILED: ${error.message}`, 'text-red-500', true);
+            }
+        }
+
+        function telemetryInspectorPointerTime(event) {
+            const chartInstance = telemetryInspectorChart;
+            if (!chartInstance?.chartArea) return null;
+            const rect = chartInstance.canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const area = chartInstance.chartArea;
+            if (x < area.left || x > area.right) return null;
+            const state = telemetryInspectorController.snapshot();
+            return state.viewStart + ((x - area.left) / area.width) * (state.viewEnd - state.viewStart);
+        }
+
+        function updateInspectorMarkerTitle(event) {
+            const time = telemetryInspectorPointerTime(event);
+            const chartInstance = telemetryInspectorChart;
+            if (!Number.isFinite(time) || !chartInstance?.chartArea) return;
+            const state = telemetryInspectorController.snapshot();
+            const threshold = (state.viewEnd - state.viewStart) * 12 / chartInstance.chartArea.width;
+            const markers = (telemetryInspectorOverview?.restarts || []).map(marker => ({
+                ...marker,
+                kind: 'restart',
+                hoverTime: marker.timeKnown === false
+                    ? (Date.parse(marker.observationWindow?.start) + Date.parse(marker.observationWindow?.end)) / 2
+                    : Date.parse(marker.restartAt || marker.timestamp)
+            }));
+            const prediction = telemetryInspectorOverview?.prediction;
+            if (prediction?.status === 'PREDICTED') markers.push({ kind: 'prediction', timestamp: prediction.predictedAt, hoverTime: Date.parse(prediction.predictedAt), confidence: prediction.confidence });
+            const nearest = markers
+                .filter(marker => Number.isFinite(marker.hoverTime))
+                .sort((left, right) => Math.abs(left.hoverTime - time) - Math.abs(right.hoverTime - time))[0];
+            chartInstance.canvas.title = nearest && Math.abs(nearest.hoverTime - time) <= threshold
+                ? formatInspectorMarker(nearest)
+                : '';
+        }
+
+        function initTelemetryInspectorNavigation() {
+            const chartCanvas = document.getElementById('telemetryInspectorChart');
+            let chartDrag = null;
+            chartCanvas.addEventListener('pointerdown', event => {
+                if (event.button !== 0) return;
+                chartDrag = { x: event.clientX, moved: false };
+                chartCanvas.setPointerCapture(event.pointerId);
+            });
+            chartCanvas.addEventListener('pointermove', event => {
+                const pointerTime = telemetryInspectorPointerTime(event);
+                if (telemetryInspectorChart?.$telemetryInspector) {
+                    telemetryInspectorChart.$telemetryInspector.cursorTime = pointerTime;
+                    telemetryInspectorChart.draw();
+                }
+                updateInspectorMarkerTitle(event);
+                if (!chartDrag) return;
+                const delta = event.clientX - chartDrag.x;
+                if (Math.abs(delta) < 2) return;
+                chartDrag.moved = true;
+                chartDrag.x = event.clientX;
+                const state = telemetryInspectorController.snapshot();
+                telemetryInspectorController.pan(-delta / Math.max(1, telemetryInspectorChart.chartArea.width) * (state.viewEnd - state.viewStart));
+            });
+            const endChartDrag = () => { chartDrag = null; };
+            chartCanvas.addEventListener('pointerup', endChartDrag);
+            chartCanvas.addEventListener('pointercancel', endChartDrag);
+            chartCanvas.addEventListener('pointerleave', () => {
+                if (!chartDrag && telemetryInspectorChart?.$telemetryInspector) {
+                    telemetryInspectorChart.$telemetryInspector.cursorTime = null;
+                    telemetryInspectorChart.draw();
+                }
+            });
+            chartCanvas.addEventListener('wheel', event => {
+                event.preventDefault();
+                const area = telemetryInspectorChart.chartArea;
+                const rect = chartCanvas.getBoundingClientRect();
+                const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - area.left) / area.width));
+                telemetryInspectorController.zoom(Math.exp(event.deltaY * 0.0015), ratio);
+            }, { passive: false });
+            chartCanvas.addEventListener('dblclick', event => {
+                const time = telemetryInspectorPointerTime(event);
+                if (!Number.isFinite(time)) return;
+                const chartWidth = telemetryInspectorChart.chartArea.width;
+                const state = telemetryInspectorController.snapshot();
+                const threshold = (state.viewEnd - state.viewStart) * 14 / chartWidth;
+                const restart = (telemetryInspectorOverview?.restarts || [])
+                    .filter(marker => marker.timeKnown !== false)
+                    .map(marker => Date.parse(marker.restartAt || marker.timestamp))
+                    .filter(Number.isFinite)
+                    .sort((left, right) => Math.abs(left - time) - Math.abs(right - time))[0];
+                if (Number.isFinite(restart) && Math.abs(restart - time) <= threshold) telemetryInspectorController.focusRestart(restart);
+            });
+
+            document.getElementById('inspectorLive').addEventListener('click', () => telemetryInspectorController.live());
+            document.getElementById('inspectorReset').addEventListener('click', () => telemetryInspectorController.reset());
+            document.getElementById('inspectorPreviousRestart').addEventListener('click', () => telemetryInspectorController.navigateRestart(-1));
+            document.getElementById('inspectorNextRestart').addEventListener('click', () => telemetryInspectorController.navigateRestart(1));
+
+            const navigator = document.getElementById('telemetryInspectorNavigator');
+            const startHandle = document.getElementById('telemetryInspectorHandleStart');
+            const endHandle = document.getElementById('telemetryInspectorHandleEnd');
+            let navigatorDrag = null;
+            const beginNavigatorDrag = (kind, event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const state = telemetryInspectorController.snapshot();
+                navigatorDrag = { kind, x: event.clientX, start: state.viewStart, end: state.viewEnd };
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+            };
+            startHandle.addEventListener('pointerdown', event => beginNavigatorDrag('start', event));
+            endHandle.addEventListener('pointerdown', event => beginNavigatorDrag('end', event));
+            navigator.addEventListener('pointerdown', event => {
+                if (event.target !== navigator && event.target.id !== 'telemetryInspectorNavigatorCanvas') return;
+                beginNavigatorDrag('window', event);
+            });
+            document.addEventListener('pointermove', event => {
+                if (!navigatorDrag) return;
+                const state = telemetryInspectorController.snapshot();
+                const duration = state.overviewEnd - state.overviewStart;
+                const deltaRatio = (event.clientX - navigatorDrag.x) / Math.max(1, navigator.clientWidth);
+                const startRatio = (navigatorDrag.start - state.overviewStart) / duration;
+                const endRatio = (navigatorDrag.end - state.overviewStart) / duration;
+                if (navigatorDrag.kind === 'start') telemetryInspectorController.setNavigatorWindow(startRatio + deltaRatio, endRatio);
+                else if (navigatorDrag.kind === 'end') telemetryInspectorController.setNavigatorWindow(startRatio, endRatio + deltaRatio);
+                else {
+                    telemetryInspectorController.pan(deltaRatio * duration);
+                    const moved = telemetryInspectorController.snapshot();
+                    navigatorDrag.x = event.clientX;
+                    navigatorDrag.start = moved.viewStart;
+                    navigatorDrag.end = moved.viewEnd;
+                }
+            });
+            document.addEventListener('pointerup', () => { navigatorDrag = null; });
+            window.addEventListener('resize', renderTelemetryInspectorNavigator);
         }
 
         window.openTelemetryInspector = function(serverId) {
@@ -2688,6 +2888,8 @@
         window.closeTelemetryInspector = function() {
             const overlay = document.getElementById('telemetryInspector');
             if (telemetryInspectorAbort) telemetryInspectorAbort.abort();
+            if (telemetryInspectorDetailAbort) telemetryInspectorDetailAbort.abort();
+            clearTimeout(telemetryInspectorDetailTimer);
             overlay.classList.remove('open');
             overlay.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('telemetry-inspector-open');
@@ -2713,6 +2915,7 @@
                 if (telemetryInspectorBackdropPointerDown && event.target === overlay) closeTelemetryInspector();
                 telemetryInspectorBackdropPointerDown = false;
             });
+            initTelemetryInspectorNavigation();
         }
 
         function formatTelemetryMarker(marker) {

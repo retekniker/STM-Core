@@ -154,3 +154,45 @@ test("observation-gap restart is represented as an interval", () => {
         end: "2026-07-28T00:22:04.696Z"
     });
 });
+
+test("48h overview bounds dense history without hiding spikes, query gaps or restart adjacency", () => {
+    const history = new TelemetryHistory();
+    const startMs = Date.parse("2026-07-26T12:00:00.000Z");
+    const endMs = startMs + 48 * 60 * 60 * 1000;
+    const restartIndex = 20000;
+    const restartAt = new Date(startMs + restartIndex * 5000).toISOString();
+    const snapshots = Array.from({ length: 34561 }, (_, index) => ({
+        serverId: "EU1",
+        timestamp: new Date(startMs + index * 5000).toISOString(),
+        success: index !== 10000,
+        ping: index === 15000 ? 999 : 20 + index % 7,
+        players: index === 25000 ? 0 : 30 + index % 5,
+        maxPlayers: 64
+    }));
+    const result = history.buildSeries({
+        serverIds: ["EU1"],
+        snapshots,
+        events: [{
+            serverId: "EU1",
+            timestamp: new Date(Date.parse(restartAt) + 10000).toISOString(),
+            data: {
+                classification: "PROCESS_RESTART",
+                confidence: "CONFIRMED",
+                restartAt
+            }
+        }],
+        states: [],
+        startMs,
+        endMs,
+        resolution: "overview",
+        maximumPoints: 900
+    })[0];
+
+    assert.equal(result.metadata.sourceSnapshotCount, 34561);
+    assert.ok(result.metadata.returnedPointCount <= 900);
+    assert.ok(result.points.some(point => point.maxPing === 999));
+    assert.ok(result.points.some(point => point.minPlayers === 0));
+    assert.ok(result.points.some(point => point.status === "OFFLINE"));
+    assert.ok(result.points.some(point => point.timestamp === restartAt));
+    assert.equal(result.restarts.length, 1);
+});
