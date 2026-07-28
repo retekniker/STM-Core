@@ -19,9 +19,9 @@ $PowerShellExe = Join-Path $env:SystemRoot `
 $RunRegistryPath = `
     "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 $RunValueName = "STM Core"
-$RunCommand = `
-    "`"$PowerShellExe`" -NoProfile -ExecutionPolicy Bypass " +
-    "-WindowStyle Hidden -File `"$PSCommandPath`""
+$TrayLauncher = Join-Path $PSScriptRoot "stm-core-tray.vbs"
+$WScriptExe = Join-Path $env:SystemRoot "System32\wscript.exe"
+$RunCommand = "`"$WScriptExe`" `"$TrayLauncher`""
 
 function Invoke-STMCore {
     param(
