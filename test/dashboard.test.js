@@ -90,3 +90,18 @@ test("dashboard oscilloscope uses SQLite telemetry ranges and markers", () => {
     assert.equal(html.includes("pingHistory"), false);
     assert.equal(html.includes("playerHistory"), false);
 });
+
+test("restart log renders backend evidence without inventing gap time", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+
+    assert.match(html, /\/api\/v1\/community\/restarts\?limit=100/);
+    assert.match(html, /RESTART OCCURRED BETWEEN/);
+    assert.match(html, /EXACT TIME UNKNOWN/);
+    assert.match(html, /REJECTED TRANSITIONAL STEAM IDS/);
+    assert.match(html, /PLAYER SESSION RESET/);
+    assert.match(html, /ADDITIONAL \/ OUTLIER/);
+    assert.equal(
+        html.includes("eventData.restartAt ||"),
+        false
+    );
+});

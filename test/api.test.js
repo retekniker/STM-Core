@@ -11,6 +11,15 @@ function getTelemetryHandler(api) {
     return layer.route.stack.at(-1).handle;
 }
 
+function getRestartHandler(api) {
+    const layer = api.app.router.stack.find(item =>
+        item.route?.path ===
+            "/api/v1/community/restarts"
+    );
+
+    return layer.route.stack.at(-1).handle;
+}
+
 function createResponse() {
     return {
         statusCode: 200,
@@ -110,4 +119,55 @@ test("telemetry endpoint rejects unsupported ranges", async () => {
         response.body.allowedRanges,
         ["30m", "2h", "6h", "12h"]
     );
+});
+
+test("restart endpoint dynamically enriches stored event data", async () => {
+    const storedEvent = {
+        id: 1,
+        serverId: "EU1",
+        timestamp: "2026-07-28T03:22:10.000Z",
+        type: "SERVER_RESTART",
+        data: {
+            classification: "PROCESS_RESTART",
+            restartAt: "2026-07-28T03:22:05.916Z"
+        }
+    };
+    const api = new ApiServer({
+        stateEngine: {
+            getAll: () => [],
+            get: () => null
+        },
+        historyRepository: {
+            getEvents: async () => [storedEvent]
+        },
+        restartPrediction: {
+            getPrediction: () => ({
+                status: "PREDICTED",
+                cycleHours: 8,
+                confidence: 0.9,
+                inliers: [{
+                    restartAt:
+                        storedEvent.data.restartAt
+                }],
+                outliers: []
+            })
+        }
+    });
+    const response = createResponse();
+
+    await getRestartHandler(api)(
+        { query: { limit: "100" } },
+        response,
+        error => {
+            throw error;
+        }
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(
+        response.body.events[0]
+            .predictionAssessment.classification,
+        "REGULAR"
+    );
+    assert.equal(storedEvent.predictionAssessment, undefined);
 });

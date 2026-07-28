@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const path = require("path");
 const TelemetryHistory = require("./telemetryHistory");
+const RestartLog = require("./restartLog");
 
 class ApiServer {
 
@@ -19,6 +20,10 @@ class ApiServer {
         this.telemetryHistory =
             options.telemetryHistory ||
             new TelemetryHistory();
+        this.restartPrediction =
+            options.restartPrediction || null;
+        this.restartLog =
+            options.restartLog || new RestartLog();
 
         this.host = options.host || "0.0.0.0";
         this.port = options.port || 3000;
@@ -274,6 +279,52 @@ class ApiServer {
                         series
                     });
 
+                } catch (error) {
+                    next(error);
+                }
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/restarts",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+
+                try {
+                    const events =
+                        await this.historyRepository
+                            .getEvents({
+                                serverId:
+                                    request.query.serverId,
+                                type: "SERVER_RESTART",
+                                before:
+                                    request.query.before,
+                                limit:
+                                    request.query.limit
+                            });
+                    const enriched = events.map(event => {
+                        const prediction =
+                            this.restartPrediction
+                                ?.getPrediction(
+                                    event.serverId
+                                ) ||
+                            this.stateEngine
+                                .get(event.serverId)
+                                ?.restartPrediction;
+
+                        return this.restartLog.enrich(
+                            event,
+                            prediction
+                        );
+                    });
+
+                    response.json({
+                        success: true,
+                        count: enriched.length,
+                        timestamp:
+                            new Date().toISOString(),
+                        events: enriched
+                    });
                 } catch (error) {
                     next(error);
                 }

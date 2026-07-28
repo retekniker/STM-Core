@@ -36,6 +36,7 @@ const restartPrediction = new RestartPrediction();
 const apiServer = new ApiServer({
     stateEngine,
     historyRepository,
+    restartPrediction,
     host: process.env.STM_HOST || "0.0.0.0",
     port: Number(process.env.STM_PORT || 3000)
 });

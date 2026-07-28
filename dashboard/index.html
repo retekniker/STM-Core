@@ -2236,7 +2236,7 @@
 
             try {
                 const response = await fetch(
-                    '/api/v1/community/events?type=SERVER_RESTART&limit=100',
+                    '/api/v1/community/restarts?limit=100',
                     { cache: 'no-store' }
                 );
 
@@ -2260,71 +2260,16 @@
 
                 events.forEach(event => {
                     const eventData = event.data || {};
-
-                    const restartDate =
-                        new Date(
-                            eventData.restartAt ||
-                            event.timestamp
-                        );
-
-                    const detectedDate =
-                        new Date(
-                            eventData.detectedAt ||
-                            event.timestamp
-                        );
-
-                    const restartTime =
-                        Number.isNaN(restartDate.getTime())
-                            ? 'UNKNOWN'
-                            : restartDate.toLocaleString(
-                                'en-GB',
-                                { hour12: false }
-                            );
-
-                    const detectedTime =
-                        Number.isNaN(detectedDate.getTime())
-                            ? 'UNKNOWN'
-                            : detectedDate.toLocaleString(
-                                'en-GB',
-                                { hour12: false }
-                            );
-
-                    const reason =
-                        eventData.reason === 'STEAM_ID_ROTATION'
-                            ? 'STEAM ID ROTATION'
-                            : eventData.reason === 'OFFLINE_ONLINE_CYCLE'
-                                ? 'OFFLINE → ONLINE CYCLE'
-                                : eventData.reason || 'UNKNOWN';
-
-                    const delay =
-                        !Number.isNaN(restartDate.getTime()) &&
-                        !Number.isNaN(detectedDate.getTime())
-                            ? Math.max(
-                                0,
-                                Math.round(
-                                    (
-                                        detectedDate -
-                                        restartDate
-                                    ) / 1000
-                                )
-                            )
-                            : null;
-
                     const row =
                         document.createElement('div');
 
                     row.className =
                         'border-l-2 border-red-500 bg-red-950/30 px-3 py-2 mb-1';
 
-                    row.innerHTML =
-                        `<div class="flex justify-between gap-2">` +
-                            `<span class="text-red-400 font-black">${escapeHTML(event.serverId || 'UNKNOWN')}</span>` +
-                            `<span class="text-gray-500">${escapeHTML(restartTime)}</span>` +
-                        `</div>` +
-                        `<div class="text-orange-400 font-bold mt-1">${escapeHTML(reason)}</div>` +
-                        `<div class="text-gray-500 text-[10px] mt-1">DETECTED: ${escapeHTML(detectedTime)}` +
-                            `${delay !== null ? ` | DELAY: ${delay}s` : ''}` +
-                        `</div>`;
+                    row.innerHTML = renderRestartLogEntry(
+                        event,
+                        eventData
+                    );
 
                     box.appendChild(row);
                 });
@@ -2335,6 +2280,59 @@
                     `<div class="text-red-500 font-bold py-2">RESTART LOG ERROR: ${escapeHTML(error.message)}</div>`;
             }
         };
+
+        function formatRestartLogDate(value, timeOnly = false) {
+            if (!value) return 'UNKNOWN';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return 'UNKNOWN';
+            return date.toLocaleString(
+                'en-GB',
+                timeOnly
+                    ? { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }
+                    : { hour12: false }
+            );
+        }
+
+        function restartEvidenceLine(label, present, details) {
+            const state = present ? 'YES' : 'NO EVIDENCE';
+            return `<div><span class="text-gray-500">${label}:</span> <span class="${present ? 'text-cyan-300' : 'text-gray-600'}">${state}${details ? ` // ${escapeHTML(details)}` : ''}</span></div>`;
+        }
+
+        function renderRestartLogEntry(event, data) {
+            const evidence = data.evidence || {};
+            const query = evidence.queryInterruption || {};
+            const roster = evidence.rosterReset || {};
+            const sessions = evidence.playerSessionReset || {};
+            const gap = data.observationWindow || evidence.observationGap || {};
+            const assessment = event.predictionAssessment || {};
+            const isGap = data.classification === 'PROCESS_RESTART_IN_OBSERVATION_GAP' || data.timeKnown === false;
+            const restartAt = formatRestartLogDate(data.restartAt);
+            const detectedAt = formatRestartLogDate(data.detectedAt || event.timestamp);
+            const playerNames = Array.isArray(sessions.players) ? sessions.players.join(', ') : '';
+            const rejected = Array.isArray(data.rejectedSteamIds) ? data.rejectedSteamIds.join(', ') : '';
+            const predictor = assessment.classification === 'REGULAR'
+                ? `REGULAR${assessment.cycleHours ? ` // ${assessment.cycleHours}H CYCLE` : ''}`
+                : assessment.classification === 'ADDITIONAL_OUTLIER'
+                    ? 'ADDITIONAL / OUTLIER'
+                    : `NOT ESTABLISHED // ${assessment.modelStatus || 'INSUFFICIENT_DATA'}`;
+            const confidence = data.confidence ?? 'UNKNOWN';
+            const timeBlock = isGap
+                ? `<div class="text-yellow-300 font-black mt-2">RESTART OCCURRED BETWEEN ${escapeHTML(formatRestartLogDate(gap.start, true))} AND ${escapeHTML(formatRestartLogDate(gap.end, true))}</div><div class="text-yellow-500 font-black">EXACT TIME UNKNOWN</div>`
+                : `<div class="mt-2"><span class="text-gray-500">RESTART AT:</span> <span class="text-red-300">${escapeHTML(restartAt)}</span></div>`;
+
+            return `<div class="flex justify-between gap-2"><span class="text-red-400 font-black">${escapeHTML(event.serverId || 'UNKNOWN')}</span><span class="text-orange-300 font-bold">${escapeHTML(data.classification || 'UNKNOWN')} // ${escapeHTML(confidence)}</span></div>` +
+                timeBlock +
+                `<div><span class="text-gray-500">DETECTED AT:</span> ${escapeHTML(detectedAt)}</div>` +
+                `<div class="text-cyan-400 font-bold mt-2">${escapeHTML(data.previousSteamId || 'UNKNOWN')} → ${escapeHTML(data.currentSteamId || 'UNKNOWN')}</div>` +
+                `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-3 text-[10px] mt-2">` +
+                    restartEvidenceLine('QUERY INTERRUPTION', query.present, `${query.failedQueries || 0} FAILED // FIRST: ${formatRestartLogDate(query.firstFailureAt)}`) +
+                    restartEvidenceLine('ROSTER RESET', roster.present, roster.present ? `${roster.before ?? '?'} → ${roster.after ?? '?'}` : '') +
+                    restartEvidenceLine('PLAYER SESSION RESET', sessions.present, playerNames) +
+                    restartEvidenceLine('OBSERVATION GAP', Boolean(gap.present || isGap), isGap ? `${formatRestartLogDate(gap.start)} → ${formatRestartLogDate(gap.end)}` : '') +
+                `</div>` +
+                `<div class="text-[10px] mt-2"><span class="text-gray-500">REJECTED TRANSITIONAL STEAM IDS:</span> <span class="text-purple-300">${escapeHTML(rejected || 'NONE')}</span></div>` +
+                `<div class="text-[10px] mt-1"><span class="text-gray-500">PREDICTOR:</span> <span class="text-yellow-300 font-bold">${escapeHTML(predictor)}</span></div>`;
+        }
 
         function clearAllAlerts() { document.getElementById("alertBox").innerHTML = ""; }
         function toggleHelp() { const m = document.getElementById('helpModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
