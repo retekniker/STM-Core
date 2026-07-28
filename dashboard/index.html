@@ -680,6 +680,7 @@
         
         let alert15Triggers = { EU1: false, EU2: false, EU3: false };
         let lastRestartAlerted = safeJsonGet('jsoc_last_restart_alerts', { EU1: null, EU2: null, EU3: null });
+        let sessionRestartDetectedAt = { EU1: null, EU2: null, EU3: null };
 
         let advMode = localStorage.getItem('jsoc_adv_mode') === 'true';
         let audioUnlocked = false; let voiceEnabled = false; let ttsVoice = null;
@@ -1177,6 +1178,41 @@
             renderDirty = true;
         }
 
+        function syncBackendRestartClock(server, core) {
+            const detectedAt = core.lastRestartDetectedAt || null;
+            const restartAt = core.lastRestartAt
+                ? Date.parse(core.lastRestartAt)
+                : 0;
+            const validRestartAt = Number.isFinite(restartAt) && restartAt > 0;
+            const isSessionBaseline = sessionRestartDetectedAt[server] === null;
+
+            if (isSessionBaseline) {
+                sessionRestartDetectedAt[server] = detectedAt || 'NO_RESTART_BASELINE';
+                if (validRestartAt) {
+                    lastRestartData[server] = restartAt;
+                    localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
+                }
+                return false;
+            }
+
+            if (!detectedAt || sessionRestartDetectedAt[server] === detectedAt) return false;
+
+            sessionRestartDetectedAt[server] = detectedAt;
+            if (!validRestartAt) return false;
+
+            lastRestartData[server] = restartAt;
+            localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
+
+            if (wdState[server] === 'AUTO') {
+                wdState[server] = 'ON';
+                localStorage.setItem('jsoc_wd_state', JSON.stringify(wdState));
+                renderWdSwitches();
+                updateClock();
+            }
+
+            return true;
+        }
+
         function handleBackendRestart(server, core) {
             const detectedAt = core.lastRestartDetectedAt || null;
             if (!lastRestartAlerted[server]) {
@@ -1600,9 +1636,6 @@
                     ? Number(core.uptimeSinceRestartSeconds)
                     : 0;
 
-                const coreRestartAt = core.lastRestartAt
-                    ? Date.parse(core.lastRestartAt)
-                    : 0;
 
                 const attr = {
                     status: mappedStatus,
@@ -1618,11 +1651,7 @@
                     }
                 };
                 
-                if (Number.isFinite(coreRestartAt) && coreRestartAt > 0 && lastRestartData[name] !== coreRestartAt) {
-                    lastRestartData[name] = coreRestartAt;
-                    lsSet("jsoc_last_restarts", JSON.stringify(lastRestartData));
-                }
-
+                syncBackendRestartClock(name, core);
                 const backendRestartConfirmed = handleBackendRestart(name, core);
                 
                 let finalStatus = attr.status;
