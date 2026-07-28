@@ -8,6 +8,8 @@ Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for 
 
 **Current release: [v0.8.9](https://github.com/retekniker/STM-Core/releases/latest)**
 
+[![Downloads](https://img.shields.io/github/downloads/retekniker/STM-Core/total?style=for-the-badge&logo=github&label=Downloads)](https://github.com/retekniker/STM-Core/releases)
+
 STM Core monitors Arma 3 servers directly through GameDig/A2S without depending on BattleMetrics. It runs locally in the background, stores historical data in SQLite and provides a browser-based community dashboard.
 
 ## Features
