@@ -155,6 +155,14 @@ class WebSocketHub {
         });
     }
 
+    broadcastActivityFeedCleared(clearedAt) {
+        return this.broadcast({
+            type: "ACTIVITY_FEED_CLEARED",
+            clearedAt,
+            timestamp: new Date().toISOString()
+        });
+    }
+
     startHeartbeat() {
         this.heartbeatTimer = setInterval(() => {
             if (!this.server) {

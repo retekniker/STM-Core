@@ -18,6 +18,10 @@ class ApiServer {
         this.stateEngine = options.stateEngine;
         this.historyRepository =
             options.historyRepository || null;
+        this.database = options.database ||
+            this.historyRepository?.database || null;
+        this.onActivityFeedCleared =
+            options.onActivityFeedCleared || null;
         this.telemetryHistory =
             options.telemetryHistory ||
             new TelemetryHistory();
@@ -63,7 +67,7 @@ class ApiServer {
 
             response.setHeader(
                 "Access-Control-Allow-Methods",
-                "GET, OPTIONS"
+                "GET, POST, OPTIONS"
             );
 
             response.setHeader(
@@ -182,6 +186,46 @@ class ApiServer {
                     timestamp:
                         new Date().toISOString()
                 });
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/activity-feed/state",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+                try {
+                    const metadata = await this.database.getMetadata(
+                        "activityFeedClearedAt"
+                    );
+                    response.json({
+                        success: true,
+                        clearedAt: metadata?.value || null,
+                        timestamp: new Date().toISOString()
+                    });
+                } catch (error) {
+                    next(error);
+                }
+            }
+        );
+
+        this.app.post(
+            "/api/v1/community/activity-feed/clear",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+                try {
+                    const clearedAt = new Date().toISOString();
+                    await this.database.setMetadata(
+                        "activityFeedClearedAt",
+                        clearedAt,
+                        clearedAt
+                    );
+                    if (this.onActivityFeedCleared) {
+                        this.onActivityFeedCleared(clearedAt);
+                    }
+                    response.json({ success: true, clearedAt });
+                } catch (error) {
+                    next(error);
+                }
             }
         );
 
@@ -416,6 +460,13 @@ class ApiServer {
             async (request, response, next) => {
 
                 try {
+                    const activityFeedView =
+                        request.query.view === "activity-feed";
+                    const metadata = activityFeedView
+                        ? await this.database.getMetadata(
+                            "activityFeedClearedAt"
+                        )
+                        : null;
                     const events =
                         await this.historyRepository
                             .getEvents({
@@ -424,6 +475,8 @@ class ApiServer {
                                 type: "SERVER_RESTART",
                                 before:
                                     request.query.before,
+                                after:
+                                    metadata?.value || undefined,
                                 limit:
                                     request.query.limit
                             });

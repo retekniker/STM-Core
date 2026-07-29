@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.13
+
+### Added
+
+- Adds a responsive Activity Feed Inspector with live updates, Restart Log mode, per-entry dismissal and keyboard or button closing.
+- Adds persistent, synchronized Activity Feed and feed-facing Restart Log clearing with an explicit STM-styled confirmation.
+
+### Changed
+
+- Improves blinking ONLINE and other Asset Saturation status readability with a bounded responsive font size and stronger glow.
+
+### Safety
+
+- Clearing Activity Feed stores only a durable cutoff and does not delete telemetry, authoritative restart records, restart markers, uptime or chart history.
+- Renders external Activity Feed text through DOM text nodes in both compact and enlarged views.
+
 ## 0.8.12
 
 ### Added

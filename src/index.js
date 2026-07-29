@@ -34,18 +34,21 @@ const historyRepository = new HistoryRepository(database);
 const restartTracker = new RestartTracker();
 const restartPrediction = new RestartPrediction();
 
-const apiServer = new ApiServer({
-    stateEngine,
-    historyRepository,
-    restartPrediction,
-    host: process.env.STM_HOST || "0.0.0.0",
-    port: Number(process.env.STM_PORT || 3000)
-});
-
 const webSocketHub = new WebSocketHub({
     stateEngine,
     path: "/ws",
     heartbeatInterval: 30000
+});
+
+const apiServer = new ApiServer({
+    stateEngine,
+    historyRepository,
+    database,
+    restartPrediction,
+    onActivityFeedCleared: clearedAt =>
+        webSocketHub.broadcastActivityFeedCleared(clearedAt),
+    host: process.env.STM_HOST || "0.0.0.0",
+    port: Number(process.env.STM_PORT || 3000)
 });
 
 let shuttingDown = false;

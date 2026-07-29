@@ -194,6 +194,23 @@
         /* STATUSY ASSET SATURATION & TĘTNIĄCE PROCENTY */
         .status-pulse-online { color: #00ff9c; text-shadow: 0 0 8px #00ff9c; animation: alert-blink 2s infinite; }
         .status-pulse-offline { color: #ff4d4d; text-shadow: 0 0 8px #ff4d4d; animation: alert-blink-rapid 0.5s infinite; }
+        .asset-status-label { min-height: 1.4em; font-size: clamp(0.7rem, 0.62rem + 0.35vw, 0.95rem); line-height: 1.2; text-shadow: 0 0 11px currentColor; overflow-wrap: anywhere; }
+
+        .activity-feed-overlay { display: none; position: fixed; inset: 0; z-index: 1200; padding: clamp(0.5rem, 2vw, 2rem); background: rgba(0,0,0,0.92); backdrop-filter: blur(9px); align-items: center; justify-content: center; }
+        body.activity-feed-modal-open { overflow: hidden; }
+        .activity-feed-overlay.open { display: flex; }
+        .activity-feed-inspector { width: min(1180px, 96vw); height: min(88vh, 900px); min-height: 260px; background: #080c10; border: 4px solid #ff4d4d; box-shadow: 0 0 45px rgba(255,77,77,0.42), inset 0 0 18px rgba(255,77,77,0.12); display: flex; flex-direction: column; overflow: hidden; }
+        .activity-feed-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem; padding: clamp(0.75rem, 2vw, 1.25rem); border-bottom: 1px solid rgba(255,77,77,0.35); }
+        .activity-feed-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+        .activity-feed-compact-toolbar { flex-wrap: wrap; gap: 0.5rem; }
+        .activity-feed-list { min-height: 0; flex: 1; overflow-y: auto; padding: clamp(0.65rem, 2vw, 1.25rem); font-size: clamp(0.68rem, 0.64rem + 0.18vw, 0.85rem); }
+        .activity-confirm-overlay { display: none; position: fixed; inset: 0; z-index: 1300; padding: 1rem; background: rgba(0,0,0,0.88); align-items: center; justify-content: center; }
+        .activity-confirm-overlay.open { display: flex; }
+        .activity-confirm-panel { width: min(620px, 96vw); background: #090d11; border: 3px solid #ff4d4d; box-shadow: 0 0 40px rgba(255,77,77,0.55); padding: clamp(1rem, 3vw, 2rem); }
+        .activity-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+        .activity-entry-close { flex: 0 0 auto; cursor: pointer; }
+        #activityFeedPanel, #activityFeedPanel #alertBox, #activityFeedPanel #restartLogBox, #activityFeedPanel #alertBox > div { cursor: pointer; }
+        @media (max-width: 520px), (max-height: 520px) { .activity-feed-inspector { width: 98vw; height: 96vh; } .activity-feed-toolbar { align-items: flex-start; } .activity-feed-actions { width: 100%; justify-content: flex-start; } }
 
         @keyframes perc-pulse-green { 0%, 100% { color: #00ff9c; text-shadow: 0 0 10px rgba(0,255,156,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #00ff9c, 0 0 30px #00ff9c; transform: scale(1.05); } }
         @keyframes perc-pulse-orange { 0%, 100% { color: #ff8c00; text-shadow: 0 0 10px rgba(255,140,0,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #ff8c00, 0 0 30px #ff8c00; transform: scale(1.05); } }
@@ -561,10 +578,10 @@
                 <div id="watchList" class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto custom-scrollbar relative z-20 content-start"></div>
             </div>
             
-            <div class="soc-border-red p-4 bg-red-950/10 relative z-10">
+            <div id="activityFeedPanel" class="soc-border-red p-4 bg-red-950/10 relative z-10 cursor-pointer" aria-label="Open Activity Feed Inspector" aria-expanded="false">
                 <div class="hidden md:block cyber-cable cyber-cable-red w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-3"></div>
                 <div class="hidden md:block cyber-cable cyber-cable-red w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-2"></div>
-                <div class="flex justify-between items-center mb-3 relative z-20"><h3 class="text-sm font-bold uppercase text-white">ACTIVITY FEED</h3><div class="flex gap-2"><button id="restartLogButton" onclick="toggleRestartLog()" class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Restart Log</button><button onclick="clearAllAlerts()" class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Clear All</button></div></div>
+                <div class="activity-feed-compact-toolbar flex justify-between items-center mb-3 relative z-20"><h3 class="text-sm font-bold uppercase text-white">ACTIVITY FEED</h3><div class="flex flex-wrap justify-end gap-2"><button id="activityFeedZoom" class="btn-system-led" aria-label="Zoom Activity Feed" aria-expanded="false" style="padding: 3px 8px; font-size: 9px;">ZOOM</button><button id="restartLogButton" data-activity-restart-toggle class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Restart Log</button><button data-activity-clear class="btn-system-led" style="padding: 3px 8px; font-size: 9px;">Clear All</button></div></div>
                 <div id="alertBox" class="text-[11px] h-56 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 pr-1 relative z-20"></div>
                 <div id="restartLogBox" class="hidden text-[11px] h-56 overflow-y-auto custom-scrollbar flex-col gap-0.5 pr-1 relative z-20"></div>
             </div>
@@ -578,21 +595,21 @@
                         <span class="text-xl md:text-2xl font-black text-[#00ff9c] drop-shadow-[0_0_5px_#00ff9c] tracking-widest">EU1</span><br>
                         <span id="percEU1" class="perc-offline mt-1 mb-1 block">---</span>
                         <div class="cap-bar-bg"><div id="barEU1" class="cap-bar-fill bg-green-500" style="width: 0%"></div></div>
-                        <div id="satStatusEU1" class="text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
+                        <div id="satStatusEU1" class="asset-status-label mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
                         <span id="fullEU1" class="full-text-blink mt-1" style="display:none">SERVER FULL</span>
                     </div>
                     <div class="text-center">
                         <span class="text-xl md:text-2xl font-black text-[#ff8c00] drop-shadow-[0_0_5px_#ff8c00] tracking-widest">EU2</span><br>
                         <span id="percEU2" class="perc-offline mt-1 mb-1 block">---</span>
                         <div class="cap-bar-bg"><div id="barEU2" class="cap-bar-fill bg-green-500" style="width: 0%"></div></div>
-                        <div id="satStatusEU2" class="text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
+                        <div id="satStatusEU2" class="asset-status-label mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
                         <span id="fullEU2" class="full-text-blink mt-1" style="display:none">SERVER FULL</span>
                     </div>
                     <div class="text-center">
                         <span class="text-xl md:text-2xl font-black text-[#00e5ff] drop-shadow-[0_0_5px_#00e5ff] tracking-widest">EU3</span><br>
                         <span id="percEU3" class="perc-offline mt-1 mb-1 block">---</span>
                         <div class="cap-bar-bg"><div id="barEU3" class="cap-bar-fill bg-green-500" style="width: 0%"></div></div>
-                        <div id="satStatusEU3" class="text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
+                        <div id="satStatusEU3" class="asset-status-label mt-1 font-bold uppercase tracking-widest status-pulse-offline">OFFLINE</div>
                         <span id="fullEU3" class="full-text-blink mt-1" style="display:none">SERVER FULL</span>
                     </div>
                     <div class="text-center">
@@ -622,6 +639,32 @@
                 <div id="logBox" class="text-[11px] h-32 overflow-y-auto font-mono opacity-80 bg-black/20 p-2 custom-scrollbar relative z-20"></div>
             </div>
         </div>
+    </div>
+
+    <div id="activityFeedInspector" class="activity-feed-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="activityFeedInspectorTitle">
+        <section class="activity-feed-inspector">
+            <header class="activity-feed-toolbar">
+                <div><div class="text-[9px] tracking-[0.25em] text-gray-500">STM EVENT CONSOLE</div><h2 id="activityFeedInspectorTitle" class="text-lg font-black tracking-widest text-red-400">ACTIVITY FEED</h2></div>
+                <div class="activity-feed-actions">
+                    <button data-activity-restart-toggle class="btn-system-led">RESTART LOG</button>
+                    <button data-activity-clear class="btn-system-led-red">CLEAR ALL</button>
+                    <button id="activityFeedRestore" class="btn-system-led" aria-label="Restore Activity Feed">RESTORE</button>
+                    <button id="activityFeedInspectorClose" class="btn-system-led-red">CLOSE</button>
+                </div>
+            </header>
+            <div id="activityFeedInspectorBox" data-feed-interactive class="activity-feed-list custom-scrollbar flex flex-col gap-0.5"></div>
+            <div id="activityFeedInspectorRestartBox" data-feed-interactive class="activity-feed-list custom-scrollbar hidden flex-col gap-0.5"></div>
+        </section>
+    </div>
+
+    <div id="activityClearConfirmation" class="activity-confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="activityClearTitle">
+        <section class="activity-confirm-panel">
+            <h2 id="activityClearTitle" class="text-xl font-black tracking-widest text-red-400">CLEAR ACTIVITY HISTORY?</h2>
+            <p class="mt-4 text-sm text-white">This will clear Activity Feed and Restart Log on all connected dashboards.</p>
+            <p class="mt-3 text-sm text-green-300">Telemetry, restart markers, uptime and chart history will remain unchanged.</p>
+            <div id="activityClearError" class="mt-3 min-h-[1.25rem] text-red-400 font-bold" aria-live="assertive"></div>
+            <div class="activity-confirm-actions"><button id="activityClearCancel" class="btn-system-led">NO — CANCEL</button><button id="activityClearConfirm" class="btn-system-led-red">YES — CLEAR</button></div>
+        </section>
     </div>
 
     <div id="telemetryInspector" class="telemetry-inspector-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="telemetryInspectorTitle">
@@ -664,6 +707,7 @@
     <script src="telemetryInspector.js"></script>
     <script src="jsocPersonnel.js"></script>
     <script src="restartFlags.js"></script>
+    <script src="activityFeed.js"></script>
     <script>
         const workerCode = `
             let timer;
@@ -683,6 +727,7 @@
         let rateLimitCooldown = 0; 
         let wdLogCounter = 0;
         let blackBoxLogs = [];
+        let activityFeedController = null;
         
         let serverBuffers = { EU1: [], EU2: [], EU3: [] };
 
@@ -1252,7 +1297,7 @@
         function toggleVoice() {
             const btnInit = document.getElementById("btnInitAudio"); const statusEl = document.getElementById("audioStatus");
             btnInit.classList.remove("btn-attention");
-            const alerts = document.querySelectorAll('#alertBox > div'); alerts.forEach(a => { if(a.innerText.includes("VOICE COMMS STANDBY")) { a.remove(); } });
+            activityFeedController?.removeByAlertId("alert-startup-voice");
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") { Notification.requestPermission(); }
             
             voiceEnabled = !voiceEnabled;
@@ -1655,9 +1700,10 @@
         }
 
         function addPlayerAlert(name, server, isJoin, squadDetails, joinedAt = null) {
-            const b = document.getElementById("alertBox"); const d = document.createElement("div"); const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); let sessionTimeStr = "";
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             let sessionMin = 0;
-            if (!isJoin && joinedAt) { sessionMin = Math.floor((Date.now() - joinedAt) / 60000); sessionTimeStr = `<span class="text-orange-400 text-[10px] ml-2 tracking-widest">[${sessionMin}m]</span>`; }
+            if (!isJoin && joinedAt) sessionMin = Math.floor((Date.now() - joinedAt) / 60000);
             
             const bbAction = isJoin ? "JOINED" : "LEFT";
             const bbSq = squadDetails ? `[${squadDetails.squadName}-${squadDetails.playerNumber}] ` : "";
@@ -1665,27 +1711,37 @@
             blackBoxLogs.push(`[${timeStr}] [ACTIVITY] ${bbSq}${name} ${bbAction} ${server}${bbSess}`);
             if (blackBoxLogs.length > 20000) blackBoxLogs.shift();
 
-            if (squadDetails) {
-                const actionText = isJoin ? "JOINED" : "LEFT"; const actionColor = isJoin ? "text-green-500" : "text-red-500"; const arrow = isJoin ? "IN" : "OUT"; const bgClass = isJoin ? "bg-green-900/20" : "bg-red-900/20"; const borderClass = isJoin ? "border-green-500" : "border-red-500"; const squadTag = `${squadDetails.squadName}-${squadDetails.playerNumber}`; const sqColor = SQUAD_COLORS[squadDetails.squadIdx].text;
-                d.className = `flex justify-between items-center border-l-2 ${borderClass} pl-2 ${bgClass} py-1.5 transition-all mb-0.5`;
-                d.innerHTML = `<div class="flex items-center gap-2 flex-wrap flex-1"><span class="opacity-60 text-xs text-white">[${timeStr}]</span><span class="font-bold text-sm uppercase" style="color: ${sqColor}; text-shadow: 0 0 5px ${sqColor};">[${squadTag}]</span><span class="text-white font-black text-lg tracking-wider">&lt; ${escapeHTML(name)} &gt;</span><span class="${actionColor} font-bold text-sm ml-1">${actionText} ${server}</span>${sessionTimeStr}<span class="${actionColor} font-black text-xs ml-2 tracking-widest drop-shadow-md">${arrow}</span></div><div class="flex items-center pr-2"><span class="cursor-pointer text-white hover:text-red-500 text-sm px-2 font-bold" onclick="this.parentElement.parentElement.remove()">X</span></div>`;
-            } else {
-                const actionText = isJoin ? "JOINED" : "LEFT"; const color = isJoin ? "text-green-500" : "text-red-500"; const arrow = isJoin ? "IN" : "OUT";
-                d.className = `flex justify-between items-center pl-2 bg-black/40 py-1 border-l border-white/10 mb-0.5`;
-                d.innerHTML = `<div class="flex items-center gap-2 opacity-90 flex-1"><span class="opacity-50 text-[11px] text-white">[${timeStr}]</span><span class="text-gray-300 text-sm font-bold uppercase">${escapeHTML(name)}</span><span class="text-gray-500 text-xs ml-1">${actionText} ${server}</span>${sessionTimeStr}<span class="${color} font-bold text-xs ml-1 tracking-widest drop-shadow-sm">${arrow}</span></div><div class="flex items-center pr-2 opacity-80"><span class="cursor-pointer text-gray-500 hover:text-red-500 text-xs px-2 font-bold" onclick="this.parentElement.parentElement.remove()">X</span></div>`;
-            }
-            b.insertBefore(d, b.firstChild); if (b.children.length > 80) { b.removeChild(b.lastChild); } b.scrollTop = 0; 
+            const actionText = isJoin ? "JOINED" : "LEFT";
+            const actionColor = isJoin ? "text-green-500" : "text-red-500";
+            const segments = [{ text: `[${timeStr}]`, className: "opacity-60 text-xs text-white" }];
+            if (squadDetails) segments.push({ text: `[${squadDetails.squadName}-${squadDetails.playerNumber}]`, className: "font-bold text-sm uppercase", color: SQUAD_COLORS[squadDetails.squadIdx].text });
+            segments.push({ text: squadDetails ? `< ${name} >` : name, className: squadDetails ? "text-white font-black text-lg tracking-wider" : "text-gray-300 text-sm font-bold uppercase" });
+            segments.push({ text: `${actionText} ${server}`, className: `${actionColor} font-bold text-sm ml-1` });
+            if (!isJoin && joinedAt) segments.push({ text: `[${sessionMin}m]`, className: "text-orange-400 text-[10px] ml-2 tracking-widest" });
+            segments.push({ text: isJoin ? "IN" : "OUT", className: `${actionColor} font-black text-xs ml-2 tracking-widest drop-shadow-md` });
+            activityFeedController?.add({
+                timestamp: now.toISOString(), segments,
+                className: squadDetails
+                    ? `flex justify-between items-center border-l-2 ${isJoin ? 'border-green-500 bg-green-900/20' : 'border-red-500 bg-red-900/20'} pl-2 py-1.5 transition-all mb-0.5`
+                    : "flex justify-between items-center pl-2 bg-black/40 py-1 border-l border-white/10 mb-0.5"
+            });
         }
 
         function addSystemAlert(message, alertId = null) {
-            const b = document.getElementById("alertBox"); const d = document.createElement("div"); const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const now = new Date(); const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             blackBoxLogs.push(`[${timeStr}] [ALERT] ${message}`);
             if (blackBoxLogs.length > 20000) blackBoxLogs.shift();
 
-            d.className = `flex justify-between items-center border-l-4 border-red-500 pl-3 bg-red-950/80 py-2 soc-border-pulse mb-1`; if (alertId) { d.id = alertId; }
-            d.innerHTML = `<div class="flex items-center gap-3"><span class="opacity-70 text-[10px] text-white">[${timeStr}]</span><span class="text-yellow-400 font-black text-xs md:text-sm tracking-widest uppercase text-shadow-sm">! ${message} !</span></div><span class="cursor-pointer text-white hover:text-red-500 px-2 text-lg" onclick="this.parentElement.remove()">X</span>`;
-            b.insertBefore(d, b.firstChild); if (b.children.length > 80) { b.removeChild(b.lastChild); } b.scrollTop = 0; 
+            activityFeedController?.add({
+                timestamp: now.toISOString(), alertId,
+                className: "flex justify-between items-center border-l-4 border-red-500 pl-3 bg-red-950/80 py-2 soc-border-pulse mb-1",
+                contentClass: "flex items-center gap-3",
+                segments: [
+                    { text: `[${timeStr}]`, className: "opacity-70 text-[10px] text-white" },
+                    { text: `! ${message} !`, className: "text-yellow-400 font-black text-xs md:text-sm tracking-widest uppercase text-shadow-sm" }
+                ]
+            });
         }
 
         // ===== THROTTLED LOCALSTORAGE (zapis maks raz/3s) =====
@@ -2081,12 +2137,12 @@
                         const warning = displayStatus === 'RESTART DETECTED // VERIFYING' || displayStatus === 'SERVER BOOTING' || displayStatus === 'DEGRADED';
                         const confirmed = displayStatus === 'RESTART CONFIRMED';
                         satStatus.className = warning
-                            ? "text-[9px] mt-1 font-bold uppercase tracking-widest text-yellow-400 warning-pulse"
+                            ? "asset-status-label mt-1 font-bold uppercase tracking-widest text-yellow-400 warning-pulse"
                             : confirmed
-                                ? "text-[9px] mt-1 font-bold uppercase tracking-widest text-red-500 warning-pulse"
+                                ? "asset-status-label mt-1 font-bold uppercase tracking-widest text-red-500 warning-pulse"
                                 : displayStatus === 'OFFLINE'
-                                    ? "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-offline"
-                                    : "text-[9px] mt-1 font-bold uppercase tracking-widest status-pulse-online";
+                                    ? "asset-status-label mt-1 font-bold uppercase tracking-widest status-pulse-offline"
+                                    : "asset-status-label mt-1 font-bold uppercase tracking-widest status-pulse-online";
                     }
                 });
                 
@@ -2496,80 +2552,11 @@
         function toggleMute() { isMuted = !isMuted; localStorage.setItem('jsoc_muted', isMuted); updateMuteUI(); if (isMuted) { audioQueue = []; isPlayingQueue = false; if (currentAudioObj) { currentAudioObj.pause(); currentAudioObj = null; } if (window.speechSynthesis) { window.speechSynthesis.cancel(); } } }
         function updateMuteUI() { document.getElementById('muteIcon').innerHTML = isMuted ? '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.41.32-.85.59-1.32.76v2.06c1.02-.21 1.97-.64 2.8-1.25L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>' : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77z"/>'; }
         window.toggleRestartLog = function() {
-            const feed = document.getElementById("alertBox");
-            const restartBox = document.getElementById("restartLogBox");
-            const button = document.getElementById("restartLogButton");
-
-            if (!feed || !restartBox || !button) return;
-
-            const restartLogVisible =
-                restartBox.style.display === "flex";
-
-            if (restartLogVisible) {
-                restartBox.style.display = "none";
-                feed.style.display = "flex";
-                button.textContent = "Restart Log";
-                return;
-            }
-
-            feed.style.display = "none";
-            restartBox.style.display = "flex";
-            button.textContent = "Activity Feed";
-            window.showRestartLog();
+            activityFeedController?.toggleMode();
         };
 
         window.showRestartLog = async function() {
-            const box = document.getElementById("restartLogBox");
-            if (!box) return;
-
-            box.innerHTML =
-                '<div class="text-cyan-400 font-bold py-2">LOADING RESTART HISTORY...</div>';
-
-            try {
-                const response = await fetch(
-                    '/api/v1/community/restarts?limit=100',
-                    { cache: 'no-store' }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const payload = await response.json();
-                const events =
-                    Array.isArray(payload.events)
-                        ? payload.events
-                        : [];
-
-                box.innerHTML = '';
-
-                if (events.length === 0) {
-                    box.innerHTML =
-                        '<div class="text-gray-500 font-bold py-2">NO RESTART EVENTS RECORDED</div>';
-                    return;
-                }
-
-                events.forEach(event => {
-                    const eventData = event.data || {};
-                    const row =
-                        document.createElement('div');
-
-                    row.className =
-                        'border-l-2 border-red-500 bg-red-950/30 px-3 py-2 mb-1';
-
-                    row.innerHTML = renderRestartLogEntry(
-                        event,
-                        eventData
-                    );
-
-                    box.appendChild(row);
-                });
-
-                box.scrollTop = 0;
-            } catch (error) {
-                box.innerHTML =
-                    `<div class="text-red-500 font-bold py-2">RESTART LOG ERROR: ${escapeHTML(error.message)}</div>`;
-            }
+            return activityFeedController?.loadRestartLog();
         };
 
         function formatRestartLogDate(value, timeOnly = false) {
@@ -2630,7 +2617,7 @@
                 `<div class="text-[10px] mt-2 border-t border-gray-800 pt-2"><span class="text-gray-500">EVIDENCE SCORE:</span> <span class="text-cyan-300 font-black">${escapeHTML(score.total ?? 'UNKNOWN')} // ${escapeHTML(score.level || 'UNKNOWN')}</span>${scoreBreakdown}</div>`;
         }
 
-        function clearAllAlerts() { document.getElementById("alertBox").innerHTML = ""; }
+        function clearAllAlerts() { activityFeedController?.openConfirmation(); }
         function toggleHelp() { const m = document.getElementById('helpModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
 
         function formatInspectorTime(value) {
@@ -3314,6 +3301,9 @@
         }
 
         (async function init() {
+            activityFeedController = new ActivityFeedController({ renderRestartEntry: renderRestartLogEntry });
+            activityFeedController.init();
+            window.setActivityFeedExpanded = expanded => activityFeedController.setActivityFeedExpanded(expanded);
             switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); initTelemetryInspector(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setRadarMode(radarMode); setTelemetryRange(telemetryRange);
             initVoice();
             

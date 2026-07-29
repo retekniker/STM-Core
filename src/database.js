@@ -143,7 +143,47 @@ class Database {
 
             CREATE INDEX IF NOT EXISTS idx_events_type
             ON events(type);
+
+            CREATE TABLE IF NOT EXISTS app_metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
         `);
+    }
+
+    async getMetadata(key) {
+        if (!this.db) {
+            throw new Error("Database is not open");
+        }
+
+        return new Promise((resolve, reject) => {
+            this.db.get(
+                "SELECT value, updated_at FROM app_metadata WHERE key = ?",
+                [key],
+                (error, row) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve(row || null);
+                }
+            );
+        });
+    }
+
+    async setMetadata(key, value, updatedAt = new Date().toISOString()) {
+        await this.run(
+            `
+            INSERT INTO app_metadata (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+            `,
+            [key, value, updatedAt]
+        );
+        return { key, value, updatedAt };
     }
 
     async saveSnapshot(serverState) {
