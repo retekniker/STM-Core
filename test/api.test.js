@@ -20,6 +20,13 @@ function getRestartHandler(api) {
     return layer.route.stack.at(-1).handle;
 }
 
+function getServerHandler(api) {
+    const layer = api.app.router.stack.find(item =>
+        item.route?.path === "/api/v1/community/servers/:serverId"
+    );
+    return layer.route.stack.at(-1).handle;
+}
+
 function createResponse() {
     return {
         statusCode: 200,
@@ -90,6 +97,22 @@ test("telemetry endpoint returns bounded series for all servers", async () => {
         ["EU1", "EU2"]
     );
     assert.equal(response.body.series[0].points[0].ping, 25);
+});
+
+test("server endpoint exposes the backend monitoring-session start", () => {
+    const api = new ApiServer({
+        stateEngine: {
+            getAll: () => [],
+            get: id => ({ id, status: "ONLINE" })
+        }
+    });
+    const response = createResponse();
+
+    getServerHandler(api)({ params: { serverId: "EU1" } }, response);
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.monitorStartedAt, api.startedAt.toISOString());
+    assert.equal(response.body.server.id, "EU1");
 });
 
 test("telemetry endpoint rejects unsupported ranges", async () => {

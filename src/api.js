@@ -589,6 +589,8 @@ class ApiServer {
                     success: true,
                     timestamp:
                         new Date().toISOString(),
+                    monitorStartedAt:
+                        this.startedAt.toISOString(),
                     server
                 });
             }

@@ -127,9 +127,10 @@
         .vfd-standby { color: #ff4d4d; text-shadow: 0 0 2px #ff4d4d; opacity: 0.3; }
 
         /* OSCYLOSKOP */
-        .mini-chart-wrapper { position: relative; width: 100%; height: 100%; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 15px rgba(0,0,0,0.8); transition: all 0.3s ease; }
-        .mini-chart-container { position: absolute; inset: 0; }
-        .mini-chart-container canvas { width: 100% !important; height: 100% !important; border-radius: 3px; }
+        .mini-chart-cell { min-width: 240px; min-height: 90px; height: 100%; }
+        .mini-chart-wrapper { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 90px; overflow: hidden; border-radius: 4px; background: rgba(0,0,0,0.4); box-shadow: inset 0 0 15px rgba(0,0,0,0.8); transition: box-shadow 0.3s ease, border-color 0.3s ease; }
+        .mini-chart-container { position: absolute; inset: 0; min-width: 1px; min-height: 1px; overflow: hidden; contain: size layout paint; }
+        .mini-chart-container canvas { display: block; border-radius: 3px; }
         
         @keyframes sync-pulse-on { 0%, 100% { box-shadow: 0 0 5px #00ff9c, inset 0 0 5px rgba(0,255,156,0.1); border-color: rgba(0,255,156,0.5); } 50% { box-shadow: 0 0 20px #00ff9c, inset 0 0 15px rgba(0,255,156,0.4); border-color: #00ff9c; } }
         @keyframes sync-led-on { 0%, 100% { box-shadow: 0 0 5px #00ff9c; background-color: rgba(0,255,156,0.6); } 50% { box-shadow: 0 0 20px #00ff9c, 0 0 30px rgba(0,255,156,0.6); background-color: #00ff9c; } }
@@ -149,11 +150,18 @@
         .clock-wait { opacity: 0.3; }
         .led-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 10px; vertical-align: middle; border: 2px solid rgba(255,255,255,0.4); }
         
-        .chart-container { position: relative; width: 100%; height: 180px; } canvas { width: 100% !important; height: 100% !important; }
+        .chart-container { position: relative; width: 100%; height: 180px; }
+        .chart-container > canvas { width: 100% !important; height: 100% !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 255, 156, 0.05); border-radius: 3px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 255, 156, 0.3); border-radius: 3px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00ff9c; }
         
-        .server-grid-row { display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 0.75rem; align-items: stretch; width: 100%; min-height: 118px; }
+        .server-grid-row { display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 0.75rem; align-items: stretch; width: 100%; height: 118px; min-height: 118px; }
         @media (min-width: 1024px) { .server-grid-row { grid-template-columns: 320px minmax(0, 1fr); gap: 1rem; } }
+        .telemetry-server-list { container-type: inline-size; }
+        @container (max-width: 720px) {
+            .telemetry-server-list .server-grid-row { grid-template-columns: minmax(0, 1fr); grid-template-rows: 118px 100px; height: 230px; }
+            .telemetry-server-list .server-grid-row > :first-child { padding-right: 0; padding-bottom: 0.5rem; border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .telemetry-server-list .mini-chart-cell { width: 100%; min-width: 1px; height: 100px; min-height: 100px; }
+        }
         .watchdog-clock-panel { display: flex; align-items: stretch; justify-content: space-between; gap: 0.75rem; height: 100%; }
         .watchdog-clock-meta { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
 
@@ -215,8 +223,8 @@
         .telemetry-inspector-panel { width: min(1600px, 96vw); height: min(940px, 96vh); min-height: 520px; display: flex; flex-direction: column; gap: 10px; padding: 14px; overflow: hidden; border: 1px solid rgba(0, 255, 156, 0.55); background: #030706; box-shadow: 0 0 45px rgba(0, 255, 156, 0.16); }
         .telemetry-inspector-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
         .telemetry-inspector-actions { display: flex; gap: 5px; flex-wrap: wrap; }
-        .telemetry-inspector-chart { position: relative; flex: 1; min-height: 320px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.55); }
-        .telemetry-inspector-chart canvas { width: 100% !important; height: 100% !important; }
+        .telemetry-inspector-chart { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.55); }
+        .telemetry-inspector-chart canvas { display: block; }
         .telemetry-inspector-meta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: #94a3b8; font-size: 10px; letter-spacing: 0.08em; }
         .telemetry-inspector-navigator { position: relative; height: 54px; border: 1px solid rgba(255, 255, 255, 0.12); background: #010302; overflow: hidden; touch-action: none; }
         .telemetry-inspector-navigator canvas { width: 100%; height: 100%; }
@@ -382,7 +390,7 @@
             <div class="soc-border p-4 md:p-6 bg-black/60 flex flex-col xl:flex-row items-stretch justify-between w-full min-h-[300px] gap-6 relative z-10 overflow-hidden">
                 <div class="hidden lg:block cyber-cable h-[6px] w-[32px] top-[50%] -right-[28px] delay-1"></div>
 
-                <div class="flex flex-col gap-3 flex-1 min-w-0 relative z-20 xl:border-r border-green-900/40 xl:pr-6">
+                <div class="telemetry-server-list flex flex-col gap-3 flex-1 min-w-0 relative z-20 xl:border-r border-green-900/40 xl:pr-6">
                     <div class="flex items-center justify-between gap-3 flex-wrap border border-white/10 bg-black/20 rounded px-3 py-2">
                         <span class="text-[10px] font-bold uppercase tracking-widest text-green-400">Telemetry history</span>
                         <div class="flex gap-1" id="telemetryRangeControls">
@@ -412,7 +420,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-center h-full min-w-0">
+                        <div class="mini-chart-cell flex items-center justify-center">
                             <div class="mini-chart-wrapper oscy-glow-off" id="oscy-EU1">
                                 <div class="mini-chart-container">
                                     <canvas id="miniChart-EU1"></canvas>
@@ -440,7 +448,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-center h-full min-w-0">
+                        <div class="mini-chart-cell flex items-center justify-center">
                             <div class="mini-chart-wrapper oscy-glow-off" id="oscy-EU2">
                                 <div class="mini-chart-container">
                                     <canvas id="miniChart-EU2"></canvas>
@@ -468,7 +476,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-center h-full min-w-0">
+                        <div class="mini-chart-cell flex items-center justify-center">
                             <div class="mini-chart-wrapper oscy-glow-off" id="oscy-EU3">
                                 <div class="mini-chart-container">
                                     <canvas id="miniChart-EU3"></canvas>
@@ -690,7 +698,9 @@
             }
         }
         
-        let wdState = safeJsonGet('jsoc_wd_state', { EU1: 'AUTO', EU2: 'AUTO', EU3: 'AUTO' });
+        function defaultWdState() { return { EU1: 'AUTO', EU2: 'AUTO', EU3: 'AUTO' }; }
+        let wdState = defaultWdState();
+        let monitoringSessionId = null;
         // Clock mode controls only the display: elapsed uptime or secondary restart-time view.
         // APRX badge is tied to this click-toggle view, not to watchdog AUTO/ON state.
         let clockMode = { EU1: 'elapsed', EU2: 'elapsed', EU3: 'elapsed' };
@@ -719,6 +729,87 @@
         let telemetryInspectorRequest = 0;
         let telemetryInspectorDetailRequest = 0;
         let telemetryInspectorBackdropPointerDown = false;
+        const chartResizeFrames = new WeakMap();
+        const chartResizeSizes = new WeakMap();
+        const chartResizeObservers = [];
+        function scheduleChartResize(chartInstance, container, afterResize) {
+            if (!chartInstance || !container) return;
+            if (chartResizeFrames.has(chartInstance)) return;
+            chartResizeFrames.set(chartInstance, requestAnimationFrame(() => {
+                chartResizeFrames.delete(chartInstance);
+                const rect = container.getBoundingClientRect();
+                const width = Math.round(rect.width);
+                const height = Math.round(rect.height);
+                if (width <= 0 || height <= 0) return;
+                const previous = chartResizeSizes.get(chartInstance);
+                if (previous?.width === width && previous?.height === height) return;
+                chartResizeSizes.set(chartInstance, { width, height });
+                chartInstance.resize(width, height);
+                if (afterResize) afterResize(rect);
+            }));
+        }
+
+        function observeChartContainer(chartInstance, container, afterResize) {
+            const observer = new ResizeObserver(() => scheduleChartResize(chartInstance, container, afterResize));
+            observer.observe(container);
+            chartResizeObservers.push(observer);
+            scheduleChartResize(chartInstance, container, afterResize);
+        }
+
+        function calculateStablePingRange(values) {
+            const sorted = values
+                .map(Number)
+                .filter(value => Number.isFinite(value) && value >= 0)
+                .sort((left, right) => left - right);
+            if (!sorted.length) return { min: 0, max: 100 };
+            const quantile = ratio => {
+                const position = (sorted.length - 1) * ratio;
+                const lower = Math.floor(position);
+                const fraction = position - lower;
+                return sorted[lower] + ((sorted[Math.min(sorted.length - 1, lower + 1)] - sorted[lower]) * fraction);
+            };
+            const median = quantile(0.5);
+            const deviations = sorted.map(value => Math.abs(value - median)).sort((left, right) => left - right);
+            const deviationPosition = (deviations.length - 1) * 0.5;
+            const deviationLower = Math.floor(deviationPosition);
+            const deviationFraction = deviationPosition - deviationLower;
+            const medianDeviation = deviations[deviationLower]
+                + ((deviations[Math.min(deviations.length - 1, deviationLower + 1)] - deviations[deviationLower]) * deviationFraction);
+            const robustHigh = Math.min(quantile(0.95), median + Math.max(20, medianDeviation * 6));
+            return { min: 0, max: Math.max(100, Math.ceil((robustHigh * 1.1) / 10) * 10) };
+        }
+
+        function calculateInspectorPingRange(values) {
+            const maximum = Math.max(0, ...values.map(Number).filter(value => Number.isFinite(value) && value >= 0));
+            return { min: 0, max: Math.max(100, Math.ceil((maximum * 11) / 100) * 10) };
+        }
+
+        function breakTelemetryGaps(points, restarts) {
+            const unknownWindows = (restarts || [])
+                .filter(marker => marker.timeKnown === false)
+                .map(marker => ({
+                    start: Date.parse(marker.observationWindow?.start),
+                    end: Date.parse(marker.observationWindow?.end)
+                }))
+                .filter(window => Number.isFinite(window.start) && Number.isFinite(window.end));
+            if (!unknownWindows.length) return points.slice();
+            const result = [];
+            points.forEach((point, index) => {
+                const previous = points[index - 1];
+                const previousTime = Date.parse(previous?.timestamp);
+                const time = Date.parse(point.timestamp);
+                if (previous && unknownWindows.some(window => previousTime <= window.start && time >= window.end)) {
+                    result.push({ timestamp: new Date((previousTime + time) / 2).toISOString(), players: null, maxPlayers: null, ping: null, gap: true });
+                }
+                result.push(point);
+            });
+            return result;
+        }
+
+        function serverTelemetryColor(serverId) {
+            return ({ EU1: '#00ff9c', EU2: '#ffb347', EU3: '#66f2ff' })[serverId] || '#f8fafc';
+        }
+
         const telemetryInspectorController = new TelemetryInspectorController({
             onChange: (state, reason) => {
                 if (document.getElementById('telemetryInspector')?.classList.contains('open')) {
@@ -761,6 +852,51 @@
         let alert15Triggers = { EU1: false, EU2: false, EU3: false };
         let lastRestartAlerted = safeJsonGet('jsoc_last_restart_alerts', { EU1: null, EU2: null, EU3: null });
         let sessionRestartDetectedAt = { EU1: null, EU2: null, EU3: null };
+
+        function persistMonitoringSession() {
+            if (!monitoringSessionId) return;
+            localStorage.setItem('jsoc_monitor_session', JSON.stringify({
+                id: monitoringSessionId,
+                wdState,
+                lastRestartData,
+                detectedAt: sessionRestartDetectedAt
+            }));
+            localStorage.setItem('jsoc_wd_state', JSON.stringify(wdState));
+            localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
+        }
+
+        function resolveMonitoringSession(stored, sessionId) {
+            if (stored?.id === sessionId) {
+                return {
+                    sameSession: true,
+                    wdState: { ...defaultWdState(), ...(stored.wdState || {}) },
+                    lastRestartData: { EU1: null, EU2: null, EU3: null, ...(stored.lastRestartData || {}) },
+                    detectedAt: { EU1: null, EU2: null, EU3: null, ...(stored.detectedAt || {}) }
+                };
+            }
+            return {
+                sameSession: false,
+                wdState: defaultWdState(),
+                lastRestartData: { EU1: null, EU2: null, EU3: null },
+                detectedAt: { EU1: null, EU2: null, EU3: null }
+            };
+        }
+
+        function reconcileMonitoringSession(sessionId) {
+            if (!sessionId || monitoringSessionId) return;
+            monitoringSessionId = sessionId;
+            const stored = safeJsonGet('jsoc_monitor_session', null);
+            const resolved = resolveMonitoringSession(stored, sessionId);
+            wdState = resolved.wdState;
+            lastRestartData = resolved.lastRestartData;
+            sessionRestartDetectedAt = resolved.detectedAt;
+            if (!resolved.sameSession) {
+                lastRestartAlerted = { EU1: null, EU2: null, EU3: null };
+            }
+            persistMonitoringSession();
+            renderWdSwitches();
+            updateClock();
+        }
 
         let advMode = localStorage.getItem('jsoc_adv_mode') === 'true';
         let audioUnlocked = false; let voiceEnabled = false; let ttsVoice = null;
@@ -1260,18 +1396,26 @@
 
         function syncBackendRestartClock(server, core) {
             const detectedAt = core.lastRestartDetectedAt || null;
+            const detectedMs = Date.parse(detectedAt || '');
+            const sessionStartedMs = Date.parse(monitoringSessionId || '');
             const restartAt = core.lastRestartAt
                 ? Date.parse(core.lastRestartAt)
                 : 0;
             const validRestartAt = Number.isFinite(restartAt) && restartAt > 0;
             const isSessionBaseline = sessionRestartDetectedAt[server] === null;
+            const detectedInCurrentSession = Number.isFinite(detectedMs)
+                && Number.isFinite(sessionStartedMs)
+                && detectedMs >= sessionStartedMs;
 
             if (isSessionBaseline) {
                 sessionRestartDetectedAt[server] = detectedAt || 'NO_RESTART_BASELINE';
-                if (validRestartAt) {
+                if (detectedInCurrentSession && validRestartAt) {
                     lastRestartData[server] = restartAt;
-                    localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
+                    persistMonitoringSession();
+                    updateClock();
+                    return true;
                 }
+                persistMonitoringSession();
                 return false;
             }
 
@@ -1281,14 +1425,9 @@
             if (!validRestartAt) return false;
 
             lastRestartData[server] = restartAt;
-            localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
-
-            if (wdState[server] === 'AUTO') {
-                wdState[server] = 'ON';
-                localStorage.setItem('jsoc_wd_state', JSON.stringify(wdState));
-                renderWdSwitches();
-                updateClock();
-            }
+            persistMonitoringSession();
+            renderWdSwitches();
+            updateClock();
 
             return true;
         }
@@ -1356,7 +1495,7 @@
         }
 
         function setWdState(server, state) {
-            wdState[server] = state; localStorage.setItem('jsoc_wd_state', JSON.stringify(wdState));
+            wdState[server] = state; persistMonitoringSession();
             renderWdSwitches(); updateClock(); updateOscyStyle(server, state); 
             let color = "text-gray-500"; if(state === 'ON') color = "text-green-400"; if(state === 'AUTO') color = "text-yellow-500";
             logEvent(`[SYSTEM] ${server} WATCHDOG SET TO ${state}`, color); queueSound(SOUND_SQUAD, currentVolume * 0.15);
@@ -1650,6 +1789,7 @@
                 }
 
                 const json = await res.json();
+                reconcileMonitoringSession(json.monitorStartedAt);
                 const core =
                     json && json.server
                         ? json.server
@@ -2569,15 +2709,18 @@
         function createTelemetryInspectorChart() {
             if (telemetryInspectorChart) return telemetryInspectorChart;
             const canvas = document.getElementById('telemetryInspectorChart');
+            const container = document.getElementById('telemetryInspectorChartArea');
+            const rect = container.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return null;
             telemetryInspectorChart = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: { datasets: [
                     { label: 'PLAYERS', data: [], borderColor: '#eab308', backgroundColor: 'rgba(234,179,8,0.08)', fill: true, pointRadius: 0, borderWidth: 2, tension: 0, spanGaps: false, yAxisID: 'players' },
                     { label: 'MAX SLOTS', data: [], borderColor: 'rgba(234,179,8,0.35)', pointRadius: 0, borderDash: [4, 4], borderWidth: 1, tension: 0, spanGaps: true, yAxisID: 'players' },
-                    { label: 'PING', data: [], borderColor: '#00e5ff', pointRadius: 0, borderWidth: 1.5, tension: 0, spanGaps: false, yAxisID: 'ping' }
+                    { label: 'PING', data: [], borderColor: '#00ff9c', pointRadius: 0, pointHoverRadius: 0, pointBorderWidth: 0, borderWidth: 1, hoverBorderWidth: 1, tension: 0, spanGaps: false, yAxisID: 'ping' }
                 ] },
                 options: {
-                    responsive: true,
+                    responsive: false,
                     maintainAspectRatio: false,
                     animation: false,
                     parsing: false,
@@ -2614,23 +2757,40 @@
                 },
                 plugins: [telemetryInspectorOverlayPlugin]
             });
+            observeChartContainer(telemetryInspectorChart, container, renderTelemetryInspectorNavigator);
+            scheduleChartResize(telemetryInspectorChart, container, renderTelemetryInspectorNavigator);
             return telemetryInspectorChart;
         }
 
         function renderTelemetryInspector() {
             const chartInstance = createTelemetryInspectorChart();
+            if (!chartInstance) {
+                if (document.getElementById('telemetryInspector')?.classList.contains('open')) {
+                    requestAnimationFrame(renderTelemetryInspector);
+                }
+                return;
+            }
             const state = telemetryInspectorController.snapshot();
             const series = telemetryInspectorSeries();
-            const points = (series?.points || []).filter(point => {
+            const visiblePoints = (series?.points || []).filter(point => {
                 const time = Date.parse(point.timestamp);
                 return time >= state.viewStart && time <= state.viewEnd;
             });
+            const points = breakTelemetryGaps(visiblePoints, telemetryInspectorOverview?.restarts || []);
             const asData = field => points.map(point => ({ x: Date.parse(point.timestamp), y: point[field], source: point }));
             chartInstance.data.datasets[0].data = asData('players');
             chartInstance.data.datasets[1].data = asData('maxPlayers');
             chartInstance.data.datasets[2].data = asData('ping');
             chartInstance.options.scales.x.min = state.viewStart;
             chartInstance.options.scales.x.max = state.viewEnd;
+            const pingRange = calculateInspectorPingRange(visiblePoints.map(point => point.ping));
+            chartInstance.options.scales.ping.min = pingRange.min;
+            chartInstance.options.scales.ping.max = pingRange.max;
+            const pingColor = serverTelemetryColor(state.serverId);
+            chartInstance.data.datasets[2].borderColor = pingColor;
+            chartInstance.options.scales.ping.ticks.color = pingColor;
+            chartInstance.options.scales.ping.title.color = pingColor;
+            chartInstance.options.plugins.legend.labels.generateLabels = chart => Chart.defaults.plugins.legend.labels.generateLabels(chart);
             chartInstance.$telemetryInspector = {
                 ...state,
                 points,
@@ -2643,7 +2803,7 @@
             document.getElementById('telemetryInspectorTitle').textContent = `${state.serverId || 'SERVER'} // TELEMETRY`;
             document.getElementById('inspectorWindowLabel').textContent = `${formatInspectorTime(state.viewStart)} — ${formatInspectorTime(state.viewEnd)}`;
             document.getElementById('inspectorResolutionLabel').textContent = series
-                ? `${series.metadata?.resolution || 'OVERVIEW'} // ${series.metadata?.sourceSnapshotCount ?? 0} SOURCE // ${points.length} VISIBLE`
+                ? `${series.metadata?.resolution || 'OVERVIEW'} // ${series.metadata?.sourceSnapshotCount ?? 0} SOURCE // ${visiblePoints.length} VISIBLE`
                 : 'WAITING';
             document.querySelectorAll('.inspector-range').forEach(button => button.classList.toggle('active', button.dataset.range === state.range));
             renderTelemetryInspectorNavigator();
@@ -2651,26 +2811,37 @@
 
         function renderTelemetryInspectorNavigator() {
             const canvas = document.getElementById('telemetryInspectorNavigatorCanvas');
+            const container = document.getElementById('telemetryInspectorNavigator');
             const context = canvas.getContext('2d');
-            const width = canvas.clientWidth;
-            const height = canvas.clientHeight;
+            const rect = container.getBoundingClientRect();
+            const width = Math.round(rect.width);
+            const height = Math.round(rect.height);
+            if (width <= 0 || height <= 0) return;
             const ratio = window.devicePixelRatio || 1;
-            canvas.width = Math.max(1, Math.round(width * ratio));
-            canvas.height = Math.max(1, Math.round(height * ratio));
+            const renderWidth = Math.max(1, Math.round(width * ratio));
+            const renderHeight = Math.max(1, Math.round(height * ratio));
+            if (canvas.width !== renderWidth) canvas.width = renderWidth;
+            if (canvas.height !== renderHeight) canvas.height = renderHeight;
             context.setTransform(ratio, 0, 0, ratio, 0, 0);
             context.clearRect(0, 0, width, height);
             const state = telemetryInspectorController.snapshot();
             const duration = state.overviewEnd - state.overviewStart;
-            const points = telemetryInspectorOverview?.points || [];
+            const points = breakTelemetryGaps(telemetryInspectorOverview?.points || [], telemetryInspectorOverview?.restarts || []);
             if (duration > 0 && points.length > 1) {
                 const maxPlayers = Math.max(1, ...points.map(point => Number(point.maxPlayers) || 0));
                 context.strokeStyle = '#eab308';
                 context.lineWidth = 1;
                 context.beginPath();
-                points.forEach((point, index) => {
+                let drawing = false;
+                points.forEach(point => {
                     const x = ((Date.parse(point.timestamp) - state.overviewStart) / duration) * width;
-                    const y = height - ((Number(point.players) || 0) / maxPlayers) * (height - 5);
-                    if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+                    if (point.players === null || point.players === undefined) {
+                        drawing = false;
+                        return;
+                    }
+                    const y = height - (Number(point.players) / maxPlayers) * (height - 5);
+                    if (!drawing) context.moveTo(x, y); else context.lineTo(x, y);
+                    drawing = true;
                 });
                 context.stroke();
             }
@@ -2871,7 +3042,8 @@
                 }
             });
             document.addEventListener('pointerup', () => { navigatorDrag = null; });
-            window.addEventListener('resize', renderTelemetryInspectorNavigator);
+            const navigatorObserver = new ResizeObserver(() => requestAnimationFrame(renderTelemetryInspectorNavigator));
+            navigatorObserver.observe(navigator);
         }
 
         window.openTelemetryInspector = function(serverId) {
@@ -2882,7 +3054,7 @@
             overlay.classList.add('open');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.classList.add('telemetry-inspector-open');
-            loadTelemetryInspectorOverview();
+            requestAnimationFrame(loadTelemetryInspectorOverview);
         };
 
         window.closeTelemetryInspector = function() {
@@ -3011,8 +3183,11 @@
                     if (!chartInstance) return;
                     const points = serverSeries.points || [];
                     chartInstance.data.labels = points.map(point => new Date(point.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
-                    chartInstance.data.datasets[0].data = points.map(point => point.ping);
-                    chartInstance.data.datasets[1].data = points.map(point => point.players);
+                    const pingRange = calculateStablePingRange(points.map(point => point.ping));
+                    chartInstance.data.datasets[0].data = points.map(point => point.players);
+                    chartInstance.data.datasets[1].data = points.map(point => point.ping);
+                    chartInstance.options.scales.miniPing.min = pingRange.min;
+                    chartInstance.options.scales.miniPing.max = pingRange.max;
                     chartInstance.$telemetry = {
                         startMs,
                         endMs,
@@ -3036,7 +3211,7 @@
                 telemetryHistoryInFlight = false;
             }
         }
-        
+
         let chart;
         function initChart() {
             const ctx = document.getElementById('popChart').getContext('2d');
@@ -3051,12 +3226,14 @@
             ["EU1", "EU2", "EU3"].forEach(n => {
                 const mctx = document.getElementById(`miniChart-${n}`);
                 if (mctx) {
+                    const miniContainer = mctx.parentElement;
                     miniCharts[n] = new Chart(mctx.getContext('2d'), {
                         type: 'line',
-                        data: { labels: [], datasets: [ { label: 'Ping', data: [], borderColor: '#00ff9c', borderWidth: 2, pointRadius: 0, tension: 0.2, spanGaps: false, yAxisID: 'y' }, { label: 'Players', data: [], borderColor: '#eab308', backgroundColor: 'rgba(234, 179, 8, 0.2)', borderWidth: 1, fill: true, pointRadius: 0, tension: 0.2, spanGaps: false, yAxisID: 'y1' } ] },
-                        options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 10, bottom: 5 } }, plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { afterBody(items) { const point = miniCharts[n]?.$telemetry?.points?.[items[0]?.dataIndex]; return point ? [`Status: ${point.status}`, `Samples: ${point.samples}`] : []; } } } }, scales: { x: { display: true, grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 }, maxTicksLimit: 6 } }, y: { display: false, min: 0, suggestedMax: 100 }, y1: { display: false, min: 0, suggestedMax: 80 } } },
+                        data: { labels: [], datasets: [ { label: 'Players', data: [], borderColor: 'rgba(234, 179, 8, 0.8)', backgroundColor: 'rgba(234, 179, 8, 0.16)', borderWidth: 1.25, fill: true, pointRadius: 0, pointHoverRadius: 0, pointBorderWidth: 0, tension: 0.2, spanGaps: false, yAxisID: 'miniPlayers', order: 2 }, { label: 'Ping', data: [], borderColor: '#00ff9c', backgroundColor: 'transparent', borderWidth: 1, hoverBorderWidth: 1, fill: false, pointRadius: 0, pointHoverRadius: 0, pointBorderWidth: 0, tension: 0.2, spanGaps: false, yAxisID: 'miniPing', order: 1 } ] },
+                        options: { responsive: false, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 10, bottom: 5 } }, plugins: { legend: { display: false }, tooltip: { enabled: true, callbacks: { label(item) { const point = miniCharts[n]?.$telemetry?.points?.[item.dataIndex]; return item.dataset.label === 'Ping' ? `Ping: ${point?.ping ?? '-'} ms` : `Players: ${point?.players ?? '-'}`; }, afterBody(items) { const point = miniCharts[n]?.$telemetry?.points?.[items[0]?.dataIndex]; return point ? [`Status: ${point.status}`, `Samples: ${point.samples}`] : []; } } } }, scales: { x: { display: true, grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 }, maxTicksLimit: 6 } }, miniPing: { display: false, position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } }, miniPlayers: { display: false, position: 'left', min: 0, suggestedMax: 80 } } },
                         plugins: [telemetryMarkerPlugin]
                     });
+                    observeChartContainer(miniCharts[n], miniContainer);
                 }
             });
         }

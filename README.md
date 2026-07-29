@@ -6,7 +6,7 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-**Current release: [v0.8.10](https://github.com/retekniker/STM-Core/releases/latest)**
+**Current release: [v0.8.11](https://github.com/retekniker/STM-Core/releases/latest)**
 
 [![Downloads](https://img.shields.io/github/downloads/retekniker/STM-Core/total?style=for-the-badge&logo=github&label=Downloads)](https://github.com/retekniker/STM-Core/releases)
 
@@ -37,7 +37,7 @@ Download the latest Windows installer:
 
 Run the downloaded installer:
 
-`STM-Core-Setup-0.8.10-x64.exe`
+`STM-Core-Setup-0.8.11-x64.exe`
 
 Installing a newer version over an existing installation preserves the database and configuration.
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.11
+
+### Telemetry charts
+
+- Keeps all three mini oscilloscopes stable and visible across intermediate container widths, display resolutions and browser zoom levels.
+- Uses a one CSS pixel Ping line without visible points and applies consistent per-server Ping colors in the Telemetry Inspector legend and axis.
+- Preserves deterministic Ping axis ranges during canvas resize and browser zoom changes.
+- Breaks Ping and Players datasets, including the navigator, across `EXACT TIME UNKNOWN` observation gaps instead of interpolating nonexistent telemetry.
+
+### Restart clock
+
+- Distinguishes browser reloads from backend monitoring-process sessions and prevents stale manual ON state from restoring false uptime after STM Core restarts.
+- Re-arms a new monitoring session in AUTO and makes its first confirmed restart the authoritative clock base while preserving manual OFF and ON within the same session.
+
+### Tests
+
+- Extended dashboard and API regression coverage for responsive chart geometry, stable Ping ranges, unknown-time gaps and backend-session-aware uptime restoration.
+
 ## 0.8.10
 
 ### Restart clock
