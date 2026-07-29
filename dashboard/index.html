@@ -104,6 +104,22 @@
         }
         .clan-member .truncate { animation: jsoc-name-pulse 3s ease-in-out infinite; font-weight: 900; }
 
+        @keyframes priority-person-flash {
+            0%, 49.99% { color: #ff3030; text-shadow: 0 0 5px #ff3030, 0 0 12px rgba(255, 48, 48, 0.8); }
+            50%, 100% { color: #ffffff; text-shadow: 0 0 5px #ffffff, 0 0 12px rgba(255, 255, 255, 0.65); }
+        }
+        .player-row.priority-person .truncate,
+        .player-row.priority-person:hover .truncate,
+        .admin-presence-alert {
+            animation: priority-person-flash 1.2s steps(1, end) infinite !important;
+            font-weight: 900;
+        }
+        .admin-presence-alert * { color: inherit !important; text-shadow: inherit; }
+        .admin-presence-alert { width: 100%; max-width: 240px; margin-top: 1rem; padding: 0.55rem; border: 1px solid #ff4d4d; background: rgba(15, 2, 2, 0.9); text-align: center; box-shadow: 0 0 12px rgba(255, 48, 48, 0.3); }
+        .admin-presence-alert[hidden] { display: none !important; }
+        .admin-presence-title { font-size: 0.75rem; letter-spacing: 0.12em; }
+        .admin-presence-person { margin-top: 0.25rem; font-size: 0.62rem; overflow-wrap: anywhere; }
+
         /* 3-WAY RADIO SWITCH CSS */
         .wd-switch-container { display: flex; background: rgba(0,0,0,0.8); border: 1px solid rgba(0, 255, 156, 0.2); border-radius: 2px; overflow: hidden; width: fit-content; box-shadow: inset 0 0 10px rgba(0,0,0,0.9); }
         .wd-switch-btn { font-size: 9px; padding: 4px 8px; cursor: pointer; text-transform: uppercase; font-weight: 900; letter-spacing: 0.05em; transition: all 0.2s ease; color: rgba(255,255,255,0.3); border-right: 1px solid rgba(255,255,255,0.05); }
@@ -500,6 +516,11 @@
                         <div id="audioStatus" class="text-[9px] text-red-500 mt-2 font-bold uppercase blink-text tracking-widest">AUDIO LOCKED</div>
                     </div>
 
+                    <div id="adminPresenceAlert" class="admin-presence-alert" hidden role="status" aria-live="polite">
+                        <div class="admin-presence-title">ADMIN ON SERVER</div>
+                        <div id="adminPresenceList"></div>
+                    </div>
+
                     <img src="Adobe Express - file.png" alt="77th JSOC Logo" class="bottom-logo mt-4 max-w-[100px] md:max-w-[140px]" onerror="this.style.display='none'">
                 </div>
             </div>
@@ -641,6 +662,8 @@
     </div>
 
     <script src="telemetryInspector.js"></script>
+    <script src="jsocPersonnel.js"></script>
+    <script src="restartFlags.js"></script>
     <script>
         const workerCode = `
             let timer;
@@ -2084,7 +2107,23 @@
             }
         }
 
+        function renderAdminPresenceAlert() {
+            const alert = document.getElementById('adminPresenceAlert');
+            const list = document.getElementById('adminPresenceList');
+            if (!alert || !list) return;
+            const people = collectPriorityPersonnel(cache);
+            list.replaceChildren();
+            people.forEach(person => {
+                const line = document.createElement('div');
+                line.className = 'admin-presence-person';
+                line.textContent = `${person.name} // ${person.serverId}`;
+                list.appendChild(line);
+            });
+            alert.hidden = people.length === 0;
+        }
+
         function renderUI() {
+            renderAdminPresenceAlert();
             ["EU1", "EU2", "EU3"].forEach(name => {
                 const c = cache[name]; if (!c) return;
                 const sEl = document.getElementById(`status${name}`); const container = document.getElementById(`container${name}`); const alertsContainer = document.getElementById(`alerts${name}`); const isFull = c.players >= c.maxPlayers && c.maxPlayers > 0;
@@ -2116,7 +2155,9 @@
                 alertsContainer.innerHTML = ""; let presentSquads = new Set(); listEl.innerHTML = "";
                 
                 c.list?.forEach((p, i) => {
-                    const squadDetails = getWatchedSquadDetails(p.name); const isClan = p.name.includes('77th') || p.name.toUpperCase().includes('JSOC');
+                    const squadDetails = getWatchedSquadDetails(p.name);
+                    const isClan = isJsocMemberName(p.name);
+                    const isPriority = isJsocPriorityPerson(p.name);
                     if (squadDetails) { presentSquads.add(squadDetails.squadIdx); }
                     
                     const row = document.createElement("div"); 
@@ -2124,6 +2165,9 @@
                     
                     let numClass = "w-5 text-right mr-2 opacity-50 text-[10px]";
                     let numStyle = "";
+
+                    if (isClan) rClass += " clan-member";
+                    if (isPriority) rClass += " priority-person";
 
                     if (squadDetails) {
                         const colors = SQUAD_COLORS[squadDetails.squadIdx]; 
@@ -2135,11 +2179,9 @@
                         if (squadDetails.squadIdx === currentSquadIdx) { 
                             numClass = "w-5 text-right mr-2 squad-number-glow text-[12px]";
                             numStyle = `color: ${colors.text};`;
-                        } else if (isClan) { 
-                            rClass += " clan-member"; 
                         }
-                    } else { 
-                        if (isClan) { rClass += " clan-member"; } else { rClass += " unassigned-player"; } 
+                    } else {
+                        if (!isClan) rClass += " unassigned-player";
                     }
                     
                     row.className = rClass; 
@@ -2674,7 +2716,7 @@
                 if (!telemetry || !area) return;
                 const duration = telemetry.viewEnd - telemetry.viewStart;
                 const ctx = chartInstance.ctx;
-                const drawLine = (timestamp, color, dashed, diamond) => {
+                const drawLine = (timestamp, color, dashed) => {
                     const time = Date.parse(timestamp);
                     if (!Number.isFinite(time) || time < telemetry.viewStart || time > telemetry.viewEnd) return;
                     const x = area.left + ((time - telemetry.viewStart) / duration) * area.width;
@@ -2687,22 +2729,28 @@
                     ctx.moveTo(x, area.top);
                     ctx.lineTo(x, area.bottom);
                     ctx.stroke();
-                    if (diamond) {
-                        ctx.setLineDash([]);
-                        ctx.translate(x, area.top + 10);
-                        ctx.rotate(Math.PI / 4);
-                        ctx.fillRect(-5, -5, 10, 10);
-                    }
                     ctx.restore();
                 };
-                telemetry.restarts.filter(marker => marker.timeKnown !== false)
-                    .forEach(marker => drawLine(marker.restartAt || marker.timestamp, '#ff4d4d', false, true));
+                chartInstance.$restartFlagHitboxes = RestartFlags.layoutRestartFlags(
+                    telemetry.restarts.filter(marker => marker.timeKnown !== false),
+                    { chartArea: area, startMs: telemetry.viewStart, endMs: telemetry.viewEnd, variant: 'inspector' }
+                );
+                RestartFlags.drawRestartFlags(ctx, chartInstance.$restartFlagHitboxes, { chartArea: area, variant: 'inspector' });
                 if (telemetry.prediction?.status === 'PREDICTED') {
-                    drawLine(telemetry.prediction.predictedAt, '#eab308', true, false);
+                    drawLine(telemetry.prediction.predictedAt, '#eab308', true);
                 }
                 if (Number.isFinite(telemetry.cursorTime)) {
-                    drawLine(new Date(telemetry.cursorTime).toISOString(), '#f8fafc', false, false);
+                    drawLine(new Date(telemetry.cursorTime).toISOString(), '#f8fafc', false);
                 }
+            },
+            afterEvent(chartInstance, args) {
+                if (!args.event) return;
+                const hit = RestartFlags.hitTestRestartFlags(chartInstance.$restartFlagHitboxes, args.event.x, args.event.y);
+                if (!hit) return;
+                chartInstance.canvas.title = formatInspectorMarker({ ...hit.marker, kind: 'restart' });
+                chartInstance.canvas.style.cursor = 'pointer';
+                chartInstance.tooltip?.setActiveElements([], { x: args.event.x, y: args.event.y });
+                args.changed = true;
             }
         };
 
@@ -2930,6 +2978,16 @@
             const time = telemetryInspectorPointerTime(event);
             const chartInstance = telemetryInspectorChart;
             if (!Number.isFinite(time) || !chartInstance?.chartArea) return;
+            const rect = chartInstance.canvas.getBoundingClientRect();
+            const pointerX = event.clientX - rect.left;
+            const pointerY = event.clientY - rect.top;
+            const flagHit = RestartFlags.hitTestRestartFlags(chartInstance.$restartFlagHitboxes, pointerX, pointerY);
+            if (flagHit) {
+                chartInstance.canvas.title = formatInspectorMarker({ ...flagHit.marker, kind: 'restart' });
+                chartInstance.canvas.style.cursor = 'pointer';
+                chartInstance.tooltip?.setActiveElements([], { x: pointerX, y: pointerY });
+                return;
+            }
             const state = telemetryInspectorController.snapshot();
             const threshold = (state.viewEnd - state.viewStart) * 12 / chartInstance.chartArea.width;
             const markers = (telemetryInspectorOverview?.restarts || []).map(marker => ({
@@ -2947,6 +3005,7 @@
             chartInstance.canvas.title = nearest && Math.abs(nearest.hoverTime - time) <= threshold
                 ? formatInspectorMarker(nearest)
                 : '';
+            chartInstance.canvas.style.cursor = chartInstance.canvas.title ? 'pointer' : '';
         }
 
         function initTelemetryInspectorNavigation() {
@@ -2976,6 +3035,8 @@
             chartCanvas.addEventListener('pointerup', endChartDrag);
             chartCanvas.addEventListener('pointercancel', endChartDrag);
             chartCanvas.addEventListener('pointerleave', () => {
+                chartCanvas.title = '';
+                chartCanvas.style.cursor = '';
                 if (!chartDrag && telemetryInspectorChart?.$telemetryInspector) {
                     telemetryInspectorChart.$telemetryInspector.cursorTime = null;
                     telemetryInspectorChart.draw();
@@ -3106,7 +3167,7 @@
                 ? `sessions: ${(evidence.playerSessionReset.players || []).join(', ')}`
                 : 'no player session reset';
 
-            return `CONFIRMED RESTART\n${new Date(marker.timestamp).toLocaleString('en-GB', { hour12: false })}\n${marker.classification} // ${marker.confidence}\n${interruption}; ${roster}; ${sessions}`;
+            return `CONFIRMED RESTART\n${new Date(marker.restartAt || marker.timestamp).toLocaleString('en-GB', { hour12: false })}\n${marker.classification} // ${marker.confidence}\n${interruption}; ${roster}; ${sessions}`;
         }
 
         const telemetryMarkerPlugin = {
@@ -3125,7 +3186,6 @@
                     const ratio = (timestamp - telemetry.startMs) / duration;
                     const x = chartArea.left + ratio * chartArea.width;
                     marker.pixelX = x;
-
                     ctx.save();
                     ctx.strokeStyle = color;
                     ctx.fillStyle = color;
@@ -3142,17 +3202,32 @@
                     ctx.restore();
                 };
 
-                telemetry.restarts.forEach(marker => drawMarker(marker, '#ff4d4d', false));
+                chartInstance.$restartFlagHitboxes = RestartFlags.layoutRestartFlags(
+                    telemetry.restarts,
+                    { chartArea, startMs: telemetry.startMs, endMs: telemetry.endMs, variant: 'mini' }
+                );
+                RestartFlags.drawRestartFlags(ctx, chartInstance.$restartFlagHitboxes, { chartArea, variant: 'mini' });
                 if (telemetry.prediction) drawMarker(telemetry.prediction, '#eab308', true);
             },
             afterEvent(chartInstance, args) {
                 const telemetry = chartInstance.$telemetry;
                 if (!telemetry || !args.event) return;
-                const markers = telemetry.prediction
-                    ? telemetry.restarts.concat(telemetry.prediction)
-                    : telemetry.restarts;
-                const nearest = markers.find(marker => Number.isFinite(marker.pixelX) && Math.abs(marker.pixelX - args.event.x) <= 7);
-                chartInstance.canvas.title = nearest ? formatTelemetryMarker(nearest) : '';
+                const hit = RestartFlags.hitTestRestartFlags(chartInstance.$restartFlagHitboxes, args.event.x, args.event.y);
+                if (hit) {
+                    chartInstance.canvas.title = formatTelemetryMarker(hit.marker);
+                    chartInstance.canvas.style.cursor = 'pointer';
+                    chartInstance.tooltip?.setActiveElements([], { x: args.event.x, y: args.event.y });
+                    args.changed = true;
+                    return;
+                }
+                const prediction = telemetry.prediction;
+                if (prediction && Number.isFinite(prediction.pixelX) && Math.abs(prediction.pixelX - args.event.x) <= 7) {
+                    chartInstance.canvas.title = formatTelemetryMarker(prediction);
+                    chartInstance.canvas.style.cursor = 'pointer';
+                    return;
+                }
+                chartInstance.canvas.title = '';
+                chartInstance.canvas.style.cursor = '';
             }
         };
 

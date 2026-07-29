@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.12
+
+### Added
+
+- Recognizes 77th JSOC members from explicit clan identifiers and controlled official rank prefixes while preserving squad styling.
+- Highlights locally classified Ambassadors, Command and High Command personnel with a red-white name animation.
+- Adds an `ADMIN ON SERVER` panel listing every priority person by server in stable order.
+- Adds readable restart flags and enlarged deterministic hover targets to mini oscilloscopes and the Telemetry Inspector.
+
+### Fixed
+
+- Restores normal JSOC name pulsing for ranked names that do not contain `77th` or `JSOC` and for members assigned to the currently selected squad.
+- Keeps restart flags inside chart bounds, recalculates their hitboxes after resize and avoids deterministic collisions without changing chart scales.
+- Preserves existing restart details, `EXACT TIME UNKNOWN` gaps, navigator behavior and stable Ping ranges while interacting with restart flags.
+- Adds regression coverage for member and priority classification, safe administrator-alert rendering, restart-flag geometry and hover behavior.
+
 ## 0.8.11
 
 ### Telemetry charts

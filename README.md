@@ -6,7 +6,7 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-**Current release: [v0.8.11](https://github.com/retekniker/STM-Core/releases/latest)**
+**Latest version: v0.8.12 (prepared for release)**
 
 [![Downloads](https://img.shields.io/github/downloads/retekniker/STM-Core/total?style=for-the-badge&logo=github&label=Downloads)](https://github.com/retekniker/STM-Core/releases)
 
@@ -17,6 +17,10 @@ STM Core monitors Arma 3 servers directly through GameDig/A2S without depending 
 - Monitors multiple Arma 3 servers
 - Tracks server status, map, latency and player count
 - Displays current player lists
+- Recognizes 77th JSOC members by official rank prefixes and clan identifiers
+- Highlights important personnel and shows an `ADMIN ON SERVER` presence alert
+- Uses a red-white alarm animation for confirmed priority personnel
+- Shows readable restart flags with enlarged hover targets on telemetry charts
 - Detects player joins and disconnects
 - Detects server restarts through Steam ID rotation
 - Detects confirmed offline-to-online restart cycles
@@ -37,7 +41,9 @@ Download the latest Windows installer:
 
 Run the downloaded installer:
 
-`STM-Core-Setup-0.8.11-x64.exe`
+Future v0.8.12 release asset:
+
+`STM-Core-Setup-0.8.12-x64.exe`
 
 Installing a newer version over an existing installation preserves the database and configuration.
 
@@ -52,6 +58,11 @@ The Windows system tray icon provides:
 - Exit STM Core
 
 ## Linux installation
+
+Future self-contained v0.8.12 release assets:
+
+- `STM-Core-0.8.12-linux-x64.tar.gz`
+- `STM-Core-0.8.12-linux-x64.tar.gz.sha256`
 
 Install or update STM Core with:
 
