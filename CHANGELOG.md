@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.14
+
+### Added
+
+- Rebuilt STM Field Manual with 14 functional chapters.
+- Offline screenshots with numbered callouts and lightbox inspection.
+- Responsive table of contents and chapter navigation.
+
+### Changed
+
+- Removed the legacy Guide text.
+- Documentation now reflects verified runtime behavior.
+
 ## 0.8.13
 
 ### Added
