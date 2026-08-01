@@ -6,9 +6,9 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-**Latest version: v0.8.14 (guide preparation; not published)**
+**Latest version: v0.8.15 (pre-release test build; not published)**
 
-v0.8.14 adds the built-in **STM Field Manual**: 14 verified functional chapters, local controlled screenshots with numbered callouts, offline delivery, responsive chapter navigation, and a keyboard-accessible screenshot lightbox. The manual is bundled with the dashboard and does not fetch documentation assets at runtime.
+v0.8.15 prepares clearer browser session logging, SQLite-backed active-personnel history, stable restart navigation, safe Watchdog startup hydration, and a refreshed 14-chapter offline **STM Field Manual**. This preparation has not been published.
 
 [![Downloads](https://img.shields.io/github/downloads/retekniker/STM-Core/total?style=for-the-badge&logo=github&label=Downloads)](https://github.com/retekniker/STM-Core/releases)
 
@@ -31,6 +31,7 @@ STM Core monitors Arma 3 servers directly through GameDig/A2S without depending 
 - Detects confirmed offline-to-online restart cycles
 - Stores restart events, server events and snapshots in SQLite
 - Restores restart clocks after STM Core is restarted
+- Hydrates each Watchdog from exact confirmed SQLite restart history when the latest restart is less than eight hours old, without creating a restart event
 - Continues monitoring after the browser is closed
 - Provides live dashboard updates through REST API and WebSocket
 - Windows system tray controller
@@ -46,9 +47,9 @@ Download the latest Windows installer:
 
 Run the downloaded installer:
 
-Future v0.8.14 release asset (not yet built or published):
+Future v0.8.15 release asset (not yet built or published):
 
-`STM-Core-Setup-0.8.14-x64.exe`
+`STM-Core-Setup-0.8.15-x64.exe`
 
 Installing a newer version over an existing installation preserves the database and configuration.
 
@@ -64,10 +65,10 @@ The Windows system tray icon provides:
 
 ## Linux installation
 
-Future self-contained v0.8.14 release assets (not yet built or published):
+Future self-contained v0.8.15 release assets (not yet built or published):
 
-- `STM-Core-0.8.14-linux-x64.tar.gz`
-- `STM-Core-0.8.14-linux-x64.tar.gz.sha256`
+- `STM-Core-0.8.15-linux-x64.tar.gz`
+- `STM-Core-0.8.15-linux-x64.tar.gz.sha256`
 
 Install or update STM Core with:
 

@@ -409,3 +409,20 @@ test("page reload restores manual state only for the same backend session", () =
     assert.deepEqual(newProcess.wdState, { EU1: "AUTO", EU2: "AUTO", EU3: "AUTO" });
     assert.equal(newProcess.lastRestartData.EU1, null);
 });
+
+test("v0.8.15 header, SYS-LOG and operator export expose only honest controls", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    for (const legacy of ["radar-btn-eco", "radar-btn-norm", "radar-btn-agr", "setRadarMode(", "btnAutoBackup", "systemBackup(", "restoreUpload", "resetBrowserMemory("])
+        assert.doesNotMatch(html, new RegExp(legacy.replace(/[()]/g, "\\$&")));
+    assert.doesNotMatch(html, />SYNC<|>RADAR<|>EKO<|>NORM<|>AGR</);
+    assert.match(html, /ADV LOG: OFF/);
+    assert.match(html, /COPY LOG/);
+    assert.match(html, /SAVE LOG/);
+    assert.match(html, /id="btnExportOperators"/);
+    assert.match(html, /function legacyCopyText/);
+    assert.match(html, /\.catch\(error =>/);
+    assert.match(html, /messageNode\.textContent = String\(text\)/);
+    assert.match(html, /ACTIVE PERSONNEL HISTORY/);
+    assert.match(html, /text: 'PLAYERS'/);
+    assert.match(html, /Number\.isInteger\(value\) \? value : null/);
+});

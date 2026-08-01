@@ -58,12 +58,6 @@
         .btn-system-led-red { font-size: 10px; letter-spacing: 0.15em; padding: 5px 12px; border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.1); color: #ff4d4d; box-shadow: 0 0 8px rgba(255, 77, 77, 0.2); transition: all 0.2s ease; text-transform: uppercase; cursor: pointer; font-weight: 900; }
         .btn-system-led-red:hover, .btn-system-led-red.active-adv { background: #ff4d4d; color: #0b0f14; box-shadow: 0 0 15px rgba(255, 77, 77, 0.6); }
 
-        /* ANIMOWANY PRZYCISK SYNC */
-        .sync-btn-wrapper { position: relative; display: inline-block; padding: 1px; overflow: hidden; border-radius: 2px; cursor: pointer; }
-        .sync-btn-wrapper::before { content: ''; position: absolute; top: -150%; left: -150%; width: 400%; height: 400%; background: conic-gradient(from 0deg, transparent 70%, #00ff9c 100%); animation: sync-spin 2s linear infinite; }
-        .sync-btn-inner { display: block; position: relative; background: #0b0f14; z-index: 1; }
-        @keyframes sync-spin { 100% { transform: rotate(360deg); } }
-
         @keyframes alert-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
         .full-text-blink { font-size: 10px; font-weight: 900; color: #ff4d4d; text-shadow: 0 0 8px #ff4d4d; animation: alert-blink 0.5s infinite; }
         .blink-text { animation: alert-blink 1s infinite; }
@@ -166,6 +160,13 @@
         
         .chart-container { position: relative; width: 100%; height: 180px; }
         .chart-container > canvas { width: 100% !important; height: 100% !important; }
+        .syslog-dmd { background-color: #030604; border: 2px solid #0f1c14; box-shadow: inset 0 0 18px #000, 0 0 8px rgba(0,255,156,0.14); font-size: clamp(0.78rem, 0.72rem + 0.18vw, 0.95rem); line-height: 1.65; overflow-wrap: anywhere; }
+        .syslog-entry { display: grid; grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr); gap: 0.65rem; padding: 0.16rem 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .syslog-time { color: #64748b; }
+        .syslog-level { font-weight: 900; letter-spacing: 0.08em; }
+        .syslog-message { min-width: 0; color: inherit; }
+        .syslog-info { color: #94a3b8; } .syslog-debug { color: #22d3ee; } .syslog-warning { color: #eab308; } .syslog-error { color: #ff4d4d; } .syslog-success { color: #00ff9c; }
+        @media (max-width: 720px) { .syslog-entry { grid-template-columns: 4.8rem minmax(0, 1fr); gap: 0.35rem; } .syslog-level { display: none; } }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 255, 156, 0.05); border-radius: 3px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 255, 156, 0.3); border-radius: 3px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00ff9c; }
         
         .server-grid-row { display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 0.75rem; align-items: stretch; width: 100%; height: 118px; min-height: 118px; }
@@ -178,16 +179,6 @@
         }
         .watchdog-clock-panel { display: flex; align-items: stretch; justify-content: space-between; gap: 0.75rem; height: 100%; }
         .watchdog-clock-meta { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
-
-        /* ANIMOWANY RADAR CSS & GLOW BOX */
-        .radar-glow-box { border: 1px solid rgba(0, 255, 156, 0.4); box-shadow: 0 0 12px rgba(0, 255, 156, 0.2), inset 0 0 8px rgba(0, 255, 156, 0.1); border-radius: 6px; padding: 4px 8px; background: rgba(0, 0, 0, 0.4); transition: all 0.3s ease; }
-        .radar-glow-box.agr-mode { border-color: rgba(255, 77, 77, 0.6); box-shadow: 0 0 15px rgba(255, 77, 77, 0.3), inset 0 0 10px rgba(255, 77, 77, 0.2); }
-        .radar-scope { width: 14px; height: 14px; border-radius: 50%; border: 1px solid currentColor; position: relative; overflow: hidden; display: inline-block; vertical-align: middle; box-shadow: 0 0 5px currentColor; }
-        .radar-sweep { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 70%, currentColor 100%); transform-origin: center; }
-        .radar-eco { color: #00ff9c; } .radar-eco .radar-sweep { animation: radar-spin 3s linear infinite; }
-        .radar-norm { color: #eab308; } .radar-norm .radar-sweep { animation: radar-spin 1.5s linear infinite; }
-        .radar-agr { color: #ff4d4d; animation: alert-blink-rapid 0.4s infinite; text-shadow: 0 0 8px #ff4d4d; box-shadow: 0 0 10px rgba(255,77,77,0.5); } .radar-agr .radar-sweep { animation: radar-spin 0.5s linear infinite; }
-        @keyframes radar-spin { 100% { transform: rotate(360deg); } }
 
         /* STATUSY ASSET SATURATION & TĘTNIĄCE PROCENTY */
         .status-pulse-online { color: #00ff9c; text-shadow: 0 0 8px #00ff9c; animation: alert-blink 2s infinite; }
@@ -315,22 +306,7 @@
                 </div>
             </div>
 
-            <div id="radar-glow-container" class="flex items-center gap-3 radar-glow-box mr-1 h-[50px] px-4">
-                <div id="radar-icon-wrapper" class="flex items-center radar-norm transition-colors duration-300 rounded-full px-1 py-0.5">
-                    <div class="radar-scope !w-[18px] !h-[18px]"><div class="radar-sweep"></div></div>
-                    <span class="text-[11px] md:text-xs opacity-90 uppercase tracking-widest font-black hidden sm:inline ml-2">RADAR</span>
-                </div>
-                <div class="wd-switch-container h-full items-center flex">
-                    <div class="wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4" id="radar-btn-eco" onclick="setRadarMode('ECO')">EKO</div>
-                    <div class="wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4" id="radar-btn-norm" onclick="setRadarMode('NORM')">NORM</div>
-                    <div class="wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4" id="radar-btn-agr" onclick="setRadarMode('AGR')">AGR</div>
-                </div>
-            </div>
-
             <div class="flex items-center gap-3 h-[50px]">
-                <div class="sync-btn-wrapper h-full" title="Force Sync API">
-                    <button onclick="updateAll()" class="sync-btn-inner btn-system-led flex items-center justify-center h-full w-full px-6 text-xs md:text-sm font-black !border-none hover:!bg-[#00ff9c] hover:!text-[#0b0f14] tracking-[0.2em]">SYNC</button>
-                </div>
                 <button id="guideTrigger" type="button" class="btn-system-led flex items-center justify-center h-full px-6 text-xs md:text-sm font-black drop-shadow-[0_0_8px_rgba(0,255,156,0.8)] border-2 border-green-400 tracking-[0.2em]">GUIDE [?]</button>
             </div>
 
@@ -519,6 +495,7 @@
                         
                         <button onclick="toggleStats()" id="btnStatsToggle" class="btn-system-led !text-[9px] !py-1">STATS: OFF</button>
                         <button onclick="toggleAutoFav()" id="btnAutoFavToggle" class="btn-system-led !text-[9px] !py-1">AUTO-FAV: OFF</button>
+                        <button onclick="exportOperators()" id="btnExportOperators" class="btn-system-led !text-[9px] !py-1 text-yellow-400 border-yellow-400">EXPORT OPERATORS</button>
                     </div>
                     <div id="squadCounter" class="squad-count">0/11</div>
                 </div>
@@ -553,7 +530,12 @@
             <div class="soc-border p-4 bg-black flex-1 min-h-[380px] min-w-0 relative z-10">
                 <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-1"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-3"></div>
-                <h3 class="text-sm font-bold uppercase opacity-80 mb-6 relative z-20">ASSET SATURATION</h3>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-20">
+                    <div><h3 class="text-sm font-bold uppercase opacity-80">ASSET SATURATION</h3><div class="text-xs font-black tracking-[0.18em] text-green-400 mt-1">ACTIVE PERSONNEL HISTORY</div></div>
+                    <div id="assetRangeControls" class="flex flex-wrap gap-1" aria-label="Asset saturation history range">
+                        <button class="btn-system-led asset-range active" data-range="30m">30 MIN</button><button class="btn-system-led asset-range" data-range="2h">2 H</button><button class="btn-system-led asset-range" data-range="6h">6 H</button><button class="btn-system-led asset-range" data-range="12h">12 H</button><button class="btn-system-led asset-range" data-range="24h">24 H</button><button class="btn-system-led asset-range" data-range="48h">48 H</button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-4 gap-4 mb-8 relative z-20">
                     <div class="text-center">
                         <span class="text-xl md:text-2xl font-black text-[#00ff9c] drop-shadow-[0_0_5px_#00ff9c] tracking-widest">EU1</span><br>
@@ -588,19 +570,12 @@
                 <div class="flex justify-between items-center mb-2 relative z-20">
                     <h3 class="text-sm font-bold uppercase opacity-80">SYS-LOG</h3>
                     <div class="flex gap-2 flex-wrap justify-end">
-                        <button id="btnAutoBackup" onclick="toggleAutoBackup()" class="btn-system-led">AUTO-BACKUP: OFF</button>
-                        <button onclick="systemBackup()" class="btn-system-led text-purple-400 border-purple-400 hover:bg-purple-400 hover:text-black">SYS BACKUP</button>
-                        <label for="restoreUpload" class="btn-system-led text-blue-400 border-blue-400 hover:bg-blue-400 hover:text-black cursor-pointer mb-0 flex items-center">RESTORE</label>
-                        <input type="file" id="restoreUpload" accept=".json" class="hidden" onchange="restoreSystem(event)">
-                        <button onclick="resetBrowserMemory()" class="btn-system-led-red">MEM RESET</button>
-                        
-                        <button id="advToggle" onclick="toggleAdvanced()" class="btn-system-led-red">ADV: OFF</button>
-                        <button onclick="exportDatabase()" class="btn-system-led text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black">DB</button>
-                        <button class="btn-system-led" onclick="copyLog()">COPY</button>
-                        <button class="btn-system-led" onclick="saveLog()">LOG</button>
+                        <button id="advToggle" onclick="toggleAdvanced()" class="btn-system-led-red">ADV LOG: OFF</button>
+                        <button id="copyLogButton" class="btn-system-led" onclick="copyLog()">COPY LOG</button>
+                        <button id="saveLogButton" class="btn-system-led" onclick="saveLog()">SAVE LOG</button>
                     </div>
                 </div>
-                <div id="logBox" class="text-[11px] h-32 overflow-y-auto font-mono opacity-80 bg-black/20 p-2 custom-scrollbar relative z-20"></div>
+                <div id="logBox" class="syslog-dmd h-48 overflow-y-auto font-mono p-3 custom-scrollbar relative z-20" role="log" aria-live="polite"></div>
             </div>
         </div>
     </div>
@@ -672,6 +647,7 @@
     <script src="guideContent.js"></script>
     <script src="guide.js"></script>
     <script src="telemetryInspector.js"></script>
+    <script src="watchdogHydration.js"></script>
     <script src="jsocPersonnel.js"></script>
     <script src="restartFlags.js"></script>
     <script src="activityFeed.js"></script>
@@ -736,6 +712,8 @@
         function defaultWdState() { return { EU1: 'AUTO', EU2: 'AUTO', EU3: 'AUTO' }; }
         let wdState = defaultWdState();
         let monitoringSessionId = null;
+        let watchdogHydrated = { EU1: false, EU2: false, EU3: false };
+        let watchdogManualRevision = { EU1: 0, EU2: 0, EU3: 0 };
         // Clock mode controls only the display: elapsed uptime or secondary restart-time view.
         // APRX badge is tied to this click-toggle view, not to watchdog AUTO/ON state.
         let clockMode = { EU1: 'elapsed', EU2: 'elapsed', EU3: 'elapsed' };
@@ -744,12 +722,7 @@
         let updateAllInFlight = false;
         let lastWatchListHash = '';
 
-        let radarMode = localStorage.getItem('jsoc_radar_mode') || 'NORM';
         let telemetryLog = safeJsonGet('jsoc_telemetry_log', { EU1: [], EU2: [], EU3: [] });
-        
-        // AUTO BACKUP VARS
-        let autoBackupEnabled = localStorage.getItem('jsoc_auto_backup') === 'true';
-        let lastBackupTime = parseInt(localStorage.getItem('jsoc_last_backup_time')) || Date.now();
 
         let miniCharts = {};
         let telemetryRange = localStorage.getItem('jsoc_telemetry_range') || '30m';
@@ -871,6 +844,8 @@
         }
         let previous = { EU1: [], EU2: [], EU3: [] };
         let cache = {}; let historyData = []; let historyLabels = [];
+        let assetSaturationRange = '30m';
+        let assetSaturationLastFetch = 0;
         let lastRenderedHash = { EU1: '', EU2: '', EU3: '' }; 
         let isFirstLoad = true;
         let renderDirty = true; // flag: true when data changed, renderUI needed
@@ -894,7 +869,8 @@
                 id: monitoringSessionId,
                 wdState,
                 lastRestartData,
-                detectedAt: sessionRestartDetectedAt
+                detectedAt: sessionRestartDetectedAt,
+                hydrated: watchdogHydrated
             }));
             localStorage.setItem('jsoc_wd_state', JSON.stringify(wdState));
             localStorage.setItem('jsoc_last_restarts', JSON.stringify(lastRestartData));
@@ -906,15 +882,47 @@
                     sameSession: true,
                     wdState: { ...defaultWdState(), ...(stored.wdState || {}) },
                     lastRestartData: { EU1: null, EU2: null, EU3: null, ...(stored.lastRestartData || {}) },
-                    detectedAt: { EU1: null, EU2: null, EU3: null, ...(stored.detectedAt || {}) }
+                    detectedAt: { EU1: null, EU2: null, EU3: null, ...(stored.detectedAt || {}) },
+                    hydrated: stored.hydrated
+                        ? { EU1: false, EU2: false, EU3: false, ...stored.hydrated }
+                        : { EU1: true, EU2: true, EU3: true }
                 };
             }
             return {
                 sameSession: false,
                 wdState: defaultWdState(),
                 lastRestartData: { EU1: null, EU2: null, EU3: null },
-                detectedAt: { EU1: null, EU2: null, EU3: null }
+                detectedAt: { EU1: null, EU2: null, EU3: null },
+                hydrated: { EU1: false, EU2: false, EU3: false }
             };
+        }
+
+        const watchdogHydrator = new WatchdogStartupHydration.Coordinator({
+            async fetchRestarts(serverId) {
+                const response = await fetch(`/api/v1/community/restarts?serverId=${encodeURIComponent(serverId)}&limit=100`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const payload = await response.json();
+                return payload.events || [];
+            },
+            getManualRevision(serverId) { return watchdogManualRevision[serverId]; },
+            getCurrentRestartAt(serverId) { return lastRestartData[serverId]; },
+            apply(serverId, result) {
+                wdState[serverId] = result.mode;
+                lastRestartData[serverId] = result.restartAt;
+                renderWdSwitches();
+                updateClock();
+            },
+            complete(serverId, result) {
+                watchdogHydrated[serverId] = true;
+                persistMonitoringSession();
+                if (result.error && advMode) logEvent(`[WD] ${serverId} STARTUP HISTORY UNAVAILABLE: ${result.error.message}`, 'text-yellow-500', true);
+            }
+        });
+
+        function hydrateWatchdogsForSession(sessionId) {
+            ['EU1', 'EU2', 'EU3'].forEach(serverId => {
+                if (!watchdogHydrated[serverId]) watchdogHydrator.hydrate(sessionId, serverId);
+            });
         }
 
         function reconcileMonitoringSession(sessionId) {
@@ -925,12 +933,14 @@
             wdState = resolved.wdState;
             lastRestartData = resolved.lastRestartData;
             sessionRestartDetectedAt = resolved.detectedAt;
+            watchdogHydrated = resolved.hydrated;
             if (!resolved.sameSession) {
                 lastRestartAlerted = { EU1: null, EU2: null, EU3: null };
             }
             persistMonitoringSession();
             renderWdSwitches();
             updateClock();
+            hydrateWatchdogsForSession(sessionId);
         }
 
         let advMode = localStorage.getItem('jsoc_adv_mode') === 'true';
@@ -1020,9 +1030,7 @@
                 if (renderDirty) { renderUI(); renderDirty = false; }
 
                 let now = Date.now();
-                let nextInterval = 8000;
-                if (radarMode === 'ECO') nextInterval = 12000;
-                else if (radarMode === 'AGR') nextInterval = 5500;
+                const nextInterval = 8000;
 
                 ["EU1", "EU2", "EU3"].forEach(n => {
                     if (wdState[n] === 'AUTO' && calibrationData[n] > 0 && now > calibrationData[n]) {
@@ -1040,16 +1048,6 @@
                     cleanupPlayerSessions();
                 }
 
-                if (autoBackupEnabled && now - lastBackupTime >= 48 * 60 * 60 * 1000) {
-                    systemBackup();
-                    if (blackBoxLogs.length > 500) {
-                        blackBoxLogs = blackBoxLogs.slice(-500);
-                    }
-                    lastBackupTime = now;
-                    localStorage.setItem('jsoc_last_backup_time', lastBackupTime);
-                    logEvent("[SYS] 48H AUTO-BACKUP COMPLETED. LOGS PRUNED.", "text-purple-400 font-bold");
-                    pushToDMD("[SYS] 48H AUTO-BACKUP COMPLETED", 1, "dmd-alarm-green");
-                }
 
                 if (now >= rateLimitCooldown && now - lastFetchTime >= nextInterval && !isFetching) {
                     lastFetchTime = now;
@@ -1059,6 +1057,7 @@
                 if (now - lastTelemetryHistoryFetch >= 30000) {
                     loadTelemetryHistory();
                 }
+                if (now - assetSaturationLastFetch >= 30000) loadAssetSaturationHistory();
             }
         };
 
@@ -1066,141 +1065,6 @@
             clockMode[server] = clockMode[server] === 'restartTime' ? 'elapsed' : 'restartTime';
             updateClock();
         };
-
-        function systemBackup() {
-            lsFlush();
-            exportDatabase();
-            
-            setTimeout(() => {
-                let backupData = {
-                    jsoc_stats: localStorage.getItem('jsoc_stats') || '{}',
-                    jsoc_all_squads: localStorage.getItem('jsoc_all_squads') || '{}',
-                    jsoc_wd_state: localStorage.getItem('jsoc_wd_state') || '{}',
-                    jsoc_last_restarts: localStorage.getItem('jsoc_last_restarts') || '{}',
-                    jsoc_approx_state: localStorage.getItem('jsoc_approx_state') || '{}',
-                    jsoc_radar_mode: localStorage.getItem('jsoc_radar_mode') || 'NORM',
-                    jsoc_sq_idx: localStorage.getItem('jsoc_sq_idx') || '1'
-                };
-                
-                const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `stm_system_backup_${new Date().getTime()}.json`;
-                a.click();
-                
-                logEvent("[SYS] SYSTEM STATE BACKUP EXPORTED", "text-purple-400 font-bold");
-                pushToDMD(`[SYS] SYSTEM STATE BACKUP EXPORTED`, 1, 'dmd-alarm-green');
-            }, 500); 
-        }
-
-        function restoreSystem(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.jsoc_stats) localStorage.setItem('jsoc_stats', data.jsoc_stats);
-                    if (data.jsoc_all_squads) localStorage.setItem('jsoc_all_squads', data.jsoc_all_squads);
-                    if (data.jsoc_wd_state) localStorage.setItem('jsoc_wd_state', data.jsoc_wd_state);
-                    if (data.jsoc_last_restarts) localStorage.setItem('jsoc_last_restarts', data.jsoc_last_restarts);
-                    if (data.jsoc_approx_state) localStorage.setItem('jsoc_approx_state', data.jsoc_approx_state);
-                    if (data.jsoc_radar_mode) localStorage.setItem('jsoc_radar_mode', data.jsoc_radar_mode);
-                    if (data.jsoc_sq_idx) localStorage.setItem('jsoc_sq_idx', data.jsoc_sq_idx);
-                    
-                    pushToDMD(`[SYS] SYSTEM RESTORED. REBOOTING...`, 2, 'dmd-alarm-green');
-                    alert("SYSTEM RESTORED SUCCESSFULLY! Rebooting kernel...");
-                    location.reload();
-                } catch (err) {
-                    alert("FAILED TO RESTORE BACKUP. Invalid file format.");
-                    logEvent("[ERROR] RESTORE FAILED. CORRUPTED FILE.", "text-red-500 font-bold");
-                    pushToDMD(`[ERROR] RESTORE FAILED: CORRUPTED FILE`, 2, 'dmd-alarm-red');
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = ''; 
-        }
-
-        function toggleAutoBackup() {
-            autoBackupEnabled = !autoBackupEnabled;
-            localStorage.setItem('jsoc_auto_backup', autoBackupEnabled);
-            const btn = document.getElementById("btnAutoBackup");
-            btn.innerText = `AUTO-BACKUP: ${autoBackupEnabled ? 'ON' : 'OFF'}`;
-            if (autoBackupEnabled) {
-                btn.classList.add("active");
-                lastBackupTime = Date.now(); 
-                localStorage.setItem('jsoc_last_backup_time', lastBackupTime);
-                logEvent("[SYS] 48H AUTO-BACKUP ENGAGED", "text-purple-400 font-bold");
-                pushToDMD(`[SYS] 48H AUTO-BACKUP: ON`, 1, 'dmd-alarm-green');
-            } else {
-                btn.classList.remove("active");
-                logEvent("[SYS] 48H AUTO-BACKUP OFFLINE", "text-gray-500");
-                pushToDMD(`[SYS] 48H AUTO-BACKUP: OFF`, 1, 'dmd-alarm-yellow');
-            }
-        }
-
-        function resetBrowserMemory() {
-            const ok = confirm(
-                "[STM MEMORY RESET]\n\n" +
-                "To usunie dane zapisane w pamięci przeglądarki dla STM:\n" +
-                "- squady / watchlisty\n" +
-                "- statystyki graczy\n" +
-                "- watchdog state\n" +
-                "- restart history\n" +
-                "- Steam server IDs\n" +
-                "- radar / volume / mute / backup settings\n\n" +
-                "Nie rusza plików na dysku ani danych BattleMetrics.\n\n" +
-                "Kontynuować?"
-            );
-
-            if (!ok) return;
-
-            try {
-                if (typeof _lsTimer !== "undefined" && _lsTimer) {
-                    clearTimeout(_lsTimer);
-                    _lsTimer = null;
-                }
-
-                if (typeof _lsPending !== "undefined") {
-                    Object.keys(_lsPending).forEach(k => delete _lsPending[k]);
-                }
-
-                const STM_KEYS = [
-                    "jsoc_wd_state",
-                    "jsoc_approx_state",
-                    "jsoc_radar_mode",
-                    "jsoc_telemetry_log",
-                    "jsoc_telemetry_range",
-                    "jsoc_auto_backup",
-                    "jsoc_last_backup_time",
-                    "jsoc_all_squads",
-                    "jsoc_sq_idx",
-                    "jsoc_steam_ids",
-                    "jsoc_stats",
-                    "jsoc_calibration_data",
-                    "jsoc_last_restarts",
-                    "jsoc_last_restart_alerts",
-                    "jsoc_muted",
-                    "jsoc_volume",
-                    "jsoc_adv_mode",
-                    "jsoc_sort_mode",
-                    "jsoc_api_heat",
-                    "jsoc_ping_baseline",
-                    "jsoc_restart_pattern"
-                ];
-
-                STM_KEYS.forEach(k => localStorage.removeItem(k));
-
-                console.log("%c[STM RESET] browser memory cleared", "color:#00ff9c;font-weight:bold");
-                alert("STM browser memory cleared. Reloading interface...");
-                location.reload();
-
-            } catch (e) {
-                console.error("[STM RESET] failed", e);
-                alert("MEM RESET failed. Check console.");
-            }
-        }
 
         function pushToDMD(msg, priority = 0, colorClass = null) {
             dmdQueue.push({ msg, priority, colorClass });
@@ -1386,18 +1250,6 @@
             updateApiHeatUI();
         }
 
-        function setRadarMode(mode) {
-            radarMode = mode; localStorage.setItem('jsoc_radar_mode', mode);
-            document.getElementById('radar-btn-eco').className = `wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4 ${mode === 'ECO' ? 'active-on' : ''}`;
-            document.getElementById('radar-btn-norm').className = `wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4 ${mode === 'NORM' ? 'active-auto' : ''}`;
-            document.getElementById('radar-btn-agr').className = `wd-switch-btn flex items-center justify-center h-full !text-[11px] md:!text-xs !px-4 ${mode === 'AGR' ? 'active-off' : ''}`;
-            const radarIcon = document.getElementById('radar-icon-wrapper');
-            if(radarIcon) { radarIcon.className = `flex items-center transition-colors duration-300 rounded-full px-1 py-0.5 ${mode === 'ECO' ? 'radar-eco' : mode === 'NORM' ? 'radar-norm' : 'radar-agr'}`; }
-            const radarContainer = document.getElementById('radar-glow-container');
-            if(radarContainer) { if(mode === 'AGR') { radarContainer.classList.add('agr-mode'); } else { radarContainer.classList.remove('agr-mode'); } }
-            logEvent(`[RADAR] FREQUENCY SET TO ${mode}`, "text-cyan-400 font-bold");
-        }
-
         function showStickyAlert(server, title, message) {
             if (document.getElementById(`sticky-${server}`)) return; 
             const container = document.getElementById('stickyAlerts'); const div = document.createElement('div'); div.id = `sticky-${server}`;
@@ -1530,6 +1382,7 @@
         }
 
         function setWdState(server, state) {
+            watchdogManualRevision[server] += 1;
             wdState[server] = state; persistMonitoringSession();
             renderWdSwitches(); updateClock(); updateOscyStyle(server, state); 
             let color = "text-gray-500"; if(state === 'ON') color = "text-green-400"; if(state === 'AUTO') color = "text-yellow-500";
@@ -1554,7 +1407,7 @@
             if(miniCharts[server]) { let color = '#555'; if (value === 'ON') color = '#00ff9c'; if (value === 'AUTO') color = '#eab308'; miniCharts[server].data.datasets[0].borderColor = color; miniCharts[server].update('none'); }
         }
 
-        function exportDatabase() {
+        function exportOperators() {
             lsFlush();
             let db = statsData || safeJsonGet('jsoc_stats', {});
             let arr = Object.keys(db).map(k => ({ name: k, total: db[k].totalTime || 0, session: db[k].sessionTime || 0 }));
@@ -1566,7 +1419,7 @@
             arr.forEach((p, i) => {
                 let tH = Math.floor(p.total / 3600000); let tM = Math.floor((p.total % 3600000) / 60000);
                 let sH = Math.floor(p.session / 3600000); let sM = Math.floor((p.session % 3600000) / 60000);
-                text += `${String(i+1).padStart(3, '0')}. ${p.name.padEnd(25, ' ')} | TOTAL: ${tH}h ${String(tM).padStart(2, '0')}m | LAST SES: ${sH}h ${String(sM).padStart(2, '0')}m\n`;
+                text += `${String(i+1).padStart(3, '0')}. ${p.name.padEnd(25, ' ')} | TOTAL: ${tH}h ${String(tM).padStart(2, '0')}m | LAST SESSION: ${sH}h ${String(sM).padStart(2, '0')}m\n`;
             });
             
             const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
@@ -1626,7 +1479,7 @@
             if (voiceEnabled) { queueSpeech("Audio check. Charlie 2 connected."); queueSpeech("Critical alert. EU One server down or restarting."); } else { queueSound(SOUND_SQUAD, currentVolume * 0.15); } queueSound(SOUND_SQUAD, currentVolume * 0.3);
         }
 
-        function initAdvButton() { const btn = document.getElementById("advToggle"); btn.innerText = `ADV: ${advMode ? 'ON' : 'OFF'}`; if(advMode) { btn.classList.add("active-adv"); } else { btn.classList.remove("active-adv"); } }
+        function initAdvButton() { const btn = document.getElementById("advToggle"); btn.innerText = `ADV LOG: ${advMode ? 'ON' : 'OFF'}`; if(advMode) { btn.classList.add("active-adv"); } else { btn.classList.remove("active-adv"); } }
         function toggleAdvanced() { 
             advMode = !advMode; 
             localStorage.setItem('jsoc_adv_mode', advMode); 
@@ -1642,16 +1495,42 @@
             blackBoxLogs.push(`[${timeStr}] [SYS] ${text}`);
             if (blackBoxLogs.length > 20000) blackBoxLogs.shift();
 
-            const log = document.getElementById("logBox"); if (!log) return; 
-            const entry = document.createElement("div"); entry.className = `${color} py-0.5 border-b border-white/5 uppercase`; entry.innerHTML = `<span class="opacity-40">[${timeStr}]</span> ${text}`; 
-            log.insertBefore(entry, log.firstChild); if (log.children.length > 100) { log.removeChild(log.lastChild); } 
+            const log = document.getElementById("logBox"); if (!log) return;
+            const upper = String(text).toUpperCase();
+            const level = isAdvanced || upper.includes('[ADV]') ? 'DEBUG' : upper.includes('ERROR') || upper.includes('CRITICAL') || color.includes('red') ? 'ERROR' : upper.includes('WARN') || color.includes('yellow') || color.includes('orange') ? 'WARNING' : upper.includes('SUCCESS') || color.includes('green') ? 'SUCCESS' : 'INFO';
+            const entry = document.createElement("div"); entry.className = `syslog-entry syslog-${level.toLowerCase()}`;
+            const timeNode = document.createElement('span'); timeNode.className = 'syslog-time'; timeNode.textContent = `[${timeStr}]`;
+            const levelNode = document.createElement('span'); levelNode.className = 'syslog-level'; levelNode.textContent = level;
+            const messageNode = document.createElement('span'); messageNode.className = 'syslog-message'; messageNode.textContent = String(text);
+            entry.append(timeNode, levelNode, messageNode);
+            log.insertBefore(entry, log.firstChild); if (log.children.length > 100) { log.removeChild(log.lastChild); }
         }
 
-        function copyLog() { 
-            const text = blackBoxLogs.join('\n'); 
-            navigator.clipboard.writeText(text).then(() => {
-                logEvent("BLACK BOX COPIED TO CLIPBOARD", "text-cyan-400"); 
+        function legacyCopyText(text) {
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            let copied = false;
+            try { copied = document.execCommand('copy'); } finally { area.remove(); }
+            if (!copied) throw new Error('Clipboard unavailable');
+        }
+        function copyLog() {
+            const text = blackBoxLogs.join('\n');
+            const clipboardWrite = navigator.clipboard?.writeText
+                ? navigator.clipboard.writeText(text).catch(() => legacyCopyText(text))
+                : Promise.resolve().then(() => legacyCopyText(text));
+            return clipboardWrite.then(() => {
+                logEvent("BLACK BOX COPIED TO CLIPBOARD", "text-cyan-400");
                 pushToDMD(`[SYS] BLACK BOX COPIED TO CLIPBOARD`, 1, 'dmd-alarm-green');
+                return true;
+            }).catch(error => {
+                logEvent(`COPY LOG FAILED: ${error.message}`, "text-red-500 font-bold");
+                pushToDMD(`[ERROR] COPY LOG FAILED`, 1, 'dmd-alarm-red');
+                return false;
             });
         }
         function saveLog() { 
@@ -2117,10 +1996,6 @@
                 const totalPercEl = document.getElementById(`percTOTAL`); if(totalPercEl) { totalPercEl.innerText = `${totalMax > 0 ? Math.round((totalPlayers / totalMax) * 100) : 0}%`; }
                 document.getElementById(`barTOTAL`).style.width = `${totalMax > 0 ? Math.round((totalPlayers / totalMax) * 100) : 0}%`;
                 
-                const timeLabel = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-                historyData.push(totalPlayers); historyLabels.push(timeLabel); if (historyData.length > 60) { historyData.shift(); historyLabels.shift(); }
-                if(chart) { chart.update('none'); }
-
                 lsSet('jsoc_stats', JSON.stringify(statsData));
             } catch (e) { console.error(e); }
             finally {
@@ -2807,7 +2682,20 @@
                 ? `${series.metadata?.resolution || 'OVERVIEW'} // ${series.metadata?.sourceSnapshotCount ?? 0} SOURCE // ${visiblePoints.length} VISIBLE`
                 : 'WAITING';
             document.querySelectorAll('.inspector-range').forEach(button => button.classList.toggle('active', button.dataset.range === state.range));
+            document.getElementById('inspectorPreviousRestart').disabled = !state.canPreviousRestart;
+            document.getElementById('inspectorNextRestart').disabled = !state.canNextRestart;
             renderTelemetryInspectorNavigator();
+        }
+
+        async function loadTelemetryInspectorRestarts(serverId) {
+            const response = await fetch(`/api/v1/community/restarts?serverId=${encodeURIComponent(serverId)}&limit=500`, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            telemetryInspectorController.setRestarts((payload.events || []).map(event => ({
+                id: event.id,
+                timestamp: event.timestamp,
+                ...(event.data || {})
+            })));
         }
 
         function renderTelemetryInspectorNavigator() {
@@ -2867,7 +2755,7 @@
                 if (requestId !== telemetryInspectorRequest) return;
                 telemetryInspectorOverview = payload.series?.[0] || { points: [], restarts: [], prediction: null, metadata: {} };
                 telemetryInspectorDetail = null;
-                telemetryInspectorController.setOverview(Date.parse(payload.requestedFrom), Date.parse(payload.requestedTo), telemetryInspectorOverview.restarts || []);
+                telemetryInspectorController.setOverview(Date.parse(payload.requestedFrom), Date.parse(payload.requestedTo));
                 renderTelemetryInspector();
                 scheduleTelemetryInspectorDetail();
             } catch (error) {
@@ -3068,7 +2956,11 @@
             overlay.classList.add('open');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.classList.add('telemetry-inspector-open');
-            requestAnimationFrame(loadTelemetryInspectorOverview);
+            requestAnimationFrame(async () => {
+                try { await loadTelemetryInspectorRestarts(serverId); }
+                catch (error) { logEvent(`[INSPECTOR] RESTART INDEX LOAD FAILED: ${error.message}`, 'text-red-500', true); }
+                await loadTelemetryInspectorOverview();
+            });
         };
 
         window.closeTelemetryInspector = function() {
@@ -3241,12 +3133,49 @@
         }
 
         let chart;
+        function assetPlayerStep(maximum) {
+            if (maximum <= 8) return 1;
+            if (maximum <= 20) return 2;
+            if (maximum <= 50) return 5;
+            return 10;
+        }
+
+        async function loadAssetSaturationHistory() {
+            try {
+                const response = await fetch(`/api/v1/community/asset-saturation?range=${encodeURIComponent(assetSaturationRange)}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const payload = await response.json();
+                historyLabels = payload.points.map(point => point.timestamp);
+                historyData = payload.points.map(point => Number.isInteger(point.players) ? point.players : null);
+                if (chart) {
+                    chart.data.labels = historyLabels;
+                    chart.data.datasets[0].data = historyData;
+                    const maximum = Math.max(0, ...historyData.filter(Number.isInteger));
+                    chart.options.scales.y.ticks.stepSize = assetPlayerStep(maximum);
+                    chart.update('none');
+                }
+                assetSaturationLastFetch = Date.now();
+            } catch (error) {
+                logEvent(`[ASSET HISTORY] LOAD FAILED: ${error.message}`, 'text-red-500', true);
+            }
+        }
+
+        function initAssetSaturation() {
+            document.querySelectorAll('.asset-range').forEach(button => button.addEventListener('click', () => {
+                assetSaturationRange = button.dataset.range;
+                document.querySelectorAll('.asset-range').forEach(item => item.classList.toggle('active', item === button));
+                assetSaturationLastFetch = 0;
+                loadAssetSaturationHistory();
+            }));
+            loadAssetSaturationHistory();
+        }
+
         function initChart() {
             const ctx = document.getElementById('popChart').getContext('2d');
             chart = new Chart(ctx, { 
                 type: 'line', 
                 data: { labels: historyLabels, datasets: [{ data: historyData, borderColor: '#00ff9c', backgroundColor: 'rgba(0, 255, 156, 0.05)', fill: true, tension: 0.4, pointRadius: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#004400' }, ticks: { color: '#00ff9c', font: { size: 9 } } }, y: { beginAtZero: true, grid: { color: '#004400' }, ticks: { color: '#00ff9c', font: { size: 10 } } } } } 
+                options: { responsive: true, maintainAspectRatio: false, animation: false, spanGaps: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { title(items) { const stamp = items[0]?.label; return stamp ? new Date(stamp).toLocaleString('en-GB', { hour12: false }) : ''; }, label(item) { return Number.isInteger(item.raw) ? `Players: ${item.raw}` : 'Players: unavailable'; } } } }, scales: { x: { grid: { color: '#004400' }, ticks: { color: '#00ff9c', font: { size: 9 }, maxTicksLimit: 8, callback(value) { const stamp = this.getLabelForValue(value); return stamp ? new Date(stamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''; } } }, y: { min: 0, beginAtZero: true, title: { display: true, text: 'PLAYERS', color: '#00ff9c', font: { weight: 'bold' } }, grid: { color: '#004400' }, ticks: { color: '#00ff9c', font: { size: 10 }, precision: 0, stepSize: 1, callback(value) { return Number.isInteger(value) ? value : null; } } } } }
             });
             const resizeObserver = new ResizeObserver(() => { chart.resize(); });
             if (document.getElementById('chartParent')) { resizeObserver.observe(document.getElementById('chartParent')); }
@@ -3270,17 +3199,11 @@
             activityFeedController = new ActivityFeedController({ renderRestartEntry: renderRestartLogEntry });
             activityFeedController.init();
             window.setActivityFeedExpanded = expanded => activityFeedController.setActivityFeedExpanded(expanded);
-            switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); initTelemetryInspector(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setRadarMode(radarMode); setTelemetryRange(telemetryRange);
+            switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); initTelemetryInspector(); initAssetSaturation(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setTelemetryRange(telemetryRange);
             initVoice();
             
             const btnSort = document.getElementById('btnSortToggle');
             if(btnSort) { btnSort.innerText = `SORT: ${sortMode}`; if(sortMode !== 'ADDED') btnSort.classList.add('active'); else btnSort.classList.remove('active'); }
-            
-            const btnBackup = document.getElementById('btnAutoBackup');
-            if(btnBackup) {
-                btnBackup.innerText = `AUTO-BACKUP: ${autoBackupEnabled ? 'ON' : 'OFF'}`;
-                if (autoBackupEnabled) btnBackup.classList.add("active");
-            }
             
             worker.postMessage('start');
             

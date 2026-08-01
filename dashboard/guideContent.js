@@ -6,7 +6,7 @@
     });
 
     window.STM_GUIDE_CONTENT = Object.freeze({
-        version: "0.8.14",
+        version: "0.8.15",
         title: "STM FIELD MANUAL",
         chapters: [
             { id: "quick-start", number: "01", title: "QUICK START", ...standard(
@@ -38,12 +38,12 @@
             )},
             { id: "squad-tracking", number: "04", title: "SQUAD TRACKING", ...standard(
                 "Maintain local, color-coded watch squads and compare them with active server rosters.",
-                ["Squad selector chooses ALFA–GOLF or FAV.", "SORT cycles ADDED, A-Z, and ONLINE.", "STATS toggles session and accumulated browser history.", "AUTO-FAV adds newly observed unassigned joiners to FAV while enabled.", "ADD inserts the typed callsign; double-clicking an active player does the same.", "DRAFT UNLINKED adds active players not present in any squad until capacity is reached.", "PURGE empties only the selected squad."],
+                ["Squad selector chooses ALFA–GOLF or FAV.", "SORT cycles ADDED, A-Z, and ONLINE.", "STATS toggles session and accumulated browser history.", "AUTO-FAV adds newly observed unassigned joiners to FAV while enabled.", "EXPORT OPERATORS downloads local operator names with TOTAL and LAST SESSION time.", "ADD inserts the typed callsign; DRAFT UNLINKED scans active unlinked players; PURGE empties only the selected squad."],
                 ["A callsign can exist in only one squad. ADD rejects duplicates and full rosters (11 for ALFA–GOLF, 210 for FAV). Remove an entry with its X before assigning it elsewhere.", "Current server session time and persistent local total time are different counters. STATS only changes presentation.", "AUTO-FAV does not retroactively import all currently connected users; DRAFT UNLINKED performs that explicit scan."],
                 "Squads, selected squad, sorting, and accumulated statistics use this browser's localStorage. SORT survives reload; STATS and AUTO-FAV reset on reload. None of these values is synchronized by the backend.",
                 "CAUTION: PURGE immediately clears the selected local squad without confirmation. It does not kick players, alter server membership, or erase telemetry/database history.",
                 "assets/guide/04-squad-tracking.png",
-                ["Squad selector and mode controls", "Linked operators", "Unlinked active operator", "ADD, DRAFT UNLINKED and PURGE"]
+                ["Squad selector and mode controls", "EXPORT OPERATORS", "Linked and unlinked operators", "ADD, DRAFT UNLINKED and PURGE"]
             )},
             { id: "activity-feed", number: "05", title: "ACTIVITY FEED & RESTART LOG", ...standard(
                 "Inspect live joins, leaves, system messages, and confirmed restart evidence.",
@@ -56,9 +56,9 @@
             )},
             { id: "watchdog", number: "06", title: "WATCHDOG: OFF / AUTO / ON", ...standard(
                 "Control restart-monitoring sensitivity per server.",
-                ["OFF disables restart analysis for that server.", "AUTO analyzes a cold-start baseline and changes to ON after its 24-hour calibration deadline.", "ON performs full restart evaluation and alerts."],
-                ["A state button takes effect on one click. The backend supplies a monitoring-session ID; browser state is restored only while that backend session remains the same.", "Restart detection compares server identity and query/roster/session evidence. Transitional identifiers are rejected until evidence confirms a restart.", "At cold start, AUTO establishes a quarantine/baseline rather than declaring historical changes as new restarts. Confirmed events update lastRestartAt, restart evidence, visual state, feed entries, flags, and eligible voice alerts."],
-                "The chosen mode and client restart clock are cached locally for the current backend monitoring session. Confirmed restart events, server baselines, and lastRestartAt are backend/SQLite state and survive an STM-Core process restart. A new backend session resets client manual modes to AUTO.",
+                ["OFF disables restart analysis for that server.", "AUTO shows ANALYSIS while STM establishes a safe restart baseline.", "ON performs full restart evaluation and runs the clock from the last exact confirmed restart."],
+                ["A state button takes effect on one click. The backend supplies a monitoring-session ID; browser state is restored only while that backend session remains the same.", "On a new backend session, the dashboard reads each server's authoritative confirmed restart history. An exact restart less than eight hours old restores ON and its true lastRestartAt; exactly eight hours or older, missing, future, or invalid evidence starts AUTO / ANALYSIS.", "The persistent backend history wins over stale localStorage. Restarting or reinstalling STM-Core does not create a game-server restart event, and hydration never adds a restart or flag."],
+                "Manual OFF/AUTO/ON and the client clock are cached with the current monitorStartedAt identifier. Reloading the same backend session preserves that manual choice. Confirmed restart events and timestamps remain read-only SQLite history during startup hydration.",
                 "IMPORTANT: OFF suppresses analysis; it does not stop server polling or erase existing telemetry and restart history.",
                 "assets/guide/06-watchdog.png",
                 ["OFF state", "AUTO calibration/analysis", "ON monitoring", "Restart state and baseline"]
@@ -74,10 +74,10 @@
             )},
             { id: "telemetry-inspector", number: "08", title: "OSCILLOSCOPES & TELEMETRY INSPECTOR", ...standard(
                 "Inspect long-range telemetry and restart context with precise navigation.",
-                ["Choose EU1/EU2/EU3 and 30 MIN through 48 H.", "Toggle Players, Max Slots, and Ping.", "Drag/pan the navigator or handles to change the visible range.", "PREVIOUS RESTART and NEXT RESTART step between markers; LIVE follows the newest data; RESET VIEW restores the range."],
+                ["Choose EU1/EU2/EU3 and 30 MIN through 48 H.", "Toggle Players, Max Slots, and Ping.", "Drag/pan the navigator or handles to change the visible range.", "PREVIOUS RESTART and NEXT RESTART repeatedly step through the stable chronological restart index; LIVE follows newest data and RESET VIEW restores the selected range."],
                 ["Players/Max Slots use the left axis and Ping the right axis. Tooltips report timestamps and values.", "Source samples is the fetched set; visible samples is the subset inside the current window.", "EXACT TIME UNKNOWN marks a restart known only to have occurred inside an observation gap. Gaps are intentionally broken rather than connected by a misleading line."],
                 "Inspector navigation is temporary UI state. Telemetry and confirmed restart markers come from backend SQLite.",
-                "NOTE: PREVIOUS/NEXT can land on clustered markers. Use the larger marker hitbox and tooltip to distinguish them.",
+                "NOTE: PREVIOUS/NEXT are disabled only at the true ends of the selected server's restart index. Unknown-time events use their observation-window boundary for navigation while retaining EXACT TIME UNKNOWN.",
                 "assets/guide/08-telemetry-inspector.png",
                 ["Server/range toolbar", "Dual-axis chart and tooltip", "Restart controls", "Navigator and sample counts", "EXACT TIME UNKNOWN gap"]
             )},
@@ -91,13 +91,13 @@
                 ["Vertical restart line", "Diamond and RESTART flag", "Date/time tooltip", "Clustered marker hit areas"]
             )},
             { id: "asset-saturation", number: "10", title: "ASSET SATURATION", ...standard(
-                "Compare slot utilization across monitored servers.",
-                ["EU1/EU2/EU3 rows show current utilization and ONLINE/OFFLINE.", "TOTAL summarizes current players against total available slots.", "The combined chart shows utilization changing over time."],
-                ["Percentage is current players divided by reported max slots. Bars and status colors update from live samples.", "The chart represents player-slot saturation only. It is not CPU, RAM, network bandwidth, mission load, or proof of queue length."],
-                "Current values are live backend state; the time series derives from stored telemetry samples.",
+                "Compare current slot utilization and total active personnel history across monitored servers.",
+                ["EU1/EU2/EU3 rows show current utilization and ONLINE/OFFLINE.", "TOTAL summarizes current players against total available slots.", "30 MIN, 2 H, 6 H, 12 H, 24 H and 48 H select the SQLite history window."],
+                ["Top percentages remain current players divided by reported max slots.", "ACTIVE PERSONNEL HISTORY sums the representative integer Players sample from every configured server in each complete time bucket.", "If any server lacks a reliable sample, the line breaks instead of treating missing data as zero. The PLAYERS axis never shows fractional personnel."],
+                "Current percentages are live backend state. Chart samples are read from backend SQLite and survive browser closure and STM-Core restart.",
                 "NOTE: An offline server may have no meaningful current percentage; read its status before comparing bars.",
                 "assets/guide/10-asset-saturation.png",
-                ["Per-server utilization", "TOTAL capacity", "ONLINE/OFFLINE labels", "Combined history chart"]
+                ["Per-server utilization", "30 MIN–48 H controls", "ACTIVE PERSONNEL HISTORY", "Integer PLAYERS axis"]
             )},
             { id: "admin-jsoc", number: "11", title: "ADMIN ON SERVER & JSOC MARKERS", ...standard(
                 "Highlight locally classified personnel in active rosters.",
@@ -110,30 +110,30 @@
             )},
             { id: "clock-override", number: "12", title: "CLOCK & MANUAL OVERRIDE", ...standard(
                 "Read confirmed uptime/restart time and temporarily inspect the approximate alternate view.",
-                ["Single-click a server clock to toggle elapsed uptime and the APRX restart-time view.", "Double-click the telemetry chart resets its view; v0.8.14 has no active manual time-injection prompt in the server clock handler."],
+                ["Single-click a server clock to toggle elapsed uptime and the APRX restart-time view.", "Double-click the telemetry chart resets its view; v0.8.15 has no active manual time-injection prompt in the server clock handler."],
                 ["The header clock shows local wall time. Server clocks derive from backend core uptime/lastRestartAt and update each second.", "The APRX badge identifies the alternate calculated display, not a new confirmed restart. Backend restart evidence mathematically establishes confirmed time; unknown observation gaps remain explicitly approximate."],
                 "Clock display mode is in-memory browser state and resets on reload. Confirmed restart time and uptime are backend state.",
-                "IMPORTANT: The legacy Guide claimed double-click manual time injection. The current v0.8.14 clock code implements only a single-click display toggle; do not treat APRX as persisted evidence.",
+                "IMPORTANT: The current v0.8.15 clock code implements only a single-click display toggle; do not treat APRX as persisted evidence.",
                 "assets/guide/12-clock-override.png",
                 ["Header clock", "Elapsed/countdown display", "Single-click APRX view", "Confirmed restart reference"]
             )},
-            { id: "backup-database", number: "13", title: "BACKUP, RESTORE & DATABASE", ...standard(
-                "Export and recover browser-held operator configuration separately from backend SQLite.",
-                ["AUTO-BACKUP toggles a 48-hour timer in this open browser tab.", "SYS BACKUP downloads an operator text export and a JSON state backup.", "RESTORE imports the JSON keys and reloads the page.", "MEM RESET removes listed STM localStorage keys after confirmation.", "ADV enables extra browser log entries; DB exports operator statistics; COPY copies visible SYS-LOG text; LOG identifies the SYS-LOG panel."],
-                ["The JSON includes local stats, squads, watchdog/display state, approximate state, radar mode, and selected squad. The DB button exports operator statistics as text; neither export is the backend SQLite database file.", "RESTORE parses JSON and writes recognized keys, then reloads. Invalid JSON is rejected, but there is no transactional rollback of already accepted browser state.", "AUTO-BACKUP runs only while the page and its one-second worker are active; enabling it starts a fresh 48-hour interval."],
-                "Browser settings and roster data persist in localStorage. Telemetry, feed cutoff, and restart evidence persist separately in `database/stm.db` on the backend. Downloads persist wherever the browser saves them.",
-                "CAUTION: RESTORE overwrites recognized browser state. MEM RESET irreversibly removes local browser configuration but does not delete backend SQLite, disk files, or remote game-server data. Export a SYS BACKUP first when recovery may be needed.",
+            { id: "operator-logs", number: "13", title: "OPERATOR EXPORTS & SESSION LOGS", ...standard(
+                "Export local operator statistics and work with the current browser-tab diagnostic log.",
+                ["EXPORT OPERATORS in SQUAD ROSTER downloads names with TOTAL and LAST SESSION time.", "ADV LOG enables additional browser diagnostics.", "COPY LOG copies the complete in-memory log for this tab.", "SAVE LOG downloads that session log as plain text."],
+                ["Operator export reads local browser statistics; it is not the backend SQLite database.", "SYS-LOG keeps up to 20,000 in-memory entries while only a readable subset is visible at once.", "COPY LOG falls back to a temporary local selection when Clipboard API permission is unavailable. SAVE LOG includes a generated timestamp and the current tab's entries."],
+                "ADV preference and operator totals use localStorage. The SYS-LOG content resets with the tab. Downloaded TXT files persist where the browser saves them; backend telemetry and restarts remain separate in SQLite.",
+                "NOTE: Session-log actions do not back up, restore, reset, or modify backend SQLite.",
                 "assets/guide/13-backup-database.png",
-                ["AUTO-BACKUP and 48H browser timer", "SYS BACKUP and RESTORE", "MEM RESET confirmation", "ADV, DB, COPY and LOG"]
+                ["EXPORT OPERATORS", "ADV LOG", "COPY LOG", "SAVE LOG and readable DMD rows"]
             )},
             { id: "troubleshooting", number: "14", title: "SYS-LOG & TROUBLESHOOTING", ...standard(
                 "Diagnose client, backend, audio, and history problems without exposing secrets.",
-                ["SYS-LOG shows normal and advanced client messages; COPY copies its visible text.", "Health is available at `/api/v1/community/health` on the same STM origin.", "Ctrl+Shift+R reloads local dashboard assets."],
+                ["SYS-LOG shows categorized current-tab messages; ADV LOG adds browser diagnostics, COPY LOG copies the in-memory session, and SAVE LOG downloads it.", "Health is available at `/api/v1/community/health` on the same STM origin.", "Ctrl+Shift+R reloads local dashboard assets."],
                 ["For no sound: clear mute, set volume, click INIT COMM, then TEST; AUDIO LOCKED means a user gesture is still required.", "For missing history: distinguish a new/empty SQLite database from an API or query failure by checking Health, version, and SYS-LOG.", "Connection messages may indicate the STM backend, game query, or WebSocket path; validate them separately. Never paste `.env`, tokens, private addresses, or database contents into diagnostics."],
                 "SYS-LOG is primarily current-page state; ADV preference survives reload. Backend Health and database state are independent of the browser log.",
-                "CAUTION: Do not use MEM RESET to repair backend history. It cannot restore SQLite data and will remove useful local configuration needed for diagnosis.",
+                "IMPORTANT: Session logs are diagnostic browser state, not a backend backup. Never paste secrets, private configuration, or database contents into them.",
                 "assets/guide/14-troubleshooting.png",
-                ["SYS-LOG status messages", "COPY and ADV", "Health/version", "Audio and history checklist"]
+                ["SYS-LOG categorized messages", "ADV LOG, COPY LOG and SAVE LOG", "Health/version", "Audio and history checklist"]
             )}
         ],
         glossary: [

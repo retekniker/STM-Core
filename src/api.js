@@ -2,6 +2,7 @@ const express = require("express");
 const crypto = require("crypto");
 const path = require("path");
 const TelemetryHistory = require("./telemetryHistory");
+const AssetSaturationHistory = require("./assetSaturationHistory");
 const RestartLog = require("./restartLog");
 const { version } = require("../package.json");
 
@@ -25,6 +26,7 @@ class ApiServer {
         this.telemetryHistory =
             options.telemetryHistory ||
             new TelemetryHistory();
+        this.assetSaturationHistory = options.assetSaturationHistory || new AssetSaturationHistory();
         this.restartPrediction =
             options.restartPrediction || null;
         this.restartLog =
@@ -448,6 +450,48 @@ class ApiServer {
                         series
                     });
 
+                } catch (error) {
+                    next(error);
+                }
+            }
+        );
+
+        this.app.get(
+            "/api/v1/community/asset-saturation",
+            this.requireHistoryRepository.bind(this),
+            async (request, response, next) => {
+                try {
+                    const range = String(request.query.range || "30m").toLowerCase();
+                    const config = this.assetSaturationHistory.getRange(range);
+                    if (!config) {
+                        response.status(400).json({
+                            success: false,
+                            error: "INVALID_ASSET_SATURATION_RANGE",
+                            allowedRanges: Object.keys(AssetSaturationHistory.RANGE_CONFIG)
+                        });
+                        return;
+                    }
+                    const endMs = Date.now();
+                    const startMs = endMs - config.durationMs;
+                    const serverIds = this.stateEngine.getAll().map(server => server.id);
+                    const snapshots = await this.historyRepository.getServerSnapshotsBetween({
+                        after: new Date(startMs).toISOString(),
+                        before: new Date(endMs).toISOString()
+                    });
+                    const points = this.assetSaturationHistory.aggregate({
+                        snapshots, serverIds, startMs, endMs, bucketMs: config.bucketMs
+                    });
+                    response.json({
+                        success: true,
+                        range,
+                        requestedFrom: new Date(startMs).toISOString(),
+                        requestedTo: new Date(endMs).toISOString(),
+                        bucketSizeMs: config.bucketMs,
+                        sourceSnapshotCount: snapshots.length,
+                        returnedPointCount: points.length,
+                        serverIds,
+                        points
+                    });
                 } catch (error) {
                     next(error);
                 }

@@ -17,7 +17,7 @@ const titles = [
     "ACTIVITY FEED & RESTART LOG", "WATCHDOG: OFF / AUTO / ON", "TELEMETRY HISTORY",
     "OSCILLOSCOPES & TELEMETRY INSPECTOR", "RESTART FLAGS", "ASSET SATURATION",
     "ADMIN ON SERVER & JSOC MARKERS", "CLOCK & MANUAL OVERRIDE",
-    "BACKUP, RESTORE & DATABASE", "SYS-LOG & TROUBLESHOOTING"
+    "OPERATOR EXPORTS & SESSION LOGS", "SYS-LOG & TROUBLESHOOTING"
 ];
 
 test("legacy Guide and handler are completely removed", () => {
@@ -27,7 +27,7 @@ test("legacy Guide and handler are completely removed", () => {
 });
 
 test("manual has exactly 14 ordered, complete chapters", () => {
-    assert.equal(guide.version, "0.8.14");
+    assert.equal(guide.version, "0.8.15");
     assert.deepEqual(Array.from(guide.chapters, c => c.title), titles);
     guide.chapters.forEach((chapter, index) => {
         assert.equal(chapter.number, String(index + 1).padStart(2, "0"));
@@ -70,5 +70,5 @@ test("glossary contains all required terms", () => {
 
 test("CAUTION is limited to real state-changing controls", () => {
     const caution = guide.chapters.filter(c => c.safety.startsWith("CAUTION:"));
-    assert.deepEqual(Array.from(caution, c => c.id), ["squad-tracking", "activity-feed", "backup-database", "troubleshooting"]);
+    assert.deepEqual(Array.from(caution, c => c.id), ["squad-tracking", "activity-feed"]);
 });

@@ -26,10 +26,13 @@
             this.viewStart = 0;
             this.viewEnd = 0;
             this.restarts = [];
+            this.restartCursor = -1;
         }
 
         open(serverId, range = "30m", endMs = Date.now()) {
             this.serverId = serverId;
+            this.restarts = [];
+            this.restartCursor = -1;
             this.setRange(range, endMs, false);
             this.emit("open");
         }
@@ -44,18 +47,32 @@
             return true;
         }
 
-        setOverview(startMs, endMs, restarts = []) {
+        setOverview(startMs, endMs) {
             if (!(endMs > startMs)) return false;
             this.overviewStart = startMs;
             this.overviewEnd = endMs;
             this.viewStart = Math.max(startMs, this.viewStart || startMs);
             this.viewEnd = Math.min(endMs, this.viewEnd || endMs);
             if (!(this.viewEnd > this.viewStart)) this.reset(false);
-            this.restarts = restarts
-                .filter(marker => marker.timeKnown !== false && Number.isFinite(Date.parse(marker.restartAt || marker.timestamp)))
-                .sort((left, right) => Date.parse(left.restartAt || left.timestamp) - Date.parse(right.restartAt || right.timestamp));
             this.emit("overview");
             return true;
+        }
+
+        restartTime(marker) {
+            return Date.parse(marker.restartAt || marker.timestamp || marker.observationWindow?.end);
+        }
+
+        setRestarts(restarts = []) {
+            const unique = new Map();
+            restarts.forEach(marker => {
+                const time = this.restartTime(marker);
+                if (!Number.isFinite(time)) return;
+                const key = marker.id !== undefined && marker.id !== null ? `id:${marker.id}` : `time:${time}`;
+                if (!unique.has(key)) unique.set(key, marker);
+            });
+            this.restarts = Array.from(unique.values()).sort((left, right) => this.restartTime(left) - this.restartTime(right));
+            this.restartCursor = this.restarts.length - 1;
+            this.emit("restarts");
         }
 
         clamp(startMs, endMs) {
@@ -78,12 +95,14 @@
         reset(emit = true) {
             this.viewStart = this.overviewStart;
             this.viewEnd = this.overviewEnd;
+            this.restartCursor = this.restarts.length - 1;
             if (emit) this.emit("reset");
         }
 
         live() {
             const duration = this.viewEnd - this.viewStart || RANGES[this.range];
             this.clamp(this.overviewEnd - duration, this.overviewEnd);
+            this.restartCursor = this.restarts.length - 1;
             this.emit("live");
         }
 
@@ -118,12 +137,15 @@
 
         navigateRestart(direction) {
             if (!this.restarts.length) return null;
-            const center = (this.viewStart + this.viewEnd) / 2;
-            const times = this.restarts.map(marker => Date.parse(marker.restartAt || marker.timestamp));
-            const candidates = direction < 0
-                ? times.filter(time => time < center - 1000).reverse()
-                : times.filter(time => time > center + 1000);
-            const target = candidates[0] ?? (direction < 0 ? times.at(-1) : times[0]);
+            if (this.restartCursor < 0) {
+                this.restartCursor = direction < 0
+                    ? this.restarts.findLastIndex(marker => this.restartTime(marker) < this.viewEnd - 1000)
+                    : this.restarts.findIndex(marker => this.restartTime(marker) > this.viewStart + 1000);
+                if (this.restartCursor < 0) this.restartCursor = direction < 0 ? 0 : this.restarts.length - 1;
+            } else {
+                this.restartCursor = Math.max(0, Math.min(this.restarts.length - 1, this.restartCursor + (direction < 0 ? -1 : 1)));
+            }
+            const target = this.restartTime(this.restarts[this.restartCursor]);
             this.focusRestart(target);
             return target;
         }
@@ -131,6 +153,8 @@
         focusRestart(timestamp) {
             const time = typeof timestamp === "number" ? timestamp : Date.parse(timestamp);
             if (!Number.isFinite(time)) return false;
+            const matchingIndex = this.restarts.findIndex(marker => this.restartTime(marker) === time);
+            if (matchingIndex >= 0) this.restartCursor = matchingIndex;
             this.clamp(time - 15 * 60 * 1000, time + 30 * 60 * 1000);
             this.emit("restart");
             return true;
@@ -152,7 +176,11 @@
                 overviewEnd: this.overviewEnd,
                 viewStart: this.viewStart,
                 viewEnd: this.viewEnd,
-                needsDetail: this.needsDetail()
+                needsDetail: this.needsDetail(),
+                restartIndex: this.restartCursor,
+                restartCount: this.restarts.length,
+                canPreviousRestart: this.restarts.length > 0 && this.restartCursor > 0,
+                canNextRestart: this.restarts.length > 0 && this.restartCursor < this.restarts.length - 1
             };
         }
     }

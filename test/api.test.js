@@ -20,6 +20,13 @@ function getRestartHandler(api) {
     return layer.route.stack.at(-1).handle;
 }
 
+function getAssetSaturationHandler(api) {
+    const layer = api.app.router.stack.find(item =>
+        item.route?.path === "/api/v1/community/asset-saturation"
+    );
+    return layer.route.stack.at(-1).handle;
+}
+
 function getServerHandler(api) {
     const layer = api.app.router.stack.find(item =>
         item.route?.path === "/api/v1/community/servers/:serverId"
@@ -113,6 +120,35 @@ test("server endpoint exposes the backend monitoring-session start", () => {
     assert.equal(response.statusCode, 200);
     assert.equal(response.body.monitorStartedAt, api.startedAt.toISOString());
     assert.equal(response.body.server.id, "EU1");
+});
+
+test("asset saturation endpoint aggregates SQLite snapshots and rejects invalid ranges", async () => {
+    const now = Date.now();
+    const historyRepository = {
+        async getServerSnapshotsBetween() {
+            return ["EU1", "EU2", "EU3"].map((serverId, index) => ({
+                serverId,
+                timestamp: new Date(now - 1000).toISOString(),
+                success: true,
+                players: index === 0 ? 3 : 0
+            }));
+        }
+    };
+    const api = new ApiServer({
+        stateEngine: { getAll: () => ["EU1", "EU2", "EU3"].map(id => ({ id })), get: () => null },
+        historyRepository
+    });
+    const response = createResponse();
+    await getAssetSaturationHandler(api)({ query: { range: "30m" } }, response, error => { throw error; });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.bucketSizeMs, 5000);
+    assert.ok(response.body.points.some(point => point.players === 3));
+    assert.ok(response.body.points.every(point => point.players === null || Number.isInteger(point.players)));
+
+    const invalid = createResponse();
+    await getAssetSaturationHandler(api)({ query: { range: "8h" } }, invalid, error => { throw error; });
+    assert.equal(invalid.statusCode, 400);
+    assert.equal(invalid.body.error, "INVALID_ASSET_SATURATION_RANGE");
 });
 
 test("telemetry endpoint rejects unsupported ranges", async () => {

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.8.15
+
+### Added
+
+- Adds SQLite-backed Active Personnel History ranges from 30 minutes through 48 hours.
+- Adds stable bidirectional navigation across the authoritative restart index.
+- Adds read-only Watchdog startup hydration from confirmed SQLite restart history.
+
+### Changed
+
+- Simplifies the header and expands the DMD by removing obsolete radar and manual sync controls.
+- Replaces misleading browser backup controls with honest session-log and operator-export actions.
+- Refreshes the 14-chapter offline STM Field Manual for the v0.8.15 interface.
+
+### Fixed
+
+- Allows repeated PREVIOUS RESTART navigation and arbitrary direction changes.
+- Prevents fractional player labels and incomplete cross-server totals in Asset Saturation history.
+- Preserves same-session manual Watchdog choices while safely restoring fresh restart clocks after an STM-Core process restart.
+
 ## 0.8.14
 
 ### Added
