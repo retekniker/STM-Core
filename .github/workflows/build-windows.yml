@@ -3,9 +3,6 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
   push:
-    branches:
-      - "feature/windows-installer"
-      - "feature/windows-tray"
     tags:
       - "v*"
 
@@ -26,9 +23,13 @@ jobs:
           node-version: "20.17.0"
           cache: npm
 
-      - name: Install Windows dependencies
+      - name: Install dependencies
         shell: pwsh
-        run: npm ci --omit=dev
+        run: npm ci
+
+      - name: Run tests
+        shell: pwsh
+        run: npm test
 
       - name: Check PowerShell launchers
         shell: pwsh
