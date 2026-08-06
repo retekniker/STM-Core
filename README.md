@@ -76,6 +76,19 @@ Install or update STM Core with:
 curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash
 ```
 
+The bootstrap resolves the latest published stable GitHub release, verifies its
+SHA-256 checksum and then runs the installer bundled in that release. It never
+installs application code directly from `main`.
+
+To install a specific published stable release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.15
+```
+
+Downgrading may require a matching database backup because database downgrade
+compatibility is not guaranteed.
+
 After installation, open STM Core from the application menu or run:
 
 ```bash
