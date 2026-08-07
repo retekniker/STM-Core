@@ -1,221 +1,155 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_URL="https://github.com/retekniker/STM-Core.git"
-BRANCH="main"
-
-XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-
-INSTALL_DIR="$XDG_DATA_HOME/stm-core"
-BIN_DIR="$HOME/.local/bin"
-SYSTEMD_DIR="$XDG_CONFIG_HOME/systemd/user"
-DESKTOP_DIR="$XDG_DATA_HOME/applications"
-
-SERVICE_NAME="stm-core.service"
-SERVICE_FILE="$SYSTEMD_DIR/$SERVICE_NAME"
-DESKTOP_FILE="$DESKTOP_DIR/stm-core.desktop"
-DASHBOARD_URL="http://127.0.0.1:3000/community/"
-
-say() {
-    printf '\n\033[1;36m==> %s\033[0m\n' "$1"
-}
+REPOSITORY="retekniker/STM-Core"
+RELEASES_URL="https://github.com/$REPOSITORY/releases"
 
 die() {
-    printf '\n\033[1;31mBłąd: %s\033[0m\n' "$1" >&2
+    printf 'Error: %s\n' "$1" >&2
     exit 1
 }
 
-for command_name in git node npm systemctl curl; do
-    command -v "$command_name" >/dev/null 2>&1 ||
-        die "Brakuje programu: $command_name"
-done
-
-NODE_MAJOR="$(node -p "Number(process.versions.node.split('.')[0])")"
-
-if (( NODE_MAJOR < 18 )); then
-    die "STM Core wymaga Node.js 18 lub nowszego."
-fi
-
-systemctl --user show-environment >/dev/null 2>&1 ||
-    die "Nie działa sesja systemd użytkownika."
-
-NODE_BIN="$(command -v node)"
-
-mkdir -p "$BIN_DIR" "$SYSTEMD_DIR" "$DESKTOP_DIR"
-
-say "Zatrzymywanie poprzedniej wersji"
-systemctl --user stop "$SERVICE_NAME" >/dev/null 2>&1 || true
-
-if [[ -d "$INSTALL_DIR/.git" ]]; then
-    say "Aktualizowanie STM Core"
-    git -C "$INSTALL_DIR" fetch origin "$BRANCH"
-    git -C "$INSTALL_DIR" checkout "$BRANCH"
-    git -C "$INSTALL_DIR" reset --hard "origin/$BRANCH"
-elif [[ -e "$INSTALL_DIR" ]]; then
-    die "Katalog $INSTALL_DIR istnieje, ale nie jest repozytorium STM Core."
-else
-    say "Pobieranie STM Core"
-    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
-fi
-
-say "Instalowanie zależności"
-npm ci --omit=dev --prefix "$INSTALL_DIR"
-
-if [[ ! -f "$INSTALL_DIR/.env" ]]; then
-    say "Generowanie tokenu administratora"
-    TOKEN="$(
-        node -e \
-        "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))"
-    )"
-
-    printf 'STM_ADMIN_TOKEN=%s\n' "$TOKEN" > "$INSTALL_DIR/.env"
-    chmod 600 "$INSTALL_DIR/.env"
-fi
-
-say "Tworzenie usługi systemowej"
-
-cat > "$SERVICE_FILE" <<SERVICE
-[Unit]
-Description=STM Core server telemetry monitor
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-WorkingDirectory=$INSTALL_DIR
-ExecStart="$NODE_BIN" "$INSTALL_DIR/src/index.js"
-Environment=NODE_ENV=production
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
-SERVICE
-
-cat > "$BIN_DIR/stm-core" <<LAUNCHER
-#!/usr/bin/env bash
-set -euo pipefail
-
-SERVICE_NAME="$SERVICE_NAME"
-INSTALL_DIR="$INSTALL_DIR"
-DASHBOARD_URL="$DASHBOARD_URL"
-
-open_dashboard() {
-    systemctl --user start "\$SERVICE_NAME"
-
-    for _ in {1..30}; do
-        if curl -fsS "\$DASHBOARD_URL" >/dev/null 2>&1; then
-            if command -v xdg-open >/dev/null 2>&1; then
-                nohup xdg-open "\$DASHBOARD_URL" >/dev/null 2>&1 &
-            elif command -v gio >/dev/null 2>&1; then
-                nohup gio open "\$DASHBOARD_URL" >/dev/null 2>&1 &
-            else
-                printf 'Otwórz w przeglądarce: %s\n' "\$DASHBOARD_URL"
-            fi
-            return 0
-        fi
-
-        sleep 1
-    done
-
-    printf 'STM Core nie odpowiedział pod adresem %s\n' "\$DASHBOARD_URL" >&2
-    return 1
+usage() {
+    printf 'Usage: install.sh [--version vX.Y.Z]\n' >&2
 }
 
-case "\${1:-open}" in
-    open)
-        open_dashboard
+for command_name in curl find mktemp sha256sum tar; do
+    command -v "$command_name" >/dev/null 2>&1 ||
+        die "required command not found: $command_name"
+done
+
+case "$#" in
+    0)
+        latest_url="$(curl -fsSL -o /dev/null -w '%{url_effective}' "$RELEASES_URL/latest")" ||
+            die "could not resolve the latest published release"
+        version="${latest_url%/}"
+        version="${version##*/}"
+        [[ "${latest_url%/}" == "$RELEASES_URL/tag/$version" ]] ||
+            die "latest release resolved outside the expected GitHub release path"
         ;;
-    start)
-        systemctl --user start "\$SERVICE_NAME"
-        ;;
-    stop)
-        systemctl --user stop "\$SERVICE_NAME"
-        ;;
-    restart)
-        systemctl --user restart "\$SERVICE_NAME"
-        ;;
-    status)
-        systemctl --user status "\$SERVICE_NAME" --no-pager
-        ;;
-    logs)
-        journalctl --user -u "\$SERVICE_NAME" -f
-        ;;
-    token)
-        sed -n 's/^STM_ADMIN_TOKEN=//p' "\$INSTALL_DIR/.env"
-        ;;
-    uninstall)
-        exec "\$INSTALL_DIR/uninstall.sh"
+    2)
+        [[ "$1" == "--version" ]] || {
+            usage
+            die "unknown option: $1"
+        }
+        version="$2"
         ;;
     *)
-        printf 'Użycie: stm-core {open|start|stop|restart|status|logs|token|uninstall}\n'
-        exit 1
+        usage
+        die "expected no arguments or --version vX.Y.Z"
         ;;
 esac
-LAUNCHER
 
-chmod 755 "$BIN_DIR/stm-core"
+[[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+    die "release version must match vX.Y.Z"
 
-cat > "$INSTALL_DIR/uninstall.sh" <<UNINSTALLER
-#!/usr/bin/env bash
-set -Eeuo pipefail
+release_number="${version#v}"
+package_root="STM-Core-${release_number}-linux-x64"
+archive_name="${package_root}.tar.gz"
+checksum_name="${archive_name}.sha256"
+download_url="$RELEASES_URL/download/$version"
 
-INSTALL_DIR="$INSTALL_DIR"
-SERVICE_FILE="$SERVICE_FILE"
-DESKTOP_FILE="$DESKTOP_FILE"
-LAUNCHER_FILE="$BIN_DIR/stm-core"
-SERVICE_NAME="$SERVICE_NAME"
+temporary_directory="$(mktemp -d)" || die "could not create a temporary directory"
+cleanup() {
+    find "$temporary_directory" -depth -delete 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 
-if [[ "\${1:-}" != "--yes" ]]; then
-    printf 'Usunąć STM Core wraz z bazą danych? [y/N] '
-    read -r answer
+archive_path="$temporary_directory/$archive_name"
+checksum_path="$temporary_directory/$checksum_name"
+normal_listing_path="$temporary_directory/archive.list"
+verbose_listing_path="$temporary_directory/archive.verbose.list"
 
-    case "\$answer" in
-        y|Y|yes|YES)
+curl -fL -o "$archive_path" "$download_url/$archive_name" ||
+    die "could not download $archive_name"
+curl -fL -o "$checksum_path" "$download_url/$checksum_name" ||
+    die "could not download $checksum_name"
+
+mapfile -t checksum_lines < "$checksum_path"
+[[ "${#checksum_lines[@]}" -eq 1 ]] ||
+    die "checksum file must contain exactly one entry"
+checksum_line="${checksum_lines[0]}"
+[[ "$checksum_line" =~ ^[[:xdigit:]]{64}[[:space:]]+\*?([^[:space:]]+)$ ]] ||
+    die "checksum file has an invalid format"
+[[ "${BASH_REMATCH[1]}" == "$archive_name" ]] ||
+    die "checksum file does not name $archive_name exactly"
+
+(
+    cd "$temporary_directory"
+    sha256sum --check --strict "$checksum_name"
+) || die "SHA-256 verification failed"
+
+validate_member_path() {
+    local member="$1"
+    local allow_parent="${2:-false}"
+    local component
+    local -a components
+    local -a normalized=()
+
+    [[ "$member" != /* ]] || return 1
+    IFS='/' read -r -a components <<< "$member"
+    for component in "${components[@]}"; do
+        case "$component" in
+            ''|.)
+                ;;
+            ..)
+                [[ "$allow_parent" == "true" ]] || return 1
+                ((${#normalized[@]} > 0)) || return 1
+                unset 'normalized[${#normalized[@]}-1]'
+                ;;
+            *)
+                normalized+=("$component")
+                ;;
+        esac
+    done
+
+    [[ "${normalized[0]:-}" == "$package_root" ]]
+}
+
+LC_ALL=C TAR_OPTIONS= tar -tzf "$archive_path" > "$normal_listing_path" ||
+    die "could not inspect archive contents"
+LC_ALL=C TAR_OPTIONS= tar -tvzf "$archive_path" > "$verbose_listing_path" ||
+    die "could not inspect archive entry types"
+
+while IFS= read -r member; do
+    validate_member_path "$member" ||
+        die "archive contains an unsafe or unexpected path: $member"
+done < "$normal_listing_path"
+
+while IFS= read -r verbose_entry; do
+    read -r mode owner size date time entry_details <<< "$verbose_entry"
+    case "${mode:0:1}" in
+        -|d)
+            ;;
+        l)
+            [[ "$entry_details" == *" -> "* ]] || die "could not inspect archive link"
+            member="${entry_details% -> *}"
+            target="${entry_details##* -> }"
+            [[ "$target" != /* ]] || die "archive link escapes the package root: $member"
+            validate_member_path "${member%/*}/$target" true ||
+                die "archive link escapes the package root: $member"
+            ;;
+        h)
+            [[ "$entry_details" == *" link to "* ]] || die "could not inspect archive link"
+            member="${entry_details% link to *}"
+            target="${entry_details##* link to }"
+            validate_member_path "$target" true ||
+                die "archive link escapes the package root: $member"
             ;;
         *)
-            printf 'Anulowano.\n'
-            exit 0
+            die "archive contains an unsupported entry type: ${mode:0:1}"
             ;;
     esac
-fi
+done < "$verbose_listing_path"
 
-systemctl --user disable --now "\$SERVICE_NAME" >/dev/null 2>&1 || true
-rm -f "\$SERVICE_FILE" "\$DESKTOP_FILE" "\$LAUNCHER_FILE"
-systemctl --user daemon-reload
-rm -rf "\$INSTALL_DIR"
+LC_ALL=C TAR_OPTIONS= tar -xzf "$archive_path" -C "$temporary_directory" ||
+    die "could not extract $archive_name"
 
-printf 'STM Core został odinstalowany.\n'
-UNINSTALLER
+bundled_installer="$temporary_directory/$package_root/install.sh"
+bundled_node="$temporary_directory/$package_root/app/runtime/bin/node"
+[[ -f "$bundled_installer" ]] || die "package is missing its top-level install.sh"
+[[ -x "$bundled_installer" ]] || die "packaged install.sh is not executable"
+[[ -x "$bundled_node" ]] || die "package is missing its executable bundled Node.js runtime"
 
-chmod 755 "$INSTALL_DIR/uninstall.sh"
-
-say "Dodawanie STM Core do menu aplikacji"
-
-cat > "$DESKTOP_FILE" <<DESKTOP
-[Desktop Entry]
-Type=Application
-Name=STM Core
-Comment=Arma 3 server telemetry dashboard
-Exec="$BIN_DIR/stm-core" open
-Icon=utilities-system-monitor
-Terminal=false
-Categories=Network;Utility;
-StartupNotify=true
-DESKTOP
-
-chmod 644 "$DESKTOP_FILE"
-
-if command -v update-desktop-database >/dev/null 2>&1; then
-    update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
-fi
-
-say "Uruchamianie STM Core"
-systemctl --user daemon-reload
-systemctl --user enable --now "$SERVICE_NAME"
-
-printf '\n\033[1;32mSTM Core został zainstalowany.\033[0m\n'
-printf 'Panel: %s\n' "$DASHBOARD_URL"
-printf 'Polecenie: %s/stm-core\n' "$BIN_DIR"
-printf 'Status: systemctl --user status %s\n\n' "$SERVICE_NAME"
+"$bundled_installer"
