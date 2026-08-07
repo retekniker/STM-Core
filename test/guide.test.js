@@ -12,43 +12,25 @@ const context = { window: {} };
 vm.runInNewContext(guideSource, context);
 const guide = context.window.STM_GUIDE_CONTENT;
 
-const titles = [
-    "QUICK START", "VOICE COMMS", "SERVER PANELS & OPERATORS", "SQUAD TRACKING",
-    "ACTIVITY FEED & RESTART LOG", "WATCHDOG: OFF / AUTO / ON", "TELEMETRY HISTORY",
-    "OSCILLOSCOPES & TELEMETRY INSPECTOR", "RESTART FLAGS", "ASSET SATURATION",
-    "ADMIN ON SERVER & JSOC MARKERS", "CLOCK & MANUAL OVERRIDE",
-    "OPERATOR EXPORTS & SESSION LOGS", "SYS-LOG & TROUBLESHOOTING"
-];
-
-test("legacy Guide and handler are completely removed", () => {
-    assert.doesNotMatch(dashboard, /STM OPERATIONAL GUIDE V6\.0|Voice Architect \(TTS Engine\)|12H quarantine|toggleHelp\s*\(/);
-    assert.doesNotMatch(dashboard, /id=["']helpModal["']/);
+test("dashboard exposes the text guide", () => {
     assert.match(dashboard, /id="guideTrigger"/);
+    assert.equal(guide.title, "STM-CORE GUIDE");
+    assert.deepEqual(Array.from(guide.sections, section => section.title), [
+        "Overview", "Servers and players", "Squads", "Activity and restarts", "Telemetry", "Audio and logs"
+    ]);
 });
 
-test("manual has exactly 14 ordered, complete chapters", () => {
-    assert.equal(guide.version, "0.8.15");
-    assert.deepEqual(Array.from(guide.chapters, c => c.title), titles);
-    guide.chapters.forEach((chapter, index) => {
-        assert.equal(chapter.number, String(index + 1).padStart(2, "0"));
-        for (const field of ["purpose", "controls", "how", "persistence", "safety", "image", "callouts"])
-            assert.ok(chapter[field] && chapter[field].length, `${chapter.title}: ${field}`);
-        assert.equal(chapter.callouts.length, new Set(chapter.callouts).size);
-    });
-});
-
-test("all controlled PNG assets exist with expected signature and dimensions", () => {
-    for (const chapter of guide.chapters) {
-        const file = path.join(root, "dashboard", chapter.image);
-        const png = fs.readFileSync(file);
-        assert.deepEqual([...png.subarray(0, 8)], [137,80,78,71,13,10,26,10]);
-        assert.equal(png.readUInt32BE(16), 1200);
-        assert.equal(png.readUInt32BE(20), 675);
-        assert.ok(png.length > 1000);
+test("guide sections contain concise text only", () => {
+    for (const section of guide.sections) {
+        assert.match(section.id, /^[a-z-]+$/);
+        assert.ok(section.paragraphs.length >= 1);
+        assert.ok(section.paragraphs.every(paragraph => typeof paragraph === "string" && paragraph.length > 0));
+        assert.deepEqual(Object.keys(section).sort(), ["id", "paragraphs", "title"]);
     }
+    assert.doesNotMatch(guideSource, /image|screenshot|callout|lightbox|future|Player Edition/i);
 });
 
-test("manual is offline and sanitized", () => {
+test("guide stays local and does not contain private configuration", () => {
     const combined = `${guideSource}\n${guideScript}`;
     assert.doesNotMatch(combined, /https?:\/\//i);
     assert.doesNotMatch(combined, /lex01|(?:10|127|169\.254|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}|\/home\//i);
@@ -56,19 +38,12 @@ test("manual is offline and sanitized", () => {
     assert.doesNotMatch(combined, /fetch\s*\(/);
 });
 
-test("callout markers and descriptions share the same chapter array", () => {
-    assert.match(guideScript, /chapter\.callouts\.forEach/g);
-    assert.match(guideScript, /stm-guide-callout-list/);
-    assert.match(guideScript, /openLightbox/);
-});
-
-test("glossary contains all required terms", () => {
-    const terms = Array.from(guide.glossary, row => row[0]);
-    for (const term of ["OPR", "AO", "LAT", "APRX", "EXACT TIME UNKNOWN", "UNLINKED", "WATCHDOG", "RESTART CONFIRMED"])
-        assert.ok(terms.includes(term), term);
-});
-
-test("CAUTION is limited to real state-changing controls", () => {
-    const caution = guide.chapters.filter(c => c.safety.startsWith("CAUTION:"));
-    assert.deepEqual(Array.from(caution, c => c.id), ["squad-tracking", "activity-feed"]);
+test("guide preserves dialog and keyboard accessibility", () => {
+    assert.match(guideScript, /setAttribute\("role", "dialog"\)/);
+    assert.match(guideScript, /setAttribute\("aria-modal", "true"\)/);
+    assert.match(guideScript, /setAttribute\("aria-labelledby", "stmGuideTitle"\)/);
+    assert.match(guideScript, /setAttribute\("aria-label", "Guide sections"\)/);
+    assert.match(guideScript, /event\.key === "Escape"/);
+    assert.match(guideScript, /event\.key !== "Tab"/);
+    assert.match(guideScript, /opener\?\.focus/);
 });
