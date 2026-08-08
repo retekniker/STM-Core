@@ -1,0 +1,283 @@
+/*
+ * Mobile foundation for the existing STM-Core dashboard.
+ * The desktop DOM and application logic remain shared across all screen sizes.
+ */
+
+.wd-switch-btn { border: 0; background: transparent; font-family: inherit; }
+
+.mobile-player-add {
+    display: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+    button,
+    input,
+    select,
+    .btn-system-led,
+    .btn-system-led-red,
+    .squad-btn,
+    .mute-btn,
+    .activity-entry-close {
+        min-height: 44px;
+    }
+
+    button,
+    .btn-system-led,
+    .btn-system-led-red,
+    .squad-btn,
+    .mute-btn,
+    .wd-switch-btn,
+    .player-row,
+    .mini-chart-wrapper {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0, 255, 156, 0.18);
+    }
+
+    .wd-switch-container-vertical {
+        width: 88px;
+        min-width: 88px;
+    }
+
+    .wd-switch-container-vertical .wd-switch-btn {
+        min-height: 44px;
+    }
+
+    .telemetry-inspector-handle {
+        width: 28px;
+    }
+
+    .mobile-player-add {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 48px;
+        min-height: 36px;
+        margin-left: 0.5rem;
+        padding: 0 0.55rem;
+        border: 1px solid #00ff9c;
+        background: rgba(0, 255, 156, 0.1);
+        color: #00ff9c;
+        font: 900 10px/1 "JetBrains Mono", monospace;
+        letter-spacing: 0.08em;
+    }
+}
+
+@media (max-width: 767px) {
+    html {
+        scroll-padding-top: env(safe-area-inset-top);
+    }
+
+    body {
+        padding:
+            max(0.5rem, env(safe-area-inset-top))
+            max(0.5rem, env(safe-area-inset-right))
+            max(0.75rem, env(safe-area-inset-bottom))
+            max(0.5rem, env(safe-area-inset-left)) !important;
+    }
+
+    .soc-border,
+    .soc-border-red,
+    .server-box.soc-border,
+    .server-box.soc-border-pulse {
+        border-width: 2px;
+    }
+
+    .mobile-header-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .mobile-header-actions .volume-wrapper.hidden {
+        display: flex !important;
+        min-width: 0;
+        height: 48px;
+        padding-inline: 0.6rem;
+    }
+
+    .mobile-header-actions > div:last-child {
+        height: 48px;
+    }
+
+    #guideTrigger {
+        min-width: 112px;
+        padding-inline: 0.75rem !important;
+    }
+
+    #volumeLevels {
+        flex: 1;
+        justify-content: space-between;
+    }
+
+    #volumeLevels .vol-level {
+        width: 12px !important;
+    }
+
+    .mobile-server-deck {
+        gap: 0.75rem;
+    }
+
+    .server-box {
+        padding: 0.75rem !important;
+    }
+
+    .server-box [id^="listEU"] {
+        height: min(52dvh, 420px) !important;
+        min-height: 220px;
+    }
+
+    .player-row {
+        min-height: 44px;
+        padding-block: 0.45rem !important;
+    }
+
+    .telemetry-server-list .server-grid-row {
+        grid-template-rows: auto 132px;
+        height: auto;
+        min-height: 250px;
+    }
+
+    .telemetry-server-list .mini-chart-cell {
+        height: 132px;
+        min-height: 132px;
+    }
+
+    .watchdog-clock-panel {
+        min-height: 132px;
+    }
+
+    #telemetryRangeControls,
+    #assetRangeControls,
+    .telemetry-inspector-actions,
+    .activity-feed-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .mobile-roster-toolbar,
+    .mobile-log-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .mobile-roster-toolbar > div:first-child,
+    .mobile-log-toolbar > div:last-child {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .mobile-roster-toolbar h3,
+    .mobile-log-toolbar h3 {
+        grid-column: 1 / -1;
+    }
+
+    .mobile-squad-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.5rem;
+    }
+
+    .mobile-watch-controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mobile-watch-controls input {
+        grid-column: 1 / -1;
+        min-width: 0;
+        font-size: 16px;
+    }
+
+    #watchList {
+        grid-template-columns: minmax(0, 1fr) !important;
+        max-height: 50dvh;
+    }
+
+    .activity-feed-compact-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .activity-feed-compact-toolbar > div {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .mobile-asset-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 1rem;
+    }
+
+    .chart-container {
+        height: 240px;
+    }
+
+    .activity-feed-overlay,
+    .activity-confirm-overlay {
+        padding:
+            max(0.35rem, env(safe-area-inset-top))
+            max(0.35rem, env(safe-area-inset-right))
+            max(0.35rem, env(safe-area-inset-bottom))
+            max(0.35rem, env(safe-area-inset-left));
+    }
+
+    .activity-feed-inspector {
+        width: 100%;
+        height: 100%;
+        border-width: 2px;
+    }
+
+    .activity-confirm-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .telemetry-inspector-panel {
+        padding:
+            max(0.5rem, env(safe-area-inset-top))
+            max(0.5rem, env(safe-area-inset-right))
+            max(0.5rem, env(safe-area-inset-bottom))
+            max(0.5rem, env(safe-area-inset-left));
+    }
+
+    .telemetry-inspector-toolbar {
+        gap: 0.65rem;
+    }
+
+    .telemetry-inspector-actions .btn-system-led,
+    .telemetry-inspector-actions .btn-system-led-red {
+        min-width: 0;
+        padding-inline: 0.35rem;
+        white-space: normal;
+    }
+
+    .stm-guide {
+        padding:
+            max(0px, env(safe-area-inset-top))
+            max(0px, env(safe-area-inset-right))
+            max(0px, env(safe-area-inset-bottom))
+            max(0px, env(safe-area-inset-left));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-attention,
+    .warning-pulse,
+    .blink-text,
+    .full-text-blink,
+    .status-pulse-online,
+    .status-pulse-offline,
+    .squad-number-glow,
+    .clan-member .truncate,
+    .priority-person .truncate {
+        animation: none !important;
+    }
+
+    * {
+        scroll-behavior: auto !important;
+    }
+}

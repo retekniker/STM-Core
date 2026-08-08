@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Re-Tek | STM PRO v6.0</title>
     <script src="vendor/chart.js/chart.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -264,6 +264,7 @@
         }
 
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="p-4 md:p-6 relative" onclick="unlockAudioFallback()">
 
@@ -291,7 +292,7 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 shrink-0 flex-wrap">
+        <div class="mobile-header-actions flex items-center justify-end gap-3 shrink-0 flex-wrap">
             
             <div class="volume-wrapper hidden md:flex h-[50px] px-4">
                 <button onclick="toggleMute()" id="muteBtn" class="mute-btn flex items-center justify-center mr-3">
@@ -316,7 +317,7 @@
     <div class="flex flex-col lg:flex-row gap-6 items-start w-full relative z-10">
         
         <div class="flex flex-col gap-6 w-full lg:w-[42%] xl:w-[44%] shrink-0 relative">
-            <div class="flex flex-col md:flex-row gap-4 w-full relative z-10">
+            <div class="mobile-server-deck flex flex-col md:flex-row gap-4 w-full relative z-10">
                 <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[16.6%] delay-1"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[50%] delay-2"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[83.3%] delay-3"></div>
@@ -387,9 +388,9 @@
                                     <div id="eta-EU1-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
-                                    <div class="wd-switch-btn" id="sw-EU1-side-off" onclick="setWdState('EU1', 'OFF')">OFF</div>
-                                    <div class="wd-switch-btn" id="sw-EU1-side-auto" onclick="setWdState('EU1', 'AUTO')">AUTO</div>
-                                    <div class="wd-switch-btn" id="sw-EU1-side-on" onclick="setWdState('EU1', 'ON')">ON</div>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU1-side-off" onclick="setWdState('EU1', 'OFF')">OFF</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU1-side-auto" onclick="setWdState('EU1', 'AUTO')">AUTO</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU1-side-on" onclick="setWdState('EU1', 'ON')">ON</button>
                                 </div>
                             </div>
                         </div>
@@ -415,9 +416,9 @@
                                     <div id="eta-EU2-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
-                                    <div class="wd-switch-btn" id="sw-EU2-side-off" onclick="setWdState('EU2', 'OFF')">OFF</div>
-                                    <div class="wd-switch-btn" id="sw-EU2-side-auto" onclick="setWdState('EU2', 'AUTO')">AUTO</div>
-                                    <div class="wd-switch-btn" id="sw-EU2-side-on" onclick="setWdState('EU2', 'ON')">ON</div>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU2-side-off" onclick="setWdState('EU2', 'OFF')">OFF</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU2-side-auto" onclick="setWdState('EU2', 'AUTO')">AUTO</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU2-side-on" onclick="setWdState('EU2', 'ON')">ON</button>
                                 </div>
                             </div>
                         </div>
@@ -443,9 +444,9 @@
                                     <div id="eta-EU3-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
-                                    <div class="wd-switch-btn" id="sw-EU3-side-off" onclick="setWdState('EU3', 'OFF')">OFF</div>
-                                    <div class="wd-switch-btn" id="sw-EU3-side-auto" onclick="setWdState('EU3', 'AUTO')">AUTO</div>
-                                    <div class="wd-switch-btn" id="sw-EU3-side-on" onclick="setWdState('EU3', 'ON')">ON</div>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU3-side-off" onclick="setWdState('EU3', 'OFF')">OFF</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU3-side-auto" onclick="setWdState('EU3', 'AUTO')">AUTO</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU3-side-on" onclick="setWdState('EU3', 'ON')">ON</button>
                                 </div>
                             </div>
                         </div>
@@ -488,7 +489,7 @@
                 <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-2"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-1"></div>
 
-                <div class="flex justify-between items-center mb-4 relative z-20">
+                <div class="mobile-roster-toolbar flex justify-between items-center mb-4 relative z-20">
                     <div class="flex items-center gap-2">
                         <h3 class="text-sm font-bold uppercase opacity-80 mr-2">SQUAD ROSTER</h3>
                         <button onclick="toggleSort()" id="btnSortToggle" class="btn-system-led !text-[9px] !py-1">SORT: ADDED</button>
@@ -500,7 +501,7 @@
                     <div id="squadCounter" class="squad-count">0/11</div>
                 </div>
 
-                <div class="grid grid-cols-4 gap-1.5 mb-4 relative z-20">
+                <div class="mobile-squad-grid grid grid-cols-4 gap-1.5 mb-4 relative z-20">
                     <button onclick="switchSquad(1)" id="sq-btn-1" class="squad-btn sq-color-1 active">Alfa</button>
                     <button onclick="switchSquad(2)" id="sq-btn-2" class="squad-btn sq-color-2">Bravo</button>
                     <button onclick="switchSquad(3)" id="sq-btn-3" class="squad-btn sq-color-3">Charlie</button>
@@ -510,7 +511,7 @@
                     <button onclick="switchSquad(7)" id="sq-btn-7" class="squad-btn sq-color-7">Golf</button>
                     <button onclick="switchSquad(8)" id="sq-btn-8" class="squad-btn sq-color-8">FAV</button>
                 </div>
-                <div class="flex gap-2 mb-4 relative z-20">
+                <div class="mobile-watch-controls flex gap-2 mb-4 relative z-20">
                     <input id="watchInput" type="text" placeholder="Callsign..." class="bg-black border border-green-900 text-xs p-2 flex-1 outline-none transition-all" onkeypress="if(event.key === 'Enter') addWatch()">
                     <button onclick="addWatch()" class="btn-system-led">ADD</button>
                     <button onclick="addAllToWatchCurrent()" class="btn-system-led">DRAFT UNLINKED</button>
@@ -536,7 +537,7 @@
                         <button class="btn-system-led asset-range active" data-range="30m">30 MIN</button><button class="btn-system-led asset-range" data-range="2h">2 H</button><button class="btn-system-led asset-range" data-range="6h">6 H</button><button class="btn-system-led asset-range" data-range="12h">12 H</button><button class="btn-system-led asset-range" data-range="24h">24 H</button><button class="btn-system-led asset-range" data-range="48h">48 H</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-4 gap-4 mb-8 relative z-20">
+                <div class="mobile-asset-grid grid grid-cols-4 gap-4 mb-8 relative z-20">
                     <div class="text-center">
                         <span class="text-xl md:text-2xl font-black text-[#00ff9c] drop-shadow-[0_0_5px_#00ff9c] tracking-widest">EU1</span><br>
                         <span id="percEU1" class="perc-offline mt-1 mb-1 block">---</span>
@@ -567,7 +568,7 @@
                 <div class="chart-container relative z-20" id="chartParent"><canvas id="popChart"></canvas></div>
             </div>
             <div class="soc-border p-4 bg-black/40 relative z-10">
-                <div class="flex justify-between items-center mb-2 relative z-20">
+                <div class="mobile-log-toolbar flex justify-between items-center mb-2 relative z-20">
                     <h3 class="text-sm font-bold uppercase opacity-80">SYS-LOG</h3>
                     <div class="flex gap-2 flex-wrap justify-end">
                         <button id="advToggle" onclick="toggleAdvanced()" class="btn-system-led-red">ADV LOG: OFF</button>
@@ -2084,6 +2085,13 @@
                     
                     row.className = rClass; 
                     row.innerHTML = `<span class="${numClass}" style="${numStyle}">${i+1}.</span><span class="truncate flex-1">${escapeHTML(p.name)}</span><span class="ml-2 shrink-0 text-[9px] opacity-60 tabular-nums" title="A2S player connection time">${formatPlayerConnectionTime(p.time)}</span>`;
+                    const mobileAdd = document.createElement("button");
+                    mobileAdd.type = "button";
+                    mobileAdd.className = "mobile-player-add";
+                    mobileAdd.textContent = "ADD";
+                    mobileAdd.setAttribute("aria-label", "Add " + p.name + " to selected squad");
+                    mobileAdd.onclick = event => { event.stopPropagation(); addWatch(p.name); };
+                    row.appendChild(mobileAdd);
                     row.ondblclick = () => addWatch(p.name);  // p.name is already a string, safe for function arg 
                     listEl.appendChild(row);
                 });
