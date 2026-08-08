@@ -2,10 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const AssetSaturationHistory = require("../src/assetSaturationHistory");
 
-test("asset history exposes six deterministic ranges", () => {
+test("asset history exposes seven deterministic ranges", () => {
     const history = new AssetSaturationHistory();
     assert.deepEqual(Object.fromEntries(Object.entries(AssetSaturationHistory.RANGE_CONFIG).map(([key, value]) => [key, value.bucketMs])), {
-        "30m": 5000, "2h": 30000, "6h": 60000, "12h": 120000, "24h": 300000, "48h": 600000
+        "30m": 5000, "2h": 30000, "6h": 60000, "12h": 120000, "24h": 300000, "48h": 600000, "7d": 1800000
     });
     assert.equal(history.getRange("invalid"), null);
 });
@@ -41,4 +41,20 @@ test("48h output is deterministically bounded", () => {
     const points = history.aggregate({ snapshots: [], serverIds: ["EU1", "EU2", "EU3"], startMs: endMs - config.durationMs, endMs, bucketMs: config.bucketMs });
     assert.equal(points.length, 288);
     assert.ok(points.every(point => point.players === null));
+});
+
+
+test("7d output stays useful and bounded without changing raw snapshots", () => {
+    const history = new AssetSaturationHistory();
+    const config = history.getRange("7d");
+    const endMs = Date.parse("2026-07-30T12:00:00Z");
+    const points = history.aggregate({
+        snapshots: [],
+        serverIds: ["EU1", "EU2", "EU3"],
+        startMs: endMs - config.durationMs,
+        endMs,
+        bucketMs: config.bucketMs
+    });
+    assert.equal(points.length, 336);
+    assert.equal(config.durationMs, 7 * 24 * 60 * 60 * 1000);
 });

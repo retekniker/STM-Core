@@ -1,3 +1,16 @@
+.mobile-server-deck,
+.telemetry-server-list,
+.mini-chart-cell,
+.mini-chart-wrapper,
+.chart-container {
+    min-width: 0;
+    max-width: 100%;
+}
+
+canvas {
+    max-width: 100%;
+}
+
 /*
  * Mobile foundation for the existing STM-Core dashboard.
  * The desktop DOM and application logic remain shared across all screen sizes.
@@ -85,7 +98,7 @@
     .mobile-header-actions {
         width: 100%;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .mobile-header-actions .volume-wrapper.hidden {
@@ -93,15 +106,6 @@
         min-width: 0;
         height: 48px;
         padding-inline: 0.6rem;
-    }
-
-    .mobile-header-actions > div:last-child {
-        height: 48px;
-    }
-
-    #guideTrigger {
-        min-width: 112px;
-        padding-inline: 0.75rem !important;
     }
 
     #volumeLevels {
@@ -147,11 +151,33 @@
     }
 
     #telemetryRangeControls,
-    #assetRangeControls,
-    .telemetry-inspector-actions,
-    .activity-feed-actions {
+    #assetRangeControls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .telemetry-inspector-actions {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .activity-feed-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+    }
+
+    .activity-feed-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: auto;
+    }
+
+    .activity-feed-clear-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         width: 100%;
     }
 
@@ -255,13 +281,6 @@
         white-space: normal;
     }
 
-    .stm-guide {
-        padding:
-            max(0px, env(safe-area-inset-top))
-            max(0px, env(safe-area-inset-right))
-            max(0px, env(safe-area-inset-bottom))
-            max(0px, env(safe-area-inset-left));
-    }
 }
 
 @media (prefers-reduced-motion: reduce) {

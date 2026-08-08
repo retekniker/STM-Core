@@ -145,6 +145,12 @@ test("asset saturation endpoint aggregates SQLite snapshots and rejects invalid 
     assert.ok(response.body.points.some(point => point.players === 3));
     assert.ok(response.body.points.every(point => point.players === null || Number.isInteger(point.players)));
 
+    const weekly = createResponse();
+    await getAssetSaturationHandler(api)({ query: { range: "7d" } }, weekly, error => { throw error; });
+    assert.equal(weekly.statusCode, 200);
+    assert.equal(weekly.body.bucketSizeMs, 30 * 60 * 1000);
+    assert.equal(weekly.body.returnedPointCount, 336);
+
     const invalid = createResponse();
     await getAssetSaturationHandler(api)({ query: { range: "8h" } }, invalid, error => { throw error; });
     assert.equal(invalid.statusCode, 400);

@@ -22,6 +22,44 @@ $EntryPoint = Join-Path $AppDir "src\index.js"
 $HealthUrl = "http://127.0.0.1:3000/api/v1/community/health"
 $DashboardUrl = "http://127.0.0.1:3000/community/"
 
+function Open-STMDashboard {
+    $browserCandidates = @()
+
+    if ($env:ProgramFiles) {
+        $browserCandidates += Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"
+    }
+    if ($env:LOCALAPPDATA) {
+        $browserCandidates += Join-Path $env:LOCALAPPDATA "Google\Chrome\Application\chrome.exe"
+    }
+    if (${env:ProgramFiles(x86)}) {
+        $browserCandidates += Join-Path ${env:ProgramFiles(x86)} "Google\Chrome\Application\chrome.exe"
+    }
+    if ($env:ProgramFiles) {
+        $browserCandidates += Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"
+    }
+    if (${env:ProgramFiles(x86)}) {
+        $browserCandidates += Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"
+    }
+    if ($env:LOCALAPPDATA) {
+        $browserCandidates += Join-Path $env:LOCALAPPDATA "Microsoft\Edge\Application\msedge.exe"
+    }
+
+    $browser = $browserCandidates |
+        Select-Object -Unique |
+        Where-Object { Test-Path -LiteralPath $_ } |
+        Select-Object -First 1
+
+    if ($browser) {
+        Start-Process -FilePath $browser -ArgumentList @(
+            "--app=$DashboardUrl",
+            "--start-maximized"
+        )
+        return
+    }
+
+    Start-Process $DashboardUrl
+}
+
 function Initialize-STMCore {
     New-Item -ItemType Directory -Force -Path `
         $DataDir, $ConfigDir, $DatabaseDir, $LogsDir | Out-Null
@@ -122,7 +160,7 @@ function Stop-STMCore {
 switch ($Action) {
     "open" {
         Start-STMCore
-        Start-Process $DashboardUrl
+        Open-STMDashboard
     }
 
     "start" {

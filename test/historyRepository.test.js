@@ -154,3 +154,34 @@ test("snapshot range query is chronological and not pagination limited", async t
         [1, 2]
     );
 });
+
+
+test("bucketed snapshot query returns only the latest sample per server and preserves counts", async t => {
+    const database = new Database(":memory:");
+    await database.init();
+    t.after(async () => { await database.close(); });
+
+    for (const [serverId, timestamp, players] of [
+        ["EU1", "2026-07-28T01:01:00.000Z", 1],
+        ["EU1", "2026-07-28T01:20:00.000Z", 2],
+        ["EU2", "2026-07-28T01:10:00.000Z", 3],
+        ["EU1", "2026-07-28T01:40:00.000Z", 4]
+    ]) {
+        await database.run(
+            "INSERT INTO server_snapshots (server_id, timestamp, success, players) VALUES (?, ?, 1, ?)",
+            [serverId, timestamp, players]
+        );
+    }
+
+    const history = new HistoryRepository(database);
+    const snapshots = await history.getServerSnapshotsForBuckets({
+        after: "2026-07-28T01:00:00.000Z",
+        before: "2026-07-28T02:00:00.000Z",
+        bucketMs: 30 * 60 * 1000
+    });
+
+    assert.deepEqual(
+        snapshots.map(snapshot => [snapshot.serverId, snapshot.players, snapshot.sourceSamples]),
+        [["EU2", 3, 1], ["EU1", 2, 2], ["EU1", 4, 1]]
+    );
+});

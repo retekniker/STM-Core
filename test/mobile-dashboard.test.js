@@ -40,3 +40,12 @@ test("mobile dialogs and reduced-motion preferences are supported", () => {
     assert.match(mobile, /\.telemetry-inspector-panel/);
     assert.match(mobile, /prefers-reduced-motion:\s*reduce/);
 });
+
+
+test("responsive ranges and charts fit phone, tablet and desktop containers", () => {
+    assert.match(dashboard, /min-w-0 lg:w-\[42%\]/);
+    assert.match(dashboard, /data-range="7d">7 DAYS/);
+    assert.match(mobile, /#assetRangeControls[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
+    assert.match(mobile, /\.chart-container[\s\S]*max-width:\s*100%/);
+    assert.match(dashboard, /new ResizeObserver\(\(\) => \{ chart\.resize\(\); \}\)/);
+});

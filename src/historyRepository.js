@@ -261,6 +261,72 @@ class HistoryRepository {
         }));
     }
 
+    async getServerSnapshotsForBuckets(options = {}) {
+        const rows = await this.all(
+            `
+            WITH bucketed AS (
+                SELECT
+                    id,
+                    server_id,
+                    timestamp,
+                    success,
+                    players,
+                    max_players,
+                    ping,
+                    error,
+                    COUNT(*) OVER (
+                        PARTITION BY server_id, CAST(
+                            (julianday(timestamp) - julianday(?)) *
+                            86400000.0 / ? AS INTEGER
+                        )
+                    ) AS source_samples,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY server_id, CAST(
+                            (julianday(timestamp) - julianday(?)) *
+                            86400000.0 / ? AS INTEGER
+                        )
+                        ORDER BY timestamp DESC, id DESC
+                    ) AS sample_rank
+                FROM server_snapshots
+                WHERE timestamp >= ? AND timestamp <= ?
+            )
+            SELECT
+                id,
+                server_id,
+                timestamp,
+                success,
+                players,
+                max_players,
+                ping,
+                error,
+                source_samples
+            FROM bucketed
+            WHERE sample_rank = 1
+            ORDER BY timestamp ASC, id ASC
+            `,
+            [
+                options.after,
+                options.bucketMs,
+                options.after,
+                options.bucketMs,
+                options.after,
+                options.before
+            ]
+        );
+
+        return rows.map(row => ({
+            id: row.id,
+            serverId: row.server_id,
+            timestamp: row.timestamp,
+            success: row.success === 1,
+            players: row.players,
+            maxPlayers: row.max_players,
+            ping: row.ping,
+            error: row.error,
+            sourceSamples: row.source_samples
+        }));
+    }
+
     async getPlayerHistory(
         playerName,
         options = {}

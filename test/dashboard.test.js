@@ -276,7 +276,8 @@ test("restart log renders backend evidence without inventing gap time", () => {
         "utf8"
     );
 
-    assert.match(activityFeed, /\/api\/v1\/community\/restarts\?limit=100&view=activity-feed/);
+    assert.match(activityFeed, /\/api\/v1\/community\/restarts\?limit=100/);
+    assert.doesNotMatch(activityFeed, /view=activity-feed/);
     assert.match(html, /RESTART OCCURRED BETWEEN/);
     assert.match(html, /EXACT TIME UNKNOWN/);
     assert.match(html, /REJECTED TRANSITIONAL STEAM IDS/);
@@ -410,7 +411,7 @@ test("page reload restores manual state only for the same backend session", () =
     assert.equal(newProcess.lastRestartData.EU1, null);
 });
 
-test("v0.8.15 header, SYS-LOG and operator export expose only honest controls", () => {
+test("v0.8.16 header, SYS-LOG and operator export expose only honest controls", () => {
     const html = fs.readFileSync(dashboardPath, "utf8");
     for (const legacy of ["radar-btn-eco", "radar-btn-norm", "radar-btn-agr", "setRadarMode(", "btnAutoBackup", "systemBackup(", "restoreUpload", "resetBrowserMemory("])
         assert.doesNotMatch(html, new RegExp(legacy.replace(/[()]/g, "\\$&")));

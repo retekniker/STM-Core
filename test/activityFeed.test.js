@@ -185,7 +185,7 @@ test("real panel targets open except controls and the actual scrollbar gutter", 
     }
 });
 
-test("ZOOM and RESTORE share an idempotent expanded state and stop propagation", () => {
+test("ZOOM and CLOSE share an idempotent expanded state and stop propagation", () => {
     const handlers = {};
     const attributes = new Map();
     const classes = new Set();
@@ -199,7 +199,7 @@ test("ZOOM and RESTORE share an idempotent expanded state and stop propagation",
         focus() { attributes.set(`${id}:focused`, "true"); }
     });
     const elements = Object.fromEntries([
-        "activityFeedPanel", "activityFeedZoom", "activityFeedRestore",
+        "activityFeedPanel", "activityFeedZoom",
         "activityFeedInspector", "activityFeedInspectorClose",
         "activityClearCancel", "activityClearConfirm"
     ].map(id => [id, element(id)]));
@@ -223,7 +223,7 @@ test("ZOOM and RESTORE share an idempotent expanded state and stop propagation",
         assert.equal(attributes.get("activityFeedZoom:aria-expanded"), "true");
         controller.setActivityFeedExpanded(true);
         assert.equal(controller.mode, "restart");
-        handlers["activityFeedRestore:click"]({ stopPropagation() { stopped += 1; } });
+        handlers["activityFeedInspectorClose:click"]({ stopPropagation() { stopped += 1; } });
         assert.equal(controller.expanded, false);
         assert.equal(attributes.get("activityFeedInspector:aria-hidden"), "true");
         assert.equal(attributes.get("activityFeedPanel:aria-expanded"), "false");
@@ -245,8 +245,76 @@ test("dashboard Activity Feed uses shared safe inspector and leaves chart endpoi
     assert.match(source, /\["alertBox", "activityFeedInspectorBox"\]/);
     assert.match(source, /textContent = String\(segment\.text/);
     assert.match(source, /ACTIVITY_FEED_CLEARED/);
-    assert.match(source, /view=activity-feed/);
+    assert.doesNotMatch(source, /view=activity-feed/);
     assert.match(html, /asset-status-label/);
     assert.match(html, /font-size: clamp\(/);
     assert.match(html, /\/api\/v1\/community\/telemetry\?range=/);
+});
+
+
+function clearActionFixture(scope) {
+    let requests = 0;
+    const values = new Map();
+    const elements = {
+        activityClearConfirm: { disabled: false },
+        activityClearError: { textContent: "" },
+        activityClearConfirmation: { classList: { remove() {} } }
+    };
+    const controller = new ActivityFeedController({
+        fetch: async () => {
+            requests += 1;
+            return { ok: true, json: async () => ({ success: true, clearedAt: "2026-07-29T10:00:00.000Z" }) };
+        },
+        WebSocket: null,
+        storage: {
+            getItem(key) { return values.get(key) || null; },
+            setItem(key, value) { values.set(key, value); }
+        }
+    });
+    controller.byId = id => elements[id] || null;
+    controller.renderActivity = () => {};
+    controller.renderRestart = () => {};
+    controller.entries = [{ id: "activity", timestamp: "2026-07-29T09:00:00.000Z" }];
+    controller.restartEvents = [{ id: 1, timestamp: "2026-07-29T09:00:00.000Z", data: {} }];
+    controller.clearScope = scope;
+    return { controller, values, requests: () => requests };
+}
+
+test("Activity Feed Clear all clears only Activity Feed", async () => {
+    const fixture = clearActionFixture("activity");
+    await fixture.controller.confirmClear();
+    assert.equal(fixture.controller.entries.length, 0);
+    assert.equal(fixture.controller.restartEvents.length, 1);
+    assert.equal(fixture.requests(), 1);
+});
+
+test("Restart Log Clear restart log clears only Restart Log", async () => {
+    const fixture = clearActionFixture("restart");
+    await fixture.controller.confirmClear();
+    assert.equal(fixture.controller.entries.length, 1);
+    assert.equal(fixture.controller.restartEvents.length, 0);
+    assert.equal(fixture.requests(), 0);
+    assert.ok(fixture.values.get("stm_restart_log_cleared_at"));
+});
+
+test("Restart Log Clear all clears both visible logs", async () => {
+    const fixture = clearActionFixture("all");
+    await fixture.controller.confirmClear();
+    assert.equal(fixture.controller.entries.length, 0);
+    assert.equal(fixture.controller.restartEvents.length, 0);
+    assert.equal(fixture.requests(), 1);
+});
+
+
+test("enlarged log actions keep clear controls left and Close on the right", () => {
+    const html = fs.readFileSync(path.join(__dirname, "../dashboard/index.html"), "utf8");
+    const header = html.slice(
+        html.indexOf('<header class="activity-feed-toolbar">'),
+        html.indexOf("</header>", html.indexOf('<header class="activity-feed-toolbar">'))
+    );
+    assert.ok(header.indexOf("activityFeedInspectorTitle") < header.indexOf("data-log-clear-all"));
+    assert.ok(header.indexOf("data-log-clear-all") < header.indexOf("activity-feed-actions"));
+    assert.ok(header.indexOf("data-restart-clear") < header.indexOf("activity-feed-actions"));
+    assert.ok(header.indexOf("data-activity-restart-toggle") < header.indexOf("activityFeedInspectorClose"));
+    assert.doesNotMatch(header, /RESTORE|activityFeedRestore/);
 });

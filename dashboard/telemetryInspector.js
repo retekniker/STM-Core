@@ -1,10 +1,14 @@
 (function(root, factory) {
-    const exported = factory();
+    const preference = typeof module === "object" && module.exports
+        ? require("./historyRangePreference")
+        : root.STMHistoryRangePreference;
+    const exported = factory(preference);
     if (typeof module === "object" && module.exports) {
         module.exports = exported;
     }
     if (root) root.TelemetryInspectorController = exported.TelemetryInspectorController;
-})(typeof window !== "undefined" ? window : globalThis, function() {
+})(typeof window !== "undefined" ? window : globalThis, function(preference) {
+    const DEFAULT_RANGE = preference.DEFAULT_HISTORY_RANGE;
     const RANGES = Object.freeze({
         "30m": 30 * 60 * 1000,
         "2h": 2 * 60 * 60 * 1000,
@@ -19,7 +23,7 @@
     class TelemetryInspectorController {
         constructor(options = {}) {
             this.onChange = options.onChange || (() => {});
-            this.range = "30m";
+            this.range = DEFAULT_RANGE;
             this.serverId = null;
             this.overviewStart = 0;
             this.overviewEnd = 0;
@@ -29,7 +33,7 @@
             this.restartCursor = -1;
         }
 
-        open(serverId, range = "30m", endMs = Date.now()) {
+        open(serverId, range = DEFAULT_RANGE, endMs = Date.now()) {
             this.serverId = serverId;
             this.restarts = [];
             this.restartCursor = -1;
@@ -185,5 +189,5 @@
         }
     }
 
-    return { TelemetryInspectorController, RANGES, MIN_VIEW_MS, RAW_VIEW_MS };
+    return { TelemetryInspectorController, RANGES, DEFAULT_RANGE, MIN_VIEW_MS, RAW_VIEW_MS };
 });
