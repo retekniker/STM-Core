@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Re-Tek | STM PRO v6.0</title>
     <script src="vendor/chart.js/chart.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -190,7 +190,10 @@
         .activity-feed-overlay.open { display: flex; }
         .activity-feed-inspector { width: min(1180px, 96vw); height: min(88vh, 900px); min-height: 260px; background: #080c10; border: 4px solid #ff4d4d; box-shadow: 0 0 45px rgba(255,77,77,0.42), inset 0 0 18px rgba(255,77,77,0.12); display: flex; flex-direction: column; overflow: hidden; }
         .activity-feed-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem; padding: clamp(0.75rem, 2vw, 1.25rem); border-bottom: 1px solid rgba(255,77,77,0.35); }
-        .activity-feed-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
+        .activity-feed-heading { min-width: 0; display: grid; gap: 0.35rem; }
+        .activity-feed-title-row, .activity-feed-clear-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .activity-feed-title-row h2 { margin: 0; flex: 0 1 auto; }
+        .activity-feed-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-left: auto; }
         .activity-feed-compact-toolbar { flex-wrap: wrap; gap: 0.5rem; }
         .activity-feed-list { min-height: 0; flex: 1; overflow-y: auto; padding: clamp(0.65rem, 2vw, 1.25rem); font-size: clamp(0.68rem, 0.64rem + 0.18vw, 0.85rem); }
         .activity-confirm-overlay { display: none; position: fixed; inset: 0; z-index: 1300; padding: 1rem; background: rgba(0,0,0,0.88); align-items: center; justify-content: center; }
@@ -199,7 +202,7 @@
         .activity-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
         .activity-entry-close { flex: 0 0 auto; cursor: pointer; }
         #activityFeedPanel, #activityFeedPanel #alertBox, #activityFeedPanel #restartLogBox, #activityFeedPanel #alertBox > div { cursor: pointer; }
-        @media (max-width: 520px), (max-height: 520px) { .activity-feed-inspector { width: 98vw; height: 96vh; } .activity-feed-toolbar { align-items: flex-start; } .activity-feed-actions { width: 100%; justify-content: flex-start; } }
+        @media (max-width: 520px), (max-height: 520px) { .activity-feed-inspector { width: 98vw; height: 96vh; } .activity-feed-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; } .activity-feed-title-row { align-items: flex-start; } .activity-feed-clear-actions { width: 100%; } .activity-feed-actions { display: grid; grid-template-columns: minmax(0, 1fr); width: auto; } }
 
         @keyframes perc-pulse-green { 0%, 100% { color: #00ff9c; text-shadow: 0 0 10px rgba(0,255,156,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #00ff9c, 0 0 30px #00ff9c; transform: scale(1.05); } }
         @keyframes perc-pulse-orange { 0%, 100% { color: #ff8c00; text-shadow: 0 0 10px rgba(255,140,0,0.6); transform: scale(1); } 50% { color: #ffffff; text-shadow: 0 0 20px #ff8c00, 0 0 30px #ff8c00; transform: scale(1.05); } }
@@ -264,6 +267,13 @@
         }
 
     </style>
+    <link rel="stylesheet" href="mobile.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+    <meta name="theme-color" content="#0b0f14">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body class="p-4 md:p-6 relative" onclick="unlockAudioFallback()">
 
@@ -291,7 +301,7 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 shrink-0 flex-wrap">
+        <div class="mobile-header-actions flex items-center justify-end gap-3 shrink-0 flex-wrap">
             
             <div class="volume-wrapper hidden md:flex h-[50px] px-4">
                 <button onclick="toggleMute()" id="muteBtn" class="mute-btn flex items-center justify-center mr-3">
@@ -306,17 +316,13 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-3 h-[50px]">
-                <button id="guideTrigger" type="button" class="btn-system-led flex items-center justify-center h-full px-6 text-xs md:text-sm font-black drop-shadow-[0_0_8px_rgba(0,255,156,0.8)] border-2 border-green-400 tracking-[0.2em]">GUIDE [?]</button>
-            </div>
-
         </div>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-6 items-start w-full relative z-10">
         
-        <div class="flex flex-col gap-6 w-full lg:w-[42%] xl:w-[44%] shrink-0 relative">
-            <div class="flex flex-col md:flex-row gap-4 w-full relative z-10">
+        <div class="flex flex-col gap-6 w-full min-w-0 lg:w-[42%] xl:w-[44%] shrink-0 relative">
+            <div class="mobile-server-deck flex flex-col md:flex-row gap-4 w-full relative z-10">
                 <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[16.6%] delay-1"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[50%] delay-2"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[12px] -bottom-[12px] left-[83.3%] delay-3"></div>
@@ -387,9 +393,9 @@
                                     <div id="eta-EU1-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
-                                    <div class="wd-switch-btn" id="sw-EU1-side-off" onclick="setWdState('EU1', 'OFF')">OFF</div>
-                                    <div class="wd-switch-btn" id="sw-EU1-side-auto" onclick="setWdState('EU1', 'AUTO')">AUTO</div>
-                                    <div class="wd-switch-btn" id="sw-EU1-side-on" onclick="setWdState('EU1', 'ON')">ON</div>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU1-side-off" onclick="setWdState('EU1', 'OFF')">OFF</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU1-side-auto" onclick="setWdState('EU1', 'AUTO')">AUTO</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU1-side-on" onclick="setWdState('EU1', 'ON')">ON</button>
                                 </div>
                             </div>
                         </div>
@@ -415,9 +421,9 @@
                                     <div id="eta-EU2-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
-                                    <div class="wd-switch-btn" id="sw-EU2-side-off" onclick="setWdState('EU2', 'OFF')">OFF</div>
-                                    <div class="wd-switch-btn" id="sw-EU2-side-auto" onclick="setWdState('EU2', 'AUTO')">AUTO</div>
-                                    <div class="wd-switch-btn" id="sw-EU2-side-on" onclick="setWdState('EU2', 'ON')">ON</div>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU2-side-off" onclick="setWdState('EU2', 'OFF')">OFF</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU2-side-auto" onclick="setWdState('EU2', 'AUTO')">AUTO</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU2-side-on" onclick="setWdState('EU2', 'ON')">ON</button>
                                 </div>
                             </div>
                         </div>
@@ -443,9 +449,9 @@
                                     <div id="eta-EU3-side" class="text-[9px] opacity-60 font-bold tracking-widest text-orange-400 uppercase truncate min-w-0 mt-2">NEXT: --:--:--</div>
                                 </div>
                                 <div class="wd-switch-container-vertical flex-shrink-0 self-center">
-                                    <div class="wd-switch-btn" id="sw-EU3-side-off" onclick="setWdState('EU3', 'OFF')">OFF</div>
-                                    <div class="wd-switch-btn" id="sw-EU3-side-auto" onclick="setWdState('EU3', 'AUTO')">AUTO</div>
-                                    <div class="wd-switch-btn" id="sw-EU3-side-on" onclick="setWdState('EU3', 'ON')">ON</div>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU3-side-off" onclick="setWdState('EU3', 'OFF')">OFF</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU3-side-auto" onclick="setWdState('EU3', 'AUTO')">AUTO</button>
+                                    <button type="button" class="wd-switch-btn" id="sw-EU3-side-on" onclick="setWdState('EU3', 'ON')">ON</button>
                                 </div>
                             </div>
                         </div>
@@ -488,7 +494,7 @@
                 <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] left-[10%] delay-2"></div>
                 <div class="hidden md:block cyber-cable w-[4px] h-[24px] -bottom-[24px] right-[10%] delay-1"></div>
 
-                <div class="flex justify-between items-center mb-4 relative z-20">
+                <div class="mobile-roster-toolbar flex justify-between items-center mb-4 relative z-20">
                     <div class="flex items-center gap-2">
                         <h3 class="text-sm font-bold uppercase opacity-80 mr-2">SQUAD ROSTER</h3>
                         <button onclick="toggleSort()" id="btnSortToggle" class="btn-system-led !text-[9px] !py-1">SORT: ADDED</button>
@@ -500,7 +506,7 @@
                     <div id="squadCounter" class="squad-count">0/11</div>
                 </div>
 
-                <div class="grid grid-cols-4 gap-1.5 mb-4 relative z-20">
+                <div class="mobile-squad-grid grid grid-cols-4 gap-1.5 mb-4 relative z-20">
                     <button onclick="switchSquad(1)" id="sq-btn-1" class="squad-btn sq-color-1 active">Alfa</button>
                     <button onclick="switchSquad(2)" id="sq-btn-2" class="squad-btn sq-color-2">Bravo</button>
                     <button onclick="switchSquad(3)" id="sq-btn-3" class="squad-btn sq-color-3">Charlie</button>
@@ -510,7 +516,7 @@
                     <button onclick="switchSquad(7)" id="sq-btn-7" class="squad-btn sq-color-7">Golf</button>
                     <button onclick="switchSquad(8)" id="sq-btn-8" class="squad-btn sq-color-8">FAV</button>
                 </div>
-                <div class="flex gap-2 mb-4 relative z-20">
+                <div class="mobile-watch-controls flex gap-2 mb-4 relative z-20">
                     <input id="watchInput" type="text" placeholder="Callsign..." class="bg-black border border-green-900 text-xs p-2 flex-1 outline-none transition-all" onkeypress="if(event.key === 'Enter') addWatch()">
                     <button onclick="addWatch()" class="btn-system-led">ADD</button>
                     <button onclick="addAllToWatchCurrent()" class="btn-system-led">DRAFT UNLINKED</button>
@@ -533,10 +539,10 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-20">
                     <div><h3 class="text-sm font-bold uppercase opacity-80">ASSET SATURATION</h3><div class="text-xs font-black tracking-[0.18em] text-green-400 mt-1">ACTIVE PERSONNEL HISTORY</div></div>
                     <div id="assetRangeControls" class="flex flex-wrap gap-1" aria-label="Asset saturation history range">
-                        <button class="btn-system-led asset-range active" data-range="30m">30 MIN</button><button class="btn-system-led asset-range" data-range="2h">2 H</button><button class="btn-system-led asset-range" data-range="6h">6 H</button><button class="btn-system-led asset-range" data-range="12h">12 H</button><button class="btn-system-led asset-range" data-range="24h">24 H</button><button class="btn-system-led asset-range" data-range="48h">48 H</button>
+                        <button class="btn-system-led asset-range" data-range="30m">30 MIN</button><button class="btn-system-led asset-range" data-range="2h">2 H</button><button class="btn-system-led asset-range" data-range="6h">6 H</button><button class="btn-system-led asset-range" data-range="12h">12 H</button><button class="btn-system-led asset-range" data-range="24h">24 H</button><button class="btn-system-led asset-range" data-range="48h">48 H</button><button class="btn-system-led asset-range" data-range="7d">7 DAYS</button>
                     </div>
                 </div>
-                <div class="grid grid-cols-4 gap-4 mb-8 relative z-20">
+                <div class="mobile-asset-grid grid grid-cols-4 gap-4 mb-8 relative z-20">
                     <div class="text-center">
                         <span class="text-xl md:text-2xl font-black text-[#00ff9c] drop-shadow-[0_0_5px_#00ff9c] tracking-widest">EU1</span><br>
                         <span id="percEU1" class="perc-offline mt-1 mb-1 block">---</span>
@@ -567,7 +573,7 @@
                 <div class="chart-container relative z-20" id="chartParent"><canvas id="popChart"></canvas></div>
             </div>
             <div class="soc-border p-4 bg-black/40 relative z-10">
-                <div class="flex justify-between items-center mb-2 relative z-20">
+                <div class="mobile-log-toolbar flex justify-between items-center mb-2 relative z-20">
                     <h3 class="text-sm font-bold uppercase opacity-80">SYS-LOG</h3>
                     <div class="flex gap-2 flex-wrap justify-end">
                         <button id="advToggle" onclick="toggleAdvanced()" class="btn-system-led-red">ADV LOG: OFF</button>
@@ -583,11 +589,18 @@
     <div id="activityFeedInspector" class="activity-feed-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="activityFeedInspectorTitle">
         <section class="activity-feed-inspector">
             <header class="activity-feed-toolbar">
-                <div><div class="text-[9px] tracking-[0.25em] text-gray-500">STM EVENT CONSOLE</div><h2 id="activityFeedInspectorTitle" class="text-lg font-black tracking-widest text-red-400">ACTIVITY FEED</h2></div>
+                <div class="activity-feed-heading">
+                    <div class="text-[9px] tracking-[0.25em] text-gray-500">STM EVENT CONSOLE</div>
+                    <div class="activity-feed-title-row">
+                        <h2 id="activityFeedInspectorTitle" class="text-lg font-black tracking-widest text-red-400">ACTIVITY FEED</h2>
+                        <div class="activity-feed-clear-actions">
+                            <button data-log-clear-all class="btn-system-led">CLEAR ALL</button>
+                            <button data-restart-clear class="btn-system-led hidden">CLEAR RESTART LOG</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="activity-feed-actions">
                     <button data-activity-restart-toggle class="btn-system-led">RESTART LOG</button>
-                    <button data-activity-clear class="btn-system-led-red">CLEAR ALL</button>
-                    <button id="activityFeedRestore" class="btn-system-led" aria-label="Restore Activity Feed">RESTORE</button>
                     <button id="activityFeedInspectorClose" class="btn-system-led-red">CLOSE</button>
                 </div>
             </header>
@@ -598,8 +611,8 @@
 
     <div id="activityClearConfirmation" class="activity-confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="activityClearTitle">
         <section class="activity-confirm-panel">
-            <h2 id="activityClearTitle" class="text-xl font-black tracking-widest text-red-400">CLEAR ACTIVITY HISTORY?</h2>
-            <p class="mt-4 text-sm text-white">This will clear Activity Feed and Restart Log on all connected dashboards.</p>
+            <h2 id="activityClearTitle" class="text-xl font-black tracking-widest text-red-400">CLEAR ACTIVITY FEED?</h2>
+            <p id="activityClearDescription" class="mt-4 text-sm text-white">This will clear only Activity Feed on connected dashboards. Restart Log will remain unchanged.</p>
             <p class="mt-3 text-sm text-green-300">Telemetry, restart markers, uptime and chart history will remain unchanged.</p>
             <div id="activityClearError" class="mt-3 min-h-[1.25rem] text-red-400 font-bold" aria-live="assertive"></div>
             <div class="activity-confirm-actions"><button id="activityClearCancel" class="btn-system-led">NO — CANCEL</button><button id="activityClearConfirm" class="btn-system-led-red">YES — CLEAR</button></div>
@@ -643,9 +656,8 @@
         </section>
     </div>
 
-    <link rel="stylesheet" href="guide.css">
-    <script src="guideContent.js"></script>
-    <script src="guide.js"></script>
+    <script src="pwa.js"></script>
+    <script src="historyRangePreference.js"></script>
     <script src="telemetryInspector.js"></script>
     <script src="watchdogHydration.js"></script>
     <script src="jsocPersonnel.js"></script>
@@ -725,7 +737,7 @@
         let telemetryLog = safeJsonGet('jsoc_telemetry_log', { EU1: [], EU2: [], EU3: [] });
 
         let miniCharts = {};
-        let telemetryRange = localStorage.getItem('jsoc_telemetry_range') || '30m';
+        let telemetryRange = STMHistoryRangePreference.read(localStorage, STMHistoryRangePreference.STORAGE_KEYS.telemetry);
         let telemetryHistoryInFlight = false;
         let lastTelemetryHistoryFetch = 0;
         let telemetryInspectorChart = null;
@@ -844,7 +856,7 @@
         }
         let previous = { EU1: [], EU2: [], EU3: [] };
         let cache = {}; let historyData = []; let historyLabels = [];
-        let assetSaturationRange = '30m';
+        let assetSaturationRange = STMHistoryRangePreference.read(localStorage, STMHistoryRangePreference.STORAGE_KEYS.assetSaturation);
         let assetSaturationLastFetch = 0;
         let lastRenderedHash = { EU1: '', EU2: '', EU3: '' }; 
         let isFirstLoad = true;
@@ -2084,6 +2096,13 @@
                     
                     row.className = rClass; 
                     row.innerHTML = `<span class="${numClass}" style="${numStyle}">${i+1}.</span><span class="truncate flex-1">${escapeHTML(p.name)}</span><span class="ml-2 shrink-0 text-[9px] opacity-60 tabular-nums" title="A2S player connection time">${formatPlayerConnectionTime(p.time)}</span>`;
+                    const mobileAdd = document.createElement("button");
+                    mobileAdd.type = "button";
+                    mobileAdd.className = "mobile-player-add";
+                    mobileAdd.textContent = "ADD";
+                    mobileAdd.setAttribute("aria-label", "Add " + p.name + " to selected squad");
+                    mobileAdd.onclick = event => { event.stopPropagation(); addWatch(p.name); };
+                    row.appendChild(mobileAdd);
                     row.ondblclick = () => addWatch(p.name);  // p.name is already a string, safe for function arg 
                     listEl.appendChild(row);
                 });
@@ -2458,8 +2477,6 @@
                 `<div class="text-[10px] mt-1"><span class="text-gray-500">PREDICTOR:</span> <span class="text-yellow-300 font-bold">${escapeHTML(predictor)}</span></div>` +
                 `<div class="text-[10px] mt-2 border-t border-gray-800 pt-2"><span class="text-gray-500">EVIDENCE SCORE:</span> <span class="text-cyan-300 font-black">${escapeHTML(score.total ?? 'UNKNOWN')} // ${escapeHTML(score.level || 'UNKNOWN')}</span>${scoreBreakdown}</div>`;
         }
-
-        function clearAllAlerts() { activityFeedController?.openConfirmation(); }
 
         function formatInspectorTime(value) {
             const parsed = typeof value === 'number' ? value : Date.parse(value);
@@ -3079,7 +3096,7 @@
         window.setTelemetryRange = function(range) {
             if (!['30m', '2h', '6h', '12h'].includes(range)) return;
             telemetryRange = range;
-            localStorage.setItem('jsoc_telemetry_range', range);
+            STMHistoryRangePreference.write(localStorage, STMHistoryRangePreference.STORAGE_KEYS.telemetry, range);
             document.querySelectorAll('.telemetry-range').forEach(button => {
                 button.classList.toggle('active', button.dataset.range === range);
             });
@@ -3161,12 +3178,16 @@
         }
 
         function initAssetSaturation() {
-            document.querySelectorAll('.asset-range').forEach(button => button.addEventListener('click', () => {
-                assetSaturationRange = button.dataset.range;
-                document.querySelectorAll('.asset-range').forEach(item => item.classList.toggle('active', item === button));
-                assetSaturationLastFetch = 0;
-                loadAssetSaturationHistory();
-            }));
+            document.querySelectorAll('.asset-range').forEach(button => {
+                button.classList.toggle('active', button.dataset.range === assetSaturationRange);
+                button.addEventListener('click', () => {
+                    assetSaturationRange = button.dataset.range;
+                    STMHistoryRangePreference.write(localStorage, STMHistoryRangePreference.STORAGE_KEYS.assetSaturation, assetSaturationRange);
+                    document.querySelectorAll('.asset-range').forEach(item => item.classList.toggle('active', item === button));
+                    assetSaturationLastFetch = 0;
+                    loadAssetSaturationHistory();
+                });
+            });
             loadAssetSaturationHistory();
         }
 

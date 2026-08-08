@@ -81,6 +81,7 @@ jobs:
           Copy-Item "windows/stm-core.ps1" "$dist/windows/stm-core.ps1"
           Copy-Item "windows/stm-core-tray.ps1" "$dist/windows/stm-core-tray.ps1"
           Copy-Item "windows/stm-core-tray.vbs" "$dist/windows/stm-core-tray.vbs"
+          Copy-Item "windows/assets" "$dist/windows/assets" -Recurse
 
           Copy-Item (Get-Command node).Source "$dist/runtime/node.exe"
 

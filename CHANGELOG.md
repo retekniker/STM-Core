@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.8.16
+
+### Added
+
+- Adds a seven-day Active Personnel History range with bounded 30-minute buckets and an efficient read-only SQLite query.
+- Adds a per-user Windows app-mode launcher that prefers Chrome or Edge, opens maximized, and falls back to the default browser.
+- Adds STM Core icons for the installer, tray and optional shortcuts, plus the ReTek/Rytek logo inside the installer wizard.
+
+### Changed
+
+- Defaults fresh chart-range preferences to 12 hours and restores each later manual choice from local browser storage.
+- Separates Activity Feed-only, Restart Log-only and combined clearing with explicit confirmations.
+- Improves responsive sizing for charts, range controls, phones, tablets and desktop app windows.
+- Makes the installer display the STM Core version directly from package metadata.
+
+### Removed
+
+- Removes the in-app Guide, its navigation, scripts, styles and screenshots.
+- Removes the redundant Restore action from the enlarged Activity Feed; Close retains the same return behavior.
+
+### Safety
+
+- Keeps telemetry and authoritative restart history intact when clearing visible logs.
+- Keeps the Windows backend, data directory, tray lifetime and autostart behavior unchanged.
+
 ## 0.8.15
 
 ### Added

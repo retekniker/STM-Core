@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "0.8.15"
+  #error MyAppVersion must be provided from package.json
 #endif
 
 #define MyAppName "STM Core"
@@ -10,6 +10,7 @@
 AppId={{9B17847D-4029-46ED-9A6C-40B18C70C56E}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -25,18 +26,25 @@ OutputBaseFilename=STM-Core-Setup-{#MyAppVersion}-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=assets\stm-core.ico
+WizardImageFile=assets\retek-wizard.bmp
 UninstallDisplayName=STM Core
+UninstallDisplayIcon={app}\windows\assets\stm-core.ico
 SetupLogging=yes
 
+[Messages]
+WelcomeLabel1=Welcome to the STM Core {#MyAppVersion} Setup Wizard
+
 [Tasks]
-Name: "desktopicon"; Description: "Utwórz skrót na pulpicie"; GroupDescription: "Dodatkowe skróty:"; Flags: unchecked
+Name: "startmenuicon"; Description: "Utwórz skrót w menu Start"; GroupDescription: "Skróty:"
+Name: "desktopicon"; Description: "Utwórz skrót na pulpicie"; GroupDescription: "Skróty:"; Flags: unchecked
 
 [Files]
 Source: "dist\STM-Core\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\STM Core"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\windows\stm-core-tray.vbs"" -OpenDashboard"; WorkingDir: "{app}"
-Name: "{autodesktop}\STM Core"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\windows\stm-core-tray.vbs"" -OpenDashboard"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\STM Core"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\windows\stm-core-tray.vbs"" -OpenDashboard"; WorkingDir: "{app}"; IconFilename: "{app}\windows\assets\stm-core.ico"; Tasks: startmenuicon
+Name: "{autodesktop}\STM Core"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\windows\stm-core-tray.vbs"" -OpenDashboard"; WorkingDir: "{app}"; IconFilename: "{app}\windows\assets\stm-core.ico"; Tasks: desktopicon
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "STM Core"; ValueData: """{sys}\wscript.exe"" ""{app}\windows\stm-core-tray.vbs"""; Flags: uninsdeletevalue

@@ -7,11 +7,17 @@
         constructor(options = {}) {
             this.fetch = options.fetch || globalThis.fetch?.bind(globalThis);
             this.WebSocket = options.WebSocket || globalThis.WebSocket;
+            this.storage = options.storage || (() => {
+                if (typeof window === "undefined") return null;
+                try { return window.localStorage || null; } catch (_) { return null; }
+            })();
             this.renderRestartEntry = options.renderRestartEntry || (() => "");
             this.entries = [];
             this.restartEvents = [];
             this.mode = "activity";
             this.clearedAt = null;
+            this.restartClearedAt = this.readRestartClearedAt();
+            this.clearScope = "activity";
             this.clearInFlight = false;
             this.initialized = false;
             this.expanded = false;
@@ -20,6 +26,21 @@
         }
 
         byId(id) { return document.getElementById(id); }
+
+        readRestartClearedAt() {
+            try { return this.storage?.getItem("stm_restart_log_cleared_at") || null; }
+            catch (_) { return null; }
+        }
+
+        restartEventTime(event) {
+            return Date.parse(event.timestamp || event.data?.restartAt);
+        }
+
+        isRestartVisible(event) {
+            if (!this.restartClearedAt) return true;
+            const timestamp = this.restartEventTime(event);
+            return Number.isFinite(timestamp) && timestamp > Date.parse(this.restartClearedAt);
+        }
 
         isScrollbarInteraction(event) {
             const scrollable = event.target.closest?.(".custom-scrollbar");
@@ -41,10 +62,6 @@
                 event.stopPropagation();
                 this.setActivityFeedExpanded(true);
             });
-            this.byId("activityFeedRestore")?.addEventListener("click", event => {
-                event.stopPropagation();
-                this.setActivityFeedExpanded(false);
-            });
             this.byId("activityFeedInspectorClose")?.addEventListener("click", event => {
                 event.stopPropagation(); this.setActivityFeedExpanded(false);
             });
@@ -55,7 +72,18 @@
             );
             document.querySelectorAll("[data-activity-clear]").forEach(button =>
                 button.addEventListener("click", event => {
-                    event.stopPropagation(); this.openConfirmation();
+                    event.stopPropagation(); this.openConfirmation("activity");
+                })
+            );
+            document.querySelectorAll("[data-log-clear-all]").forEach(button =>
+                button.addEventListener("click", event => {
+                    event.stopPropagation();
+                    this.openConfirmation(this.mode === "restart" ? "all" : "activity");
+                })
+            );
+            document.querySelectorAll("[data-restart-clear]").forEach(button =>
+                button.addEventListener("click", event => {
+                    event.stopPropagation(); this.openConfirmation("restart");
                 })
             );
             this.byId("activityClearCancel")?.addEventListener("click", () => this.closeConfirmation());
@@ -171,6 +199,11 @@
             document.querySelectorAll("[data-activity-restart-toggle]").forEach(button => {
                 button.textContent = restart ? "Activity Feed" : "Restart Log";
             });
+            const title = this.byId("activityFeedInspectorTitle");
+            if (title) title.textContent = restart ? "RESTART LOG" : "ACTIVITY FEED";
+            document.querySelectorAll("[data-restart-clear]").forEach(button => {
+                button.classList.toggle("hidden", !restart);
+            });
             this.renderActivity();
             if (restart) this.loadRestartLog();
         }
@@ -182,10 +215,11 @@
 
         async loadRestartLog() {
             try {
-                const response = await this.fetch("/api/v1/community/restarts?limit=100&view=activity-feed", { cache: "no-store" });
+                const response = await this.fetch("/api/v1/community/restarts?limit=100", { cache: "no-store" });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const payload = await response.json();
-                this.restartEvents = Array.isArray(payload.events) ? payload.events : [];
+                this.restartEvents = (Array.isArray(payload.events) ? payload.events : [])
+                    .filter(event => this.isRestartVisible(event));
                 this.renderRestart();
             } catch (error) {
                 for (const id of ["restartLogBox", "activityFeedInspectorRestartBox"]) {
@@ -209,7 +243,7 @@
             document.body.classList.toggle("activity-feed-modal-open", next);
             if (next) {
                 this.render();
-                if (changed) this.byId("activityFeedRestore")?.focus();
+                if (changed) this.byId("activityFeedInspectorClose")?.focus();
             } else if (changed) {
                 this.byId("activityFeedZoom")?.focus();
             }
@@ -219,7 +253,21 @@
         open() { return this.setActivityFeedExpanded(true); }
         close() { return this.setActivityFeedExpanded(false); }
         isOpen() { return this.expanded; }
-        openConfirmation() { this.byId("activityClearConfirmation")?.classList.add("open"); this.byId("activityClearError").textContent = ""; }
+        openConfirmation(scope = "activity") {
+            this.clearScope = scope;
+            const copy = {
+                activity: ["CLEAR ACTIVITY FEED?", "This will clear only Activity Feed on connected dashboards. Restart Log will remain unchanged."],
+                restart: ["CLEAR RESTART LOG?", "This will clear only Restart Log on this device. Activity Feed will remain unchanged."],
+                all: ["CLEAR ALL LOGS?", "This will clear Activity Feed on connected dashboards and Restart Log on this device."]
+            }[scope];
+            const title = this.byId("activityClearTitle");
+            const description = this.byId("activityClearDescription");
+            const error = this.byId("activityClearError");
+            if (title) title.textContent = copy[0];
+            if (description) description.textContent = copy[1];
+            if (error) error.textContent = "";
+            this.byId("activityClearConfirmation")?.classList.add("open");
+        }
         closeConfirmation() { if (!this.clearInFlight) this.byId("activityClearConfirmation")?.classList.remove("open"); }
         isConfirmationOpen() { return this.byId("activityClearConfirmation")?.classList.contains("open"); }
 
@@ -229,8 +277,13 @@
             this.entries = this.entries.filter(entry =>
                 Date.parse(entry.timestamp) > Date.parse(clearedAt)
             );
-            this.restartEvents = [];
             this.renderActivity();
+        }
+
+        applyRestartClear(clearedAt) {
+            this.restartClearedAt = clearedAt;
+            try { this.storage?.setItem("stm_restart_log_cleared_at", clearedAt); } catch (_) {}
+            this.restartEvents = this.restartEvents.filter(event => this.isRestartVisible(event));
             this.renderRestart();
         }
 
@@ -242,11 +295,17 @@
             if (button) button.disabled = true;
             if (errorBox) errorBox.textContent = "";
             try {
+                if (this.clearScope === "restart") {
+                    this.applyRestartClear(new Date().toISOString());
+                    this.byId("activityClearConfirmation")?.classList.remove("open");
+                    return;
+                }
                 const response = await this.fetch("/api/v1/community/activity-feed/clear", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const payload = await response.json();
                 if (!payload.success || !payload.clearedAt) throw new Error("INVALID SERVER RESPONSE");
                 this.applyClear(payload.clearedAt);
+                if (this.clearScope === "all") this.applyRestartClear(payload.clearedAt);
                 this.byId("activityClearConfirmation")?.classList.remove("open");
             } catch (error) {
                 if (errorBox) errorBox.textContent = `CLEAR FAILED: ${error.message}`;

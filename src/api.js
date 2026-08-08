@@ -474,10 +474,14 @@ class ApiServer {
                     const endMs = Date.now();
                     const startMs = endMs - config.durationMs;
                     const serverIds = this.stateEngine.getAll().map(server => server.id);
-                    const snapshots = await this.historyRepository.getServerSnapshotsBetween({
+                    const snapshotQuery = {
                         after: new Date(startMs).toISOString(),
-                        before: new Date(endMs).toISOString()
-                    });
+                        before: new Date(endMs).toISOString(),
+                        bucketMs: config.bucketMs
+                    };
+                    const snapshots = this.historyRepository.getServerSnapshotsForBuckets
+                        ? await this.historyRepository.getServerSnapshotsForBuckets(snapshotQuery)
+                        : await this.historyRepository.getServerSnapshotsBetween(snapshotQuery);
                     const points = this.assetSaturationHistory.aggregate({
                         snapshots, serverIds, startMs, endMs, bucketMs: config.bucketMs
                     });

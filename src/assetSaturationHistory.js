@@ -4,7 +4,8 @@ const RANGE_CONFIG = Object.freeze({
     "6h": { durationMs: 6 * 60 * 60 * 1000, bucketMs: 60 * 1000 },
     "12h": { durationMs: 12 * 60 * 60 * 1000, bucketMs: 2 * 60 * 1000 },
     "24h": { durationMs: 24 * 60 * 60 * 1000, bucketMs: 5 * 60 * 1000 },
-    "48h": { durationMs: 48 * 60 * 60 * 1000, bucketMs: 10 * 60 * 1000 }
+    "48h": { durationMs: 48 * 60 * 60 * 1000, bucketMs: 10 * 60 * 1000 },
+    "7d": { durationMs: 7 * 24 * 60 * 60 * 1000, bucketMs: 30 * 60 * 1000 }
 });
 
 class AssetSaturationHistory {
@@ -27,7 +28,7 @@ class AssetSaturationHistory {
             if (!Number.isFinite(time) || time < startMs || time > endMs) return;
             const index = Math.min(bucketCount - 1, Math.floor((time - startMs) / bucketMs));
             const bucket = buckets[index];
-            bucket.sourceSamples += 1;
+            bucket.sourceSamples += Number(snapshot.sourceSamples) || 1;
             const previous = bucket.latest.get(snapshot.serverId);
             if (!previous || Date.parse(previous.timestamp) <= time) bucket.latest.set(snapshot.serverId, snapshot);
         });
