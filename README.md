@@ -6,9 +6,9 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-**Latest stable release: v0.8.15**
+**Latest stable release: v0.8.16**
 
-v0.8.15 provides clearer browser session logging, SQLite-backed active-personnel history, stable restart navigation, safe Watchdog startup hydration, and a refreshed 14-chapter offline **STM Field Manual**.
+v0.8.16 adds a focused Windows app-mode launcher, locally remembered chart ranges, a bounded seven-day Active Personnel History view, clearer log controls, and responsive dashboard sizing.
 
 [![Downloads](https://img.shields.io/github/downloads/retekniker/STM-Core/total?style=for-the-badge&logo=github&label=Downloads)](https://github.com/retekniker/STM-Core/releases)
 
@@ -24,7 +24,7 @@ STM Core monitors Arma 3 servers directly through GameDig/A2S without depending 
 - Uses a red-white alarm animation for confirmed priority personnel
 - Shows readable restart flags with enlarged hover targets on telemetry charts
 - Opens Activity Feed in a responsive inspector with the same live entries and Restart Log
-- Synchronizes confirmed Activity Feed clearing across connected dashboards while preserving telemetry, restart markers, uptime and chart history
+- Separates Activity Feed and Restart Log clearing while preserving telemetry, restart markers, uptime and chart history
 - Improves the readability of blinking Asset Saturation status labels
 - Detects player joins and disconnects
 - Detects server restarts through Steam ID rotation
@@ -47,9 +47,9 @@ Download the latest Windows installer:
 
 Run the downloaded installer:
 
-v0.8.15 release asset:
+v0.8.16 release asset:
 
-`STM-Core-Setup-0.8.15-x64.exe`
+`STM-Core-Setup-0.8.16-x64.exe`
 
 Installing a newer version over an existing installation preserves the database and configuration.
 
@@ -65,10 +65,10 @@ The Windows system tray icon provides:
 
 ## Linux installation
 
-Self-contained v0.8.15 release assets:
+Self-contained v0.8.16 release assets:
 
-- `STM-Core-0.8.15-linux-x64.tar.gz`
-- `STM-Core-0.8.15-linux-x64.tar.gz.sha256`
+- `STM-Core-0.8.16-linux-x64.tar.gz`
+- `STM-Core-0.8.16-linux-x64.tar.gz.sha256`
 
 Install or update STM Core with:
 
@@ -83,7 +83,7 @@ installs application code directly from `main`.
 To install a specific published stable release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.15
+curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.16
 ```
 
 Downgrading may require a matching database backup because database downgrade

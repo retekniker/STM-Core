@@ -152,6 +152,7 @@ Set-Content `
     -Encoding ASCII
 
 $notifyIcon = $null
+$stmIcon = $null
 $timer = $null
 
 try {
@@ -189,7 +190,14 @@ try {
 
     $notifyIcon = New-Object System.Windows.Forms.NotifyIcon
     $notifyIcon.ContextMenuStrip = $contextMenu
-    $notifyIcon.Icon = [System.Drawing.SystemIcons]::Application
+    $iconPath = Join-Path $PSScriptRoot "assets\stm-core.ico"
+    if (Test-Path -LiteralPath $iconPath) {
+        $stmIcon = [System.Drawing.Icon]::new($iconPath)
+        $notifyIcon.Icon = $stmIcon
+    }
+    else {
+        $notifyIcon.Icon = [System.Drawing.SystemIcons]::Application
+    }
     $notifyIcon.Text = "STM Core - Checking status"
     $notifyIcon.Visible = $true
 
@@ -198,7 +206,6 @@ try {
         $startWithWindowsItem.Checked = Test-StartWithWindows
 
         if ($running) {
-            $notifyIcon.Icon = [System.Drawing.SystemIcons]::Information
             $notifyIcon.Text = "STM Core - Running"
             $statusItem.Text = "Status: Running"
             $startItem.Enabled = $false
@@ -206,7 +213,6 @@ try {
             $restartItem.Enabled = $true
         }
         else {
-            $notifyIcon.Icon = [System.Drawing.SystemIcons]::Warning
             $notifyIcon.Text = "STM Core - Stopped"
             $statusItem.Text = "Status: Stopped"
             $startItem.Enabled = $true
@@ -289,6 +295,10 @@ finally {
     if ($notifyIcon) {
         $notifyIcon.Visible = $false
         $notifyIcon.Dispose()
+    }
+
+    if ($stmIcon) {
+        $stmIcon.Dispose()
     }
 
     if (Test-Path $TrayPidFile) {
