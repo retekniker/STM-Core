@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing vX.Y.Z tag to build
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,20 +17,24 @@ permissions:
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
 
       - name: Validate release tag
         shell: bash
         run: |
-          [[ "${GITHUB_REF_TYPE}" == "tag" ]] || {
-            echo "This workflow builds release assets only for a tag." >&2
+          [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Release tag must match vX.Y.Z." >&2
             exit 1
           }
-          [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-            echo "Release tag must match vX.Y.Z." >&2
+          [[ "$(git describe --tags --exact-match HEAD)" == "${RELEASE_TAG}" ]] || {
+            echo "Checkout is not the requested release tag ${RELEASE_TAG}." >&2
             exit 1
           }
 
@@ -35,6 +45,8 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        env:
+          npm_config_build_from_source: "true"
         run: npm ci
 
       - name: Run tests
@@ -44,10 +56,10 @@ jobs:
         run: npm prune --omit=dev
 
       - name: Build Linux release assets
-        run: tools/buildLinuxRelease.sh "${GITHUB_REF_NAME}"
+        run: env -u GITHUB_SHA tools/buildLinuxRelease.sh "${RELEASE_TAG}"
 
       - name: Validate archive and smoke-test installation
-        run: tools/testLinuxRelease.sh "dist/linux/STM-Core-${GITHUB_REF_NAME#v}-linux-x64.tar.gz"
+        run: tools/testLinuxRelease.sh "dist/linux/STM-Core-${RELEASE_TAG#v}-linux-x64.tar.gz"
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
@@ -62,12 +74,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release create "${GITHUB_REF_NAME}" \
-              --title "STM Core ${GITHUB_REF_NAME}" \
-              --generate-notes || gh release view "${GITHUB_REF_NAME}" >/dev/null
+          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release create "${RELEASE_TAG}" \
+              --title "STM Core ${RELEASE_TAG}" \
+              --generate-notes || gh release view "${RELEASE_TAG}" >/dev/null
           fi
-          gh release upload "${GITHUB_REF_NAME}" \
+          gh release upload "${RELEASE_TAG}" \
             dist/linux/STM-Core-*-linux-x64.tar.gz \
             dist/linux/STM-Core-*-linux-x64.tar.gz.sha256 \
             --clobber
