@@ -11,11 +11,8 @@
         "cpl", "sgt", "ssgt", "ssg", "sfc", "2lt", "1lt", "lt",
         "cpt", "capt", "maj", "col", "gen", "res"
     ]);
-    const PRIORITY_RANKS = new Set([
-        "amb", "2lt", "1lt", "lt", "cpt", "capt", "maj", "col", "gen"
-    ]);
-
-    // Publicly confirmed initial High Command list. Keep future callsign updates here.
+    // Explicitly verified High Command callsigns. A displayed rank is not proof of
+    // administrator identity and must never be used as an authorization signal.
     const JSOC_PRIORITY_CALLSIGNS = Object.freeze([
         "Knight",
         "MadTrap",
@@ -51,10 +48,12 @@
         return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
     }
 
-    function isJsocPriorityPerson(playerName) {
-        const rank = parseJsocRankPrefix(playerName);
-        if (rank && PRIORITY_RANKS.has(rank.key)) return true;
+    function isVerifiedAdminName(playerName) {
         return PRIORITY_CALLSIGN_KEYS.has(normalizeJsocCallsign(playerName));
+    }
+
+    function isJsocPriorityPerson(playerName) {
+        return isVerifiedAdminName(playerName);
     }
 
     function collectPriorityPersonnel(serverCaches, serverOrder = ["EU1", "EU2", "EU3"]) {
@@ -84,6 +83,7 @@
         normalizeJsocCallsign,
         isJsocMemberName,
         isJsocPriorityPerson,
+        isVerifiedAdminName,
         collectPriorityPersonnel
     };
 });

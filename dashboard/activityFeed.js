@@ -62,6 +62,10 @@
                 event.stopPropagation();
                 this.setActivityFeedExpanded(true);
             });
+            this.byId("activityFeedInspectorZoom")?.addEventListener("click", event => {
+                event.stopPropagation();
+                this.setActivityFeedExpanded(true);
+            });
             this.byId("activityFeedInspectorClose")?.addEventListener("click", event => {
                 event.stopPropagation(); this.setActivityFeedExpanded(false);
             });
@@ -240,6 +244,7 @@
             overlay?.setAttribute("aria-hidden", String(!next));
             this.byId("activityFeedPanel")?.setAttribute("aria-expanded", String(next));
             this.byId("activityFeedZoom")?.setAttribute("aria-expanded", String(next));
+            this.byId("activityFeedInspectorZoom")?.setAttribute("aria-pressed", String(next));
             document.body.classList.toggle("activity-feed-modal-open", next);
             if (next) {
                 this.render();

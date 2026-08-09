@@ -327,6 +327,105 @@ class HistoryRepository {
         }));
     }
 
+    async getServerSnapshotsForTelemetryBuckets(options = {}) {
+        const conditions = ["timestamp >= ?", "timestamp <= ?"];
+        const filterParameters = [options.after, options.before];
+        if (options.serverId) {
+            conditions.push("server_id = ?");
+            filterParameters.push(options.serverId);
+        }
+
+        const rows = await this.all(
+            `
+            WITH source AS (
+                SELECT
+                    id,
+                    server_id,
+                    timestamp,
+                    success,
+                    players,
+                    max_players,
+                    ping,
+                    error,
+                    CAST(
+                        (julianday(timestamp) - julianday(?)) *
+                        86400000.0 / ? AS INTEGER
+                    ) AS bucket_index,
+                    LAG(success) OVER (
+                        PARTITION BY server_id
+                        ORDER BY timestamp ASC, id ASC
+                    ) AS previous_success
+                FROM server_snapshots
+                WHERE ${conditions.join(" AND ")}
+            ), ranked AS (
+                SELECT
+                    *,
+                    COUNT(*) OVER (
+                        PARTITION BY server_id, bucket_index
+                    ) AS source_samples,
+                    SUM(success) OVER (
+                        PARTITION BY server_id, bucket_index
+                    ) AS successful_samples,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY server_id, bucket_index
+                        ORDER BY timestamp ASC, id ASC
+                    ) AS first_rank,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY server_id, bucket_index
+                        ORDER BY timestamp DESC, id DESC
+                    ) AS last_rank,
+                    MIN(CASE WHEN success = 1 THEN ping END) OVER (
+                        PARTITION BY server_id, bucket_index
+                    ) AS minimum_ping,
+                    MAX(CASE WHEN success = 1 THEN ping END) OVER (
+                        PARTITION BY server_id, bucket_index
+                    ) AS maximum_ping,
+                    MIN(CASE WHEN success = 1 THEN players END) OVER (
+                        PARTITION BY server_id, bucket_index
+                    ) AS minimum_players,
+                    MAX(CASE WHEN success = 1 THEN players END) OVER (
+                        PARTITION BY server_id, bucket_index
+                    ) AS maximum_players
+                FROM source
+            )
+            SELECT
+                id,
+                server_id,
+                timestamp,
+                success,
+                players,
+                max_players,
+                ping,
+                error,
+                bucket_index,
+                source_samples,
+                successful_samples
+            FROM ranked
+            WHERE first_rank = 1
+                OR last_rank = 1
+                OR success != COALESCE(previous_success, success)
+                OR (success = 1 AND ping IN (minimum_ping, maximum_ping))
+                OR (success = 1 AND players IN (minimum_players, maximum_players))
+            ORDER BY timestamp ASC, id ASC
+            `,
+            [options.after, options.bucketMs, ...filterParameters]
+        );
+
+        return rows.map(row => ({
+            id: row.id,
+            serverId: row.server_id,
+            timestamp: row.timestamp,
+            success: row.success === 1,
+            players: row.players,
+            maxPlayers: row.max_players,
+            ping: row.ping,
+            error: row.error,
+            sourceBucketIndex: row.bucket_index,
+            sourceSamples: row.source_samples,
+            successfulSamples: row.successful_samples
+        }));
+    }
+
     async getPlayerHistory(
         playerName,
         options = {}

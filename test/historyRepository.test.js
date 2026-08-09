@@ -185,3 +185,47 @@ test("bucketed snapshot query returns only the latest sample per server and pres
         [["EU2", 3, 1], ["EU1", 2, 2], ["EU1", 4, 1]]
     );
 });
+
+test("telemetry bucket query preserves extrema, failures and exact source counts", async t => {
+    const database = new Database(":memory:");
+    await database.init();
+    t.after(async () => { await database.close(); });
+
+    const samples = [
+        ["2026-07-28T01:00:00.000Z", 1, 20, 10],
+        ["2026-07-28T01:01:00.000Z", 1, 250, 11],
+        ["2026-07-28T01:02:00.000Z", 0, null, null],
+        ["2026-07-28T01:03:00.000Z", 1, 25, 40],
+        ["2026-07-28T01:04:00.000Z", 1, 22, 12]
+    ];
+    for (const [timestamp, success, ping, players] of samples) {
+        await database.run(
+            `
+            INSERT INTO server_snapshots (
+                server_id, timestamp, success, players, max_players, ping
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            `,
+            ["EU1", timestamp, success, players, 64, ping]
+        );
+    }
+    await database.run(
+        "INSERT INTO server_snapshots (server_id, timestamp, success, players, ping) VALUES (?, ?, 1, ?, ?)",
+        ["EU2", "2026-07-28T01:02:30.000Z", 9, 99]
+    );
+
+    const history = new HistoryRepository(database);
+    const snapshots = await history.getServerSnapshotsForTelemetryBuckets({
+        serverId: "EU1",
+        after: "2026-07-28T01:00:00.000Z",
+        before: "2026-07-28T01:10:00.000Z",
+        bucketMs: 10 * 60 * 1000
+    });
+
+    assert.ok(snapshots.length <= samples.length);
+    assert.ok(snapshots.some(snapshot => snapshot.ping === 250));
+    assert.ok(snapshots.some(snapshot => snapshot.players === 40));
+    assert.ok(snapshots.some(snapshot => snapshot.success === false));
+    assert.ok(snapshots.every(snapshot => snapshot.serverId === "EU1"));
+    assert.ok(snapshots.every(snapshot => snapshot.sourceSamples === 5));
+    assert.ok(snapshots.every(snapshot => snapshot.successfulSamples === 4));
+});

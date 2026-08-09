@@ -31,6 +31,16 @@ test("inspector changes from 12h to 48h", () => {
     assert.equal(controller.viewEnd - controller.viewStart, RANGES["48h"]);
 });
 
+test("inspector supports a bounded seven-day overview", () => {
+    const controller = new TelemetryInspectorController();
+    const end = Date.parse("2026-08-09T12:00:00.000Z");
+    controller.open("EU3", "12h", end);
+
+    assert.equal(controller.setRange("7d", end), true);
+    assert.equal(controller.range, "7d");
+    assert.equal(controller.viewEnd - controller.viewStart, RANGES["7d"]);
+});
+
 test("LIVE returns the current view to the end of available data", () => {
     const controller = new TelemetryInspectorController();
     const end = Date.parse("2026-07-28T12:00:00.000Z");
@@ -163,6 +173,7 @@ test("inspector dashboard includes modal open and Escape close wiring", () => {
     assert.match(html, /id="telemetryInspector"/);
     assert.match(html, /data-range="48h"/);
     assert.match(html, /telemetryInspectorOverlayPlugin/);
+    assert.match(html, /data-range="7d"/);
     assert.match(html, /EXACT TIME UNKNOWN/);
     assert.match(html, /scheduleTelemetryInspectorDetail/);
     assert.match(html, /resolution: 'raw'/);

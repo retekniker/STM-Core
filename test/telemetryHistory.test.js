@@ -11,6 +11,7 @@ test("telemetry ranges are explicit and bounded", () => {
     assert.equal(history.getRangeMs("12h"), 43200000);
     assert.equal(history.getRangeMs("24h"), 86400000);
     assert.equal(history.getRangeMs("48h"), 172800000);
+    assert.equal(history.getRangeMs("7d"), 604800000);
     assert.equal(history.getRangeMs("8h"), null);
 });
 
@@ -195,4 +196,26 @@ test("48h overview bounds dense history without hiding spikes, query gaps or res
     assert.ok(result.points.some(point => point.status === "OFFLINE"));
     assert.ok(result.points.some(point => point.timestamp === restartAt));
     assert.equal(result.restarts.length, 1);
+});
+
+test("bucket representatives retain exact source counts for long windows", () => {
+    const history = new TelemetryHistory();
+    const startMs = Date.parse("2026-08-01T00:00:00.000Z");
+    const snapshots = [
+        { timestamp: new Date(startMs).toISOString(), success: true, ping: 20, players: 10 },
+        { timestamp: new Date(startMs + 1000).toISOString(), success: false, ping: null, players: null }
+    ].map(snapshot => ({
+        ...snapshot,
+        serverId: "EU1",
+        sourceBucketIndex: 0,
+        sourceSamples: 120,
+        successfulSamples: 119
+    }));
+    const result = history.downsample(snapshots, startMs, startMs + 7 * 24 * 60 * 60 * 1000, {
+        maximumPoints: 900
+    });
+
+    assert.ok(result.points.length <= 900);
+    assert.ok(result.points.every(point => point.samples === 120));
+    assert.ok(result.points.every(point => point.successRate === 0.992));
 });

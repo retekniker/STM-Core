@@ -411,7 +411,7 @@ test("page reload restores manual state only for the same backend session", () =
     assert.equal(newProcess.lastRestartData.EU1, null);
 });
 
-test("v0.8.16 header, SYS-LOG and operator export expose only honest controls", () => {
+test("v0.8.17 header, SYS-LOG and operator export expose only honest controls", () => {
     const html = fs.readFileSync(dashboardPath, "utf8");
     for (const legacy of ["radar-btn-eco", "radar-btn-norm", "radar-btn-agr", "setRadarMode(", "btnAutoBackup", "systemBackup(", "restoreUpload", "resetBrowserMemory("])
         assert.doesNotMatch(html, new RegExp(legacy.replace(/[()]/g, "\\$&")));
@@ -426,4 +426,17 @@ test("v0.8.16 header, SYS-LOG and operator export expose only honest controls", 
     assert.match(html, /ACTIVE PERSONNEL HISTORY/);
     assert.match(html, /text: 'PLAYERS'/);
     assert.match(html, /Number\.isInteger\(value\) \? value : null/);
+});
+
+test("first-start standby visibly arms INIT.COM until the operator clicks it", () => {
+    const html = fs.readFileSync(path.join(__dirname, "../dashboard/index.html"), "utf8");
+    const standby = html.indexOf('addSystemAlert("VOICE COMMS STANDBY. CLICK [INIT COMM] TO ACTIVATE."');
+    const armed = html.indexOf("armInitCommAttention();", standby);
+
+    assert.ok(standby >= 0);
+    assert.ok(armed > standby);
+    assert.match(html, /\.btn-system-led\.btn-attention \{ animation: btn-attention-blink 0\.8s steps\(2, end\) infinite; \}/);
+    assert.match(html, /button\.classList\.add\('btn-attention'\)/);
+    assert.match(html, /btnInit\.classList\.remove\("btn-attention"\)/);
+    assert.match(html, /removeByAlertId\("alert-startup-voice"\)/);
 });
