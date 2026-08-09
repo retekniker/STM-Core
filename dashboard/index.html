@@ -983,7 +983,24 @@
         let dmdQueue = [];
         let isDmdProcessing = false;
         let dmdTimeout = null;
-        const DMD_DEFAULT_TEXT = 'Re-Tek corp.      ..::77th JSOC::.. Server Tactical Monitor PRO V6.0//........SYSTEM READY!';
+        function createDmdDefaultText(version = '--') {
+            return `Re-Tek corp.      ..::77th JSOC::.. Server Tactical Monitor PRO V${version}//........SYSTEM READY!`;
+        }
+        let dmdDefaultText = createDmdDefaultText();
+
+        async function refreshDmdVersion() {
+            try {
+                const response = await fetch('/api/v1/community/health', { cache: 'no-store' });
+                if (!response.ok) return;
+                const payload = await response.json();
+                const version = String(payload?.version || '').replace(/^v/i, '');
+                if (!/^\d+(?:\.\d+)+$/.test(version)) return;
+                dmdDefaultText = createDmdDefaultText(version);
+                if (!isDmdProcessing) setDMDText(document.getElementById('dmd-text-stream'), dmdDefaultText, '█');
+            } catch (error) {
+                console.warn('[DMD] version lookup failed', error);
+            }
+        }
         function setDMDText(el, text, cursor = '█') {
             if (!el) return;
             el.textContent = text;
@@ -1116,7 +1133,7 @@
                 dmdStream.style.opacity = '1';
                 hides.forEach(el => { if(el) el.style.opacity = '1'; });
                 dmdOverride.style.opacity = '0';
-                setDMDText(dmdStream, DMD_DEFAULT_TEXT, '█');
+                setDMDText(dmdStream, dmdDefaultText, '█');
                 dmdNode.className = "flex-1 dmd-container w-full min-w-0";
                 return;
             }
@@ -3287,6 +3304,7 @@
             window.setActivityFeedExpanded = expanded => activityFeedController.setActivityFeedExpanded(expanded);
             switchSquad(currentSquadIdx); renderWdSwitches(); initChart(); initTelemetryInspector(); initAssetSaturation(); updateMuteUI(); updateVolumeUI(); initAdvButton(); setTelemetryRange(telemetryRange);
             initVoice();
+            refreshDmdVersion();
             
             const btnSort = document.getElementById('btnSortToggle');
             if(btnSort) { btnSort.innerText = `SORT: ${sortMode}`; if(sortMode !== 'ADDED') btnSort.classList.add('active'); else btnSort.classList.remove('active'); }

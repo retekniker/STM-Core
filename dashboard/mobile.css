@@ -284,14 +284,12 @@ canvas {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .btn-attention,
     .warning-pulse,
     .blink-text,
     .full-text-blink,
     .status-pulse-online,
     .status-pulse-offline,
     .squad-number-glow,
-    .clan-member .player-name,
     .priority-person .truncate,
     .server-box.verified-admin-present::after,
     .clock-prediction-message {
