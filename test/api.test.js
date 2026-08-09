@@ -185,7 +185,7 @@ test("telemetry endpoint rejects unsupported ranges", async () => {
     );
     assert.deepEqual(
         response.body.allowedRanges,
-        ["30m", "2h", "6h", "12h", "24h", "48h"]
+        ["30m", "2h", "6h", "12h", "24h", "48h", "7d"]
     );
 });
 
@@ -222,6 +222,55 @@ test("telemetry endpoint supports 24h and 48h overview windows", async () => {
     assert.ok(Date.parse(calls[1].before) - Date.parse(calls[1].after) >= 172799950);
 });
 
+
+test("telemetry endpoint uses bounded representative buckets for the 7d inspector", async () => {
+    let rawReads = 0;
+    const bucketReads = [];
+    const now = Date.now();
+    const api = new ApiServer({
+        stateEngine: {
+            getAll: () => [{ id: "EU1" }],
+            get: () => null
+        },
+        historyRepository: {
+            async getServerSnapshotsBetween() {
+                rawReads += 1;
+                return [];
+            },
+            async getServerSnapshotsForTelemetryBuckets(options) {
+                bucketReads.push(options);
+                return [{
+                    serverId: "EU1",
+                    timestamp: new Date(now - 1000).toISOString(),
+                    success: true,
+                    players: 20,
+                    maxPlayers: 64,
+                    ping: 24,
+                    sourceBucketIndex: 0,
+                    sourceSamples: 120,
+                    successfulSamples: 120
+                }];
+            },
+            async getEvents() { return []; }
+        }
+    });
+    const response = createResponse();
+
+    await getTelemetryHandler(api)(
+        { query: { range: "7d", serverId: "EU1", maxPoints: "900" } },
+        response,
+        error => { throw error; }
+    );
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.range, "7d");
+    assert.equal(response.body.sourceSnapshotCount, 120);
+    assert.equal(response.body.returnedPointCount, 1);
+    assert.equal(rawReads, 0);
+    assert.equal(bucketReads.length, 1);
+    assert.equal(bucketReads[0].serverId, "EU1");
+    assert.ok(bucketReads[0].bucketMs >= 60 * 60 * 1000);
+});
 test("telemetry endpoint supports custom raw window and metadata", async () => {
     const from = "2026-07-28T10:00:00.000Z";
     const to = "2026-07-28T10:30:00.000Z";

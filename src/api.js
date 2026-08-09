@@ -343,7 +343,7 @@ class ApiServer {
                     const effectiveResolution = resolution === "auto"
                         ? "overview"
                         : resolution;
-                    const defaultMaximumPoints = range === "24h" || range === "48h"
+                    const defaultMaximumPoints = ["24h", "48h", "7d"].includes(range)
                         ? this.telemetryHistory.overviewMaximumPoints
                         : this.telemetryHistory.maximumPoints;
                     const maximumPoints = this.telemetryHistory
@@ -379,17 +379,30 @@ class ApiServer {
                     const serverIds = requestedServerId
                         ? [requestedServerId]
                         : knownServerIds;
+                    const useBucketedOverview =
+                        effectiveResolution === "overview" &&
+                        requestedDuration > TelemetryHistory.RANGE_MS["48h"] &&
+                        typeof this.historyRepository.getServerSnapshotsForTelemetryBuckets === "function";
+                    const overviewBucketMs = this.telemetryHistory.getBucketMs(
+                        requestedDuration,
+                        Math.max(1, Math.floor(maximumPoints / 6))
+                    );
+                    const readSnapshots = serverId => useBucketedOverview
+                        ? this.historyRepository.getServerSnapshotsForTelemetryBuckets({
+                            serverId,
+                            after,
+                            before,
+                            bucketMs: overviewBucketMs
+                        })
+                        : this.historyRepository.getServerSnapshotsBetween({
+                            serverId,
+                            after,
+                            before
+                        });
                     const [snapshotGroups, events] =
                         await Promise.all([
                             Promise.all(
-                                serverIds.map(serverId =>
-                                    this.historyRepository
-                                        .getServerSnapshotsBetween({
-                                            serverId,
-                                            after,
-                                            before
-                                        })
-                                )
+                                serverIds.map(readSnapshots)
                             ),
                             this.historyRepository.getEvents({
                                 type: "SERVER_RESTART",
@@ -419,7 +432,10 @@ class ApiServer {
                         (total, item) => total + item.points.length,
                         0
                     );
-                    const sourceSnapshotCount = snapshots.length;
+                    const sourceSnapshotCount = series.reduce(
+                        (total, item) => total + item.metadata.sourceSnapshotCount,
+                        0
+                    );
                     const bucketSizeMs = series.reduce(
                         (maximum, item) => Math.max(
                             maximum,

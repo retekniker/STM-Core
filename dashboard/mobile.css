@@ -291,8 +291,10 @@ canvas {
     .status-pulse-online,
     .status-pulse-offline,
     .squad-number-glow,
-    .clan-member .truncate,
-    .priority-person .truncate {
+    .clan-member .player-name,
+    .priority-person .truncate,
+    .server-box.verified-admin-present::after,
+    .clock-prediction-message {
         animation: none !important;
     }
 

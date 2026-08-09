@@ -6,9 +6,16 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-**Latest stable release: v0.8.16**
+**Latest stable release: v0.8.17**
 
-v0.8.16 adds a focused Windows app-mode launcher, locally remembered chart ranges, a bounded seven-day Active Personnel History view, clearer log controls, and responsive dashboard sizing.
+v0.8.17 restores the first-start `INIT.COM` attention signal, expands Activity Feed Zoom,
+adds a clock-to-Restart-Prediction display cycle, tightens verified-administrator alerts,
+restores JSOC player emphasis and welcomes, and adds a bounded seven-day Telemetry
+Inspector range. v0.8.16 introduced the local Windows app-mode/tray experience,
+per-device remembered chart ranges, seven-day Active Personnel History, clearer
+Activity Feed and Restart Log controls, responsive dashboard sizing and the
+installable mobile PWA. See [CHANGELOG.md](CHANGELOG.md) for the full release
+history.
 
 [![Downloads](https://img.shields.io/github/downloads/retekniker/STM-Core/total?style=for-the-badge&logo=github&label=Downloads)](https://github.com/retekniker/STM-Core/releases)
 
@@ -19,13 +26,14 @@ STM Core monitors Arma 3 servers directly through GameDig/A2S without depending 
 - Monitors multiple Arma 3 servers
 - Tracks server status, map, latency and player count
 - Displays current player lists
-- Recognizes 77th JSOC members by official rank prefixes and clan identifiers
-- Highlights important personnel and shows an `ADMIN ON SERVER` presence alert
-- Uses a red-white alarm animation for confirmed priority personnel
+- Recognizes 77th JSOC members by official rank prefixes and clan identifiers, pulses their names and shows a DMD welcome when they join
+- Shows `ADMIN ON SERVER` and a subtle white-red server-frame pulse only for explicitly verified administrator callsigns; a displayed rank alone is never sufficient
 - Shows readable restart flags with enlarged hover targets on telemetry charts
-- Opens Activity Feed in a responsive inspector with the same live entries and Restart Log
+- Opens Activity Feed in a large responsive inspector with the same live entries and Restart Log
 - Separates Activity Feed and Restart Log clearing while preserving telemetry, restart markers, uptime and chart history
-- Improves the readability of blinking Asset Saturation status labels
+- Provides locally remembered chart ranges, including seven-day Active Personnel History and seven-day enlarged server telemetry
+- Cycles each EU server clock through elapsed time, restart time and a DMD-style Restart Prediction view
+- Draws attention to `INIT.COM` while first-start voice communications remain in standby
 - Detects player joins and disconnects
 - Detects server restarts through Steam ID rotation
 - Detects confirmed offline-to-online restart cycles
@@ -34,9 +42,10 @@ STM Core monitors Arma 3 servers directly through GameDig/A2S without depending 
 - Hydrates each Watchdog from exact confirmed SQLite restart history when the latest restart is less than eight hours old, without creating a restart event
 - Continues monitoring after the browser is closed
 - Provides live dashboard updates through REST API and WebSocket
-- Windows system tray controller
-- Optional automatic startup with Windows
+- Windows system tray controller, optional autostart and maximized browser app-mode dashboard (Chrome or Edge, with a normal-browser fallback)
 - Linux background service through systemd
+- Installable mobile PWA for supported Android and iOS browsers when served from a trusted HTTPS origin
+- Responsive dashboard sizing for desktops, laptops, tablets and phones
 - Local configuration and data storage
 
 ## Windows installation
@@ -47,9 +56,9 @@ Download the latest Windows installer:
 
 Run the downloaded installer:
 
-v0.8.16 release asset:
+v0.8.17 release asset:
 
-`STM-Core-Setup-0.8.16-x64.exe`
+`STM-Core-Setup-0.8.17-x64.exe`
 
 Installing a newer version over an existing installation preserves the database and configuration.
 
@@ -63,12 +72,16 @@ The Windows system tray icon provides:
 - Current running status
 - Exit STM Core
 
+Opening STM Core from the installer, an optional desktop/Start Menu shortcut, or
+the tray uses the same local dashboard. Closing that window does not stop the tray
+or the local collector.
+
 ## Linux installation
 
-Self-contained v0.8.16 release assets:
+Self-contained v0.8.17 release assets:
 
-- `STM-Core-0.8.16-linux-x64.tar.gz`
-- `STM-Core-0.8.16-linux-x64.tar.gz.sha256`
+- `STM-Core-0.8.17-linux-x64.tar.gz`
+- `STM-Core-0.8.17-linux-x64.tar.gz.sha256`
 
 Install or update STM Core with:
 
@@ -83,7 +96,7 @@ installs application code directly from `main`.
 To install a specific published stable release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.16
+curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.17
 ```
 
 Downgrading may require a matching database backup because database downgrade
@@ -122,7 +135,19 @@ The dashboard displays live server status, connected players, restart clocks, ac
 
 Browser-based voice notifications must be enabled from the dashboard after opening the page.
 
-## Manual installation
+## Mobile PWA
+
+STM Core includes a responsive Progressive Web App manifest, icons and a safe
+offline shell. On a supported phone or tablet, open the `/community/` dashboard
+from a trusted HTTPS address, sign in if the hosting environment requires it, and
+choose the browser's **Install app** or **Add to Home Screen** command.
+
+The PWA is a view of the STM Core instance that serves it. Continuous collection
+and historical storage remain on that STM Core computer or server; the phone does
+not need to stay open. STM Core does not publish a private installation to the
+internet automatically.
+
+## Run from source
 
 Requirements:
 

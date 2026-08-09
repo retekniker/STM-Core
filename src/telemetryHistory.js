@@ -4,10 +4,11 @@ const RANGE_MS = Object.freeze({
     "6h": 6 * 60 * 60 * 1000,
     "12h": 12 * 60 * 60 * 1000,
     "24h": 24 * 60 * 60 * 1000,
-    "48h": 48 * 60 * 60 * 1000
+    "48h": 48 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000
 });
 
-const MAX_RANGE_MS = RANGE_MS["48h"];
+const MAX_RANGE_MS = RANGE_MS["7d"];
 const MAX_RAW_RANGE_MS = 60 * 60 * 1000;
 
 class TelemetryHistory {
@@ -92,6 +93,32 @@ class TelemetryHistory {
             .map(snapshot => this.createRawPoint(snapshot));
     }
 
+    getSourceSummary(snapshots) {
+        const buckets = new Map();
+        snapshots.forEach(snapshot => {
+            const samples = Number(snapshot.sourceSamples);
+            const successful = Number(snapshot.successfulSamples);
+            if (!Number.isFinite(samples) || !Number.isFinite(successful) || snapshot.sourceBucketIndex === undefined) return;
+            const key = `${snapshot.serverId || ''}:${snapshot.sourceBucketIndex}`;
+            if (!buckets.has(key)) buckets.set(key, { samples, successful });
+        });
+
+        if (buckets.size > 0) {
+            return Array.from(buckets.values()).reduce(
+                (total, bucket) => ({
+                    samples: total.samples + bucket.samples,
+                    successful: total.successful + bucket.successful
+                }),
+                { samples: 0, successful: 0 }
+            );
+        }
+
+        return {
+            samples: snapshots.length,
+            successful: snapshots.filter(snapshot => snapshot.success).length
+        };
+    }
+
     getBucketRepresentatives(bucket, restartTimes) {
         const snapshots = bucket.snapshots;
         const selected = new Set([0, snapshots.length - 1]);
@@ -145,15 +172,15 @@ class TelemetryHistory {
         const playerCounts = successful
             .map(item => Number(item.snapshot.players))
             .filter(Number.isFinite);
-        const successes = snapshots.filter(snapshot => snapshot.success).length;
-        const successRate = successes / snapshots.length;
+        const source = this.getSourceSummary(snapshots);
+        const successRate = source.samples > 0 ? source.successful / source.samples : 0;
         const bucketStatus = successRate === 1
             ? "ONLINE"
             : successRate === 0
                 ? "OFFLINE"
                 : "DEGRADED";
         const summary = {
-            samples: snapshots.length,
+            samples: source.samples,
             successRate: Number(successRate.toFixed(3)),
             minPing: pings.length > 0 ? Math.min(...pings) : null,
             maxPing: pings.length > 0 ? Math.max(...pings) : null,
@@ -341,7 +368,7 @@ class TelemetryHistory {
                 metadata: {
                     resolution,
                     bucketSizeMs,
-                    sourceSnapshotCount: serverSnapshots.length,
+                    sourceSnapshotCount: this.getSourceSummary(serverSnapshots).samples,
                     returnedPointCount: points.length,
                     truncated
                 }

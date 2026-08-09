@@ -200,7 +200,7 @@ test("ZOOM and CLOSE share an idempotent expanded state and stop propagation", (
     });
     const elements = Object.fromEntries([
         "activityFeedPanel", "activityFeedZoom",
-        "activityFeedInspector", "activityFeedInspectorClose",
+        "activityFeedInspector", "activityFeedInspectorZoom", "activityFeedInspectorClose",
         "activityClearCancel", "activityClearConfirm"
     ].map(id => [id, element(id)]));
     const originalDocument = global.document;
@@ -221,6 +221,8 @@ test("ZOOM and CLOSE share an idempotent expanded state and stop propagation", (
         assert.equal(attributes.get("activityFeedInspector:aria-hidden"), "false");
         assert.equal(attributes.get("activityFeedPanel:aria-expanded"), "true");
         assert.equal(attributes.get("activityFeedZoom:aria-expanded"), "true");
+        handlers["activityFeedInspectorZoom:click"]({ stopPropagation() { stopped += 1; } });
+        assert.equal(attributes.get("activityFeedInspectorZoom:aria-pressed"), "true");
         controller.setActivityFeedExpanded(true);
         assert.equal(controller.mode, "restart");
         handlers["activityFeedInspectorClose:click"]({ stopPropagation() { stopped += 1; } });
@@ -229,7 +231,7 @@ test("ZOOM and CLOSE share an idempotent expanded state and stop propagation", (
         assert.equal(attributes.get("activityFeedPanel:aria-expanded"), "false");
         assert.equal(controller.mode, "restart");
         controller.setActivityFeedExpanded(false);
-        assert.equal(stopped, 2);
+        assert.equal(stopped, 3);
     } finally {
         global.document = originalDocument;
     }
@@ -315,6 +317,8 @@ test("enlarged log actions keep clear controls left and Close on the right", () 
     assert.ok(header.indexOf("activityFeedInspectorTitle") < header.indexOf("data-log-clear-all"));
     assert.ok(header.indexOf("data-log-clear-all") < header.indexOf("activity-feed-actions"));
     assert.ok(header.indexOf("data-restart-clear") < header.indexOf("activity-feed-actions"));
+    assert.ok(header.indexOf("activityFeedInspectorZoom") < header.indexOf("data-activity-restart-toggle"));
     assert.ok(header.indexOf("data-activity-restart-toggle") < header.indexOf("activityFeedInspectorClose"));
     assert.doesNotMatch(header, /RESTORE|activityFeedRestore/);
+    assert.match(html, /\.activity-feed-inspector \{ width: 92vw; height: 90vh;/);
 });

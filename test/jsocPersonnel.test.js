@@ -6,6 +6,7 @@ const {
     JSOC_PRIORITY_CALLSIGNS,
     normalizeJsocCallsign,
     isJsocMemberName,
+    isVerifiedAdminName,
     isJsocPriorityPerson,
     collectPriorityPersonnel
 } = require("../dashboard/jsocPersonnel");
@@ -47,13 +48,13 @@ test("priority callsigns normalize exact rank and trailing clan tags", () => {
     assert.equal(isJsocPriorityPerson("Helpful Knight Support"), false);
 });
 
-test("controlled command ranks trigger priority while ordinary ranks do not", () => {
-    for (const rank of ["Amb.", "Cpt.", "Maj.", "Col.", "2Lt.", "1Lt.", "Lt.", "Capt.", "Gen."]) {
-        assert.equal(isJsocPriorityPerson(`[${rank}] Example`), true, rank);
+test("displayed rank alone never verifies an administrator", () => {
+    for (const rank of ["Amb.", "Cpt.", "Maj.", "Col.", "2Lt.", "1Lt.", "Lt.", "Capt.", "Gen.", "Pfc."]) {
+        assert.equal(isVerifiedAdminName(`[${rank}] Seawall`), false, rank);
+        assert.equal(isJsocPriorityPerson(`[${rank}] Example`), false, rank);
     }
-    for (const rank of ["Pvt.", "Pfc.", "Spc.", "Cpl.", "Sgt.", "SSgt.", "SSG.", "SFC."]) {
-        assert.equal(isJsocPriorityPerson(`[${rank}] Lycoris`), false, rank);
-    }
+    assert.equal(isVerifiedAdminName("[Col.] Knight"), true);
+    assert.equal(isJsocPriorityPerson("MadTrap"), true);
 });
 
 test("ADMIN ON SERVER is deduplicated, sorted and follows server movement", () => {
@@ -70,12 +71,19 @@ test("ADMIN ON SERVER is deduplicated, sorted and follows server movement", () =
     assert.deepEqual(collectPriorityPersonnel({ EU1: { list: [] }, EU2: { list: [] }, EU3: { list: [] } }), []);
 });
 
-test("priority display uses textContent and red-white priority styling wins", () => {
-    const malicious = '[Cpt.] <img src=x onerror="globalThis.pwned=1">';
-    assert.equal(collectPriorityPersonnel({ EU1: { list: [{ name: malicious }] } })[0].name, malicious);
+test("verified-admin display uses textContent and red-white priority styling wins", () => {
+    assert.deepEqual(collectPriorityPersonnel({ EU1: { list: [{ name: "[Cpt.] Seawall" }] } }), []);
     assert.match(dashboard, /line\.textContent = `\$\{person\.name\} \/\/ \$\{person\.serverId\}`/);
     assert.match(dashboard, /\.player-row\.priority-person \.truncate/);
     assert.match(dashboard, /priority-person-flash 1\.2s steps\(1, end\) infinite !important/);
     assert.match(dashboard, /0%, 49\.99% \{ color: #ff3030/);
     assert.match(dashboard, /50%, 100% \{ color: #ffffff/);
+});
+
+test("JSOC joins welcome the player and verified admins pulse only their server frame", () => {
+    assert.match(dashboard, /const isClan = isJsocMemberName\(pName\)/);
+    assert.match(dashboard, /WITAMY, \$\{pName\} \/\/ JSOC UPLINK ESTABLISHED/);
+    assert.match(dashboard, /player-row\.clan-member \.player-name/);
+    assert.match(dashboard, /some\(player => isJsocPriorityPerson\(player\.name\)\)/);
+    assert.match(dashboard, /classList\.toggle\('verified-admin-present', hasVerifiedAdmin\)/);
 });

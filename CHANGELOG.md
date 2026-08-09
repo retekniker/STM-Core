@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.8.17
+
+### Added
+
+- Adds a third EU1/EU2/EU3 clock state that shows the current time before scrolling the backend Restart Prediction details in a DMD-style presentation.
+- Adds a subtle white-red frame pulse on the player list of a server containing an explicitly verified administrator.
+- Adds a JSOC join welcome in the top DMD with the player's displayed name.
+- Adds a seven-day range to the enlarged Telemetry Inspector.
+
+### Changed
+
+- Expands Activity Feed Zoom to approximately 90% of the viewport while preserving the compact panel and the established clear-action semantics.
+- Restores the JSOC player-name pulse and keeps reduced-motion preferences respected.
+- Optimizes seven-day telemetry reads with server-filtered SQLite buckets that preserve first/last samples, extrema and status transitions before final response bounding.
+- Refreshes the public README for current Windows, Linux, app-mode/tray and mobile PWA usage.
+
+### Fixed
+
+- Restores the visible `INIT.COM` blink whenever the first-start voice-communications standby message is armed, until the operator activates it.
+- Stops rank prefixes from being treated as proof of administrator identity. `Seawall` and any other unverified ranked player no longer trigger administrator alerts, while explicitly verified callsigns retain their alerts.
+
+### Compatibility and safety
+
+- Preserves the v0.8.16 Windows per-user installer, local backend, tray, autostart, shortcuts, app-mode browser fallback and persistent data directories.
+- Preserves existing chart ranges, responsive desktop/tablet/phone layouts, Activity Feed and Restart Log clearing behavior, SQLite history and server configuration.
+- Adds no new credential storage and makes no changes to private proxy or authentication deployments.
+
+### Verification
+
+- Adds regression coverage for ranked non-admin and verified-admin classification, JSOC presentation, `INIT.COM`, Activity Feed Zoom, the three-state clock and the bounded seven-day telemetry path.
+- Verifies the complete Node.js test suite and the Linux and Windows release builds from the tagged release commit.
+
 ## 0.8.16
 
 ### Added
