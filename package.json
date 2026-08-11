@@ -1,6 +1,6 @@
 {
   "name": "stm-core",
-  "version": "0.8.18",
+  "version": "0.8.19",
   "description": "Self-hosted Arma 3 server telemetry and monitoring dashboard",
   "main": "src/index.js",
   "scripts": {

@@ -84,9 +84,12 @@ test("restart navigation and double-click focus use a 45 minute window", () => {
         { timeKnown: false, observationWindow: { start: first, end: second } }
     ]);
 
-    assert.equal(controller.navigateRestart(1), Date.parse(second));
-    assert.equal(controller.viewStart, Date.parse(second) - 15 * 60 * 1000);
-    assert.equal(controller.viewEnd, Date.parse(second) + 30 * 60 * 1000);
+    const before = controller.snapshot();
+    assert.equal(controller.navigateRestart(1), null);
+    assert.deepEqual(controller.snapshot(), before);
+    assert.equal(controller.navigateRestart(-1), Date.parse(first));
+    assert.equal(controller.viewStart, Date.parse(first) - 15 * 60 * 1000);
+    assert.equal(controller.viewEnd, Date.parse(first) + 30 * 60 * 1000);
     assert.equal(controller.needsDetail(), true);
 });
 

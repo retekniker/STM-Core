@@ -142,6 +142,10 @@
 
         navigateRestart(direction) {
             if (!this.restarts.length) return null;
+            if (this.restartCursor >= 0) {
+                if (direction < 0 && this.restartCursor === 0) return null;
+                if (direction >= 0 && this.restartCursor === this.restarts.length - 1) return null;
+            }
             if (this.restartCursor < 0) {
                 this.restartCursor = direction < 0
                     ? this.restarts.findLastIndex(marker => this.restartTime(marker) < this.viewEnd - 1000)

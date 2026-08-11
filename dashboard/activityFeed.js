@@ -12,11 +12,13 @@
                 try { return window.localStorage || null; } catch (_) { return null; }
             })();
             this.renderRestartEntry = options.renderRestartEntry || (() => "");
+            this.formatRestartExport = options.formatRestartExport || (event => JSON.stringify(event, null, 2));
             this.entries = [];
             this.restartEvents = [];
             this.mode = "activity";
             this.clearedAt = null;
             this.restartClearedAt = this.readRestartClearedAt();
+            this.removedRestartIds = this.readRemovedRestartIds();
             this.clearScope = "activity";
             this.clearInFlight = false;
             this.initialized = false;
@@ -32,11 +34,23 @@
             catch (_) { return null; }
         }
 
+        readRemovedRestartIds() {
+            try {
+                const value = JSON.parse(this.storage?.getItem("stm_restart_log_removed_ids") || "[]");
+                return new Set(Array.isArray(value) ? value : []);
+            } catch (_) { return new Set(); }
+        }
+
+        restartEventId(event) {
+            return String(event.id || `${event.serverId || "UNKNOWN"}:${event.timestamp || event.data?.restartAt || "UNKNOWN"}`);
+        }
+
         restartEventTime(event) {
             return Date.parse(event.timestamp || event.data?.restartAt);
         }
 
         isRestartVisible(event) {
+            if (this.removedRestartIds.has(this.restartEventId(event))) return false;
             if (!this.restartClearedAt) return true;
             const timestamp = this.restartEventTime(event);
             return Number.isFinite(timestamp) && timestamp > Date.parse(this.restartClearedAt);
@@ -89,6 +103,12 @@
                 button.addEventListener("click", event => {
                     event.stopPropagation(); this.openConfirmation("restart");
                 })
+            );
+            document.querySelectorAll("[data-activity-export]").forEach(button =>
+                button.addEventListener("click", event => { event.stopPropagation(); this.exportActivity(); })
+            );
+            document.querySelectorAll("[data-restart-export-all]").forEach(button =>
+                button.addEventListener("click", event => { event.stopPropagation(); this.exportAllRestarts(); })
             );
             this.byId("activityClearCancel")?.addEventListener("click", () => this.closeConfirmation());
             this.byId("activityClearConfirm")?.addEventListener("click", () => this.confirmClear());
@@ -185,6 +205,18 @@
                     const row = document.createElement("div");
                     row.className = "border-l-2 border-red-500 bg-red-950/30 px-3 py-2 mb-1";
                     row.innerHTML = this.renderRestartEntry(event, event.data || {});
+                    const actions = document.createElement("div");
+                    actions.className = "flex gap-2 justify-end mt-2";
+                    const exportButton = document.createElement("button");
+                    exportButton.className = "btn-system-led";
+                    exportButton.textContent = "EXPORT TXT";
+                    exportButton.addEventListener("click", () => this.exportRestart(event));
+                    const removeButton = document.createElement("button");
+                    removeButton.className = "btn-system-led-red";
+                    removeButton.textContent = "REMOVE";
+                    removeButton.addEventListener("click", () => this.removeRestart(event));
+                    actions.append(exportButton, removeButton);
+                    row.appendChild(actions);
                     box.appendChild(row);
                 }
                 box.scrollTop = 0;
@@ -208,6 +240,8 @@
             document.querySelectorAll("[data-restart-clear]").forEach(button => {
                 button.classList.toggle("hidden", !restart);
             });
+            document.querySelectorAll("[data-activity-export]").forEach(button => button.classList.toggle("hidden", restart));
+            document.querySelectorAll("[data-restart-export-all]").forEach(button => button.classList.toggle("hidden", !restart));
             this.renderActivity();
             if (restart) this.loadRestartLog();
         }
@@ -215,6 +249,36 @@
         toggleMode() {
             this.mode = this.mode === "activity" ? "restart" : "activity";
             this.render();
+        }
+
+        downloadText(filename, text) {
+            const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 0);
+        }
+
+        activityExportText() {
+            const lines = this.entries.map(entry => {
+                const content = (entry.segments || []).map(segment => String(segment.text ?? "")).join(" ").trim();
+                return `[${entry.timestamp || "UNKNOWN"}] ${content}`;
+            });
+            return `STM CORE ACTIVITY FEED\nEXPORTED: ${new Date().toISOString()}\nENTRIES: ${lines.length}\n\n${lines.join("\n")}`;
+        }
+
+        exportActivity() { this.downloadText(`stm-activity-feed-${Date.now()}.txt`, this.activityExportText()); }
+        exportRestart(event) { this.downloadText(`stm-restart-${this.restartEventId(event).replace(/[^a-z0-9_-]+/gi, "-")}.txt`, this.formatRestartExport(event)); }
+        exportAllRestarts() {
+            const body = this.restartEvents.map((event, index) => `=== RESTART ${index + 1} ===\n${this.formatRestartExport(event)}`).join("\n\n");
+            this.downloadText(`stm-restart-log-${Date.now()}.txt`, `STM CORE RESTART LOG\nEXPORTED: ${new Date().toISOString()}\nENTRIES: ${this.restartEvents.length}\n\n${body}`);
+        }
+        removeRestart(event) {
+            this.removedRestartIds.add(this.restartEventId(event));
+            try { this.storage?.setItem("stm_restart_log_removed_ids", JSON.stringify([...this.removedRestartIds])); } catch (_) {}
+            this.restartEvents = this.restartEvents.filter(item => this.restartEventId(item) !== this.restartEventId(event));
+            this.renderRestart();
         }
 
         async loadRestartLog() {

@@ -316,6 +316,19 @@ test("dashboard exposes backend status and prediction presentations", () => {
     );
 });
 
+test("0.8.19 roster and Asset Saturation controls expose the requested defaults", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    assert.match(html, /SORT: ONLINE/);
+    assert.match(html, /localStorage\.getItem\('jsoc_sort_mode'\) \|\| 'ONLINE'/);
+    assert.doesNotMatch(html, /DRAFT UNLINKED/);
+    assert.match(html, /selectedRosterPlayers = new Set/);
+    assert.match(html, /event\.ctrlKey \|\| event\.metaKey/);
+    assert.match(html, /let assetSaturationMetric = "TOTAL"/);
+    assert.match(html, /serverSamples\?\.\[assetSaturationMetric\]/);
+    assert.match(html, /asset-saturation-selected/);
+    assert.match(html, /totalPlayers \+ " — " \+/);
+});
+
 test("new monitoring session ignores historical uptime and accepts its first confirmed restart", () => {
     const harness = createRestartClockHarness("AUTO");
 
