@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.8.19
+
+### Added
+
+- Adds readable TXT exports for the current Activity Feed, the complete Restart Log and individual restart records with all recorded evidence.
+- Adds persistent per-entry removal in Restart Log without deleting authoritative restart or telemetry history.
+- Adds Ctrl/Cmd multi-selection in the live roster so one Add action can assign several players to the selected squad.
+- Adds EU1, EU2, EU3 and Total selectors for Asset Saturation history, with Total selected by default.
+
+### Changed
+
+- Shows only the predicted restart time in the third EU server-clock state; cycle and confidence details move to the top DMD.
+- Keeps compact Activity Feed controls to Export, Zoom and Restart Log, while the enlarged view exposes Clear All, Export and Close without Zoom.
+- Shows player count to the left of saturation percentage and defaults fresh roster sorting to Online while preserving later choices.
+- Makes Telemetry LIVE active only at the live edge and makes restart navigation inert at either end of the list.
+- Removes Draft Unlinked.
+
+### Compatibility and verification
+
+- Preserves JSOC pulsing, first-run INIT COMM attention, runtime DMD versioning, roster join/leave DMD messages, admin alerts and framing, and weekly history ranges.
+- Retains authoritative SQLite telemetry and restart records when visible log entries are cleared or removed.
+
 ## 0.8.17
 
 ### Added

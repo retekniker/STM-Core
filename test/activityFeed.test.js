@@ -316,9 +316,42 @@ test("enlarged log actions keep clear controls left and Close on the right", () 
     );
     assert.ok(header.indexOf("activityFeedInspectorTitle") < header.indexOf("data-log-clear-all"));
     assert.ok(header.indexOf("data-log-clear-all") < header.indexOf("activity-feed-actions"));
-    assert.ok(header.indexOf("data-restart-clear") < header.indexOf("activity-feed-actions"));
-    assert.ok(header.indexOf("activityFeedInspectorZoom") < header.indexOf("data-activity-restart-toggle"));
+    assert.ok(header.indexOf("data-activity-export") < header.indexOf("activity-feed-actions"));
+    assert.ok(header.indexOf("data-restart-export-all") < header.indexOf("activity-feed-actions"));
     assert.ok(header.indexOf("data-activity-restart-toggle") < header.indexOf("activityFeedInspectorClose"));
+    assert.doesNotMatch(header, /activityFeedInspectorZoom|data-restart-clear/);
     assert.doesNotMatch(header, /RESTORE|activityFeedRestore/);
     assert.match(html, /\.activity-feed-inspector \{ width: 92vw; height: 90vh;/);
+});
+
+test("Activity Feed and Restart Log exports contain current readable data", () => {
+    const downloads = [];
+    const controller = new ActivityFeedController({
+        WebSocket: null,
+        formatRestartExport: event => `SERVER: ${event.serverId}\nALL: ${JSON.stringify(event)}`
+    });
+    controller.downloadText = (filename, text) => downloads.push({ filename, text });
+    controller.entries = [{ timestamp: "2026-08-11T10:00:00.000Z", segments: [{ text: "EU1" }, { text: "JOINED" }] }];
+    controller.restartEvents = [{ serverId: "EU2", timestamp: "2026-08-11T11:00:00.000Z", data: { confidence: "CONFIRMED" } }];
+    controller.exportActivity();
+    controller.exportAllRestarts();
+    controller.exportRestart(controller.restartEvents[0]);
+    assert.match(downloads[0].text, /EU1 JOINED/);
+    assert.match(downloads[1].text, /SERVER: EU2/);
+    assert.match(downloads[2].text, /CONFIRMED/);
+});
+
+test("removing one restart persists only its identifier", () => {
+    const values = new Map();
+    const storage = { getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value) };
+    const controller = new ActivityFeedController({ storage, WebSocket: null });
+    controller.renderRestart = () => {};
+    const first = { id: 1, serverId: "EU1", timestamp: "2026-08-11T10:00:00.000Z" };
+    const second = { id: 2, serverId: "EU2", timestamp: "2026-08-11T11:00:00.000Z" };
+    controller.restartEvents = [first, second];
+    controller.removeRestart(first);
+    assert.deepEqual(controller.restartEvents, [second]);
+    assert.deepEqual(JSON.parse(values.get("stm_restart_log_removed_ids")), ["1"]);
+    assert.equal(controller.isRestartVisible(first), false);
+    assert.equal(controller.isRestartVisible(second), true);
 });
