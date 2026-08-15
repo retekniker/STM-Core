@@ -321,6 +321,9 @@ async function start() {
             historyRepository.getEvents({
                 serverId: server.id,
                 type: "SERVER_RESTART",
+                after: new Date(
+                    Date.now() - restartPrediction.historyWindowMs
+                ).toISOString(),
                 limit: 500
             })
         ]);
