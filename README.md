@@ -6,11 +6,9 @@
 
 Self-hosted Arma 3 server telemetry, event history and monitoring dashboard for **Linux and Windows**.
 
-**Latest stable release: v0.8.19**
+**Latest stable release: v0.8.20**
 
-v0.8.19 streamlines restart prediction clocks, expands Activity Feed and Restart Log
-exports, adds roster multi-selection and selectable Asset Saturation history, and tightens
-Telemetry navigation while preserving JSOC/admin warnings and seven-day history.
+v0.8.20 replaces restart prediction with a seven-day, per-server dominant-cycle model. It uses only exact confirmed restart times, rejects isolated outliers, detects sustained schedule changes and avoids inventing a shorter restart cycle.
 v0.8.16 introduced the local Windows app-mode/tray experience,
 per-device remembered chart ranges, seven-day Active Personnel History, clearer
 Activity Feed and Restart Log controls, responsive dashboard sizing and the
@@ -56,9 +54,9 @@ Download the latest Windows installer:
 
 Run the downloaded installer:
 
-v0.8.19 release asset:
+v0.8.20 release asset:
 
-`STM-Core-Setup-0.8.19-x64.exe`
+`STM-Core-Setup-0.8.20-x64.exe`
 
 Installing a newer version over an existing installation preserves the database and configuration.
 
@@ -78,10 +76,10 @@ or the local collector.
 
 ## Linux installation
 
-Self-contained v0.8.19 release assets:
+Self-contained v0.8.20 release assets:
 
-- `STM-Core-0.8.19-linux-x64.tar.gz`
-- `STM-Core-0.8.19-linux-x64.tar.gz.sha256`
+- `STM-Core-0.8.20-linux-x64.tar.gz`
+- `STM-Core-0.8.20-linux-x64.tar.gz.sha256`
 
 Install or update STM Core with:
 
@@ -96,7 +94,7 @@ installs application code directly from `main`.
 To install a specific published stable release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.19
+curl -fsSL https://raw.githubusercontent.com/retekniker/STM-Core/main/install.sh | bash -s -- --version v0.8.20
 ```
 
 Downgrading may require a matching database backup because database downgrade

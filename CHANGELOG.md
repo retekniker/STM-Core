@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.20
+
+### Changed
+
+- Replaces restart prediction with a per-server, seven-day model based only on exact confirmed restart timestamps.
+- Selects a dominant cluster of direct restart intervals using a median representative interval and 4%/10-minute tolerance.
+- Detects a schedule change only after three consecutive matching intervals, while a single short or long interval remains an outlier.
+- Marks stale predictions unavailable instead of advancing an unobserved schedule into the future.
+
+### Verification
+
+- Adds regression coverage for stable cycles, jitter, short outliers, schedule changes, chaotic data, seven-day filtering, duplicate timestamps, stale data and EU independence.
+
 ## 0.8.19
 
 ### Added

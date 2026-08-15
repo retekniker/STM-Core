@@ -1,394 +1,251 @@
 class RestartPrediction {
 
     constructor(options = {}) {
-        this.minimumEvents = options.minimumEvents ?? 3;
-        this.minimumPredictionSamples =
-            options.minimumPredictionSamples ?? 3;
-        this.minimumCustomPredictionSamples =
-            options.minimumCustomPredictionSamples ?? 4;
-        this.minimumCustomCycleMs =
-            options.minimumCustomCycleMs ?? 4 * 60 * 60 * 1000;
-        this.maximumCustomCycleMs =
-            options.maximumCustomCycleMs ?? 12 * 60 * 60 * 1000;
-        this.maximumMultiple = options.maximumMultiple ?? 4;
-        this.maximumEvents = options.maximumEvents ?? 100;
+        this.minimumEvents = options.minimumEvents ?? 4;
+        this.minimumPredictionSamples = options.minimumPredictionSamples ?? 3;
+        this.maximumEvents = options.maximumEvents ?? 500;
+        this.historyWindowMs = options.historyWindowMs ?? 7 * 24 * 60 * 60 * 1000;
+        this.minimumIntervalMs = options.minimumIntervalMs ?? 60 * 1000;
         this.windowRatio = options.windowRatio ?? 0.04;
-        this.minimumWindowMs =
-            options.minimumWindowMs ?? 10 * 60 * 1000;
+        this.minimumWindowMs = options.minimumWindowMs ?? 10 * 60 * 1000;
+        this.scheduleChangeIntervals = options.scheduleChangeIntervals ?? 3;
         this.servers = new Map();
-        this.fitCache = new Map();
     }
 
     hydrate(serverId, events = []) {
         this.servers.set(serverId, []);
-        this.fitCache.delete(serverId);
-
-        for (const event of events) {
-            this.addEvent(serverId, event);
-        }
-
+        for (const event of events) this.addEvent(serverId, event);
         return this.getPrediction(serverId);
     }
 
     getExactRestart(event) {
         const data = event?.data || event || {};
-        let classification =
-            data.classification || event?.classification;
-        const restartAt =
-            data.restartAt || event?.restartAt;
+        let classification = data.classification || event?.classification;
+        const restartAt = data.restartAt || event?.restartAt;
         const reason = data.reason || event?.reason || null;
-        const previousSteamId =
-            data.previousSteamId ?? event?.previousSteamId;
-        const currentSteamId =
-            data.currentSteamId ?? event?.currentSteamId;
-        const legacyInstanceChange =
-            !classification &&
-            (
-                reason === "STEAM_ID_ROTATION" ||
-                (
-                    previousSteamId !== null &&
-                    previousSteamId !== undefined &&
-                    currentSteamId !== null &&
-                    currentSteamId !== undefined &&
-                    String(previousSteamId) !==
-                        String(currentSteamId)
-                )
-            );
+        const previousSteamId = data.previousSteamId ?? event?.previousSteamId;
+        const currentSteamId = data.currentSteamId ?? event?.currentSteamId;
+        const legacyInstanceChange = !classification && (
+            reason === "STEAM_ID_ROTATION" ||
+            (previousSteamId !== null && previousSteamId !== undefined &&
+                currentSteamId !== null && currentSteamId !== undefined &&
+                String(previousSteamId) !== String(currentSteamId))
+        );
 
-        if (legacyInstanceChange) {
-            classification = "PROCESS_RESTART";
-        }
-
-        if (
-            classification !== "PROCESS_RESTART" ||
-            data.timeKnown === false ||
-            !restartAt
-        ) {
-            return null;
-        }
+        if (legacyInstanceChange) classification = "PROCESS_RESTART";
+        if (classification !== "PROCESS_RESTART" || data.timeKnown === false || !restartAt) return null;
 
         const timestamp = Date.parse(restartAt);
-
-        if (!Number.isFinite(timestamp)) {
-            return null;
-        }
+        if (!Number.isFinite(timestamp)) return null;
 
         return {
             timestamp,
             restartAt: new Date(timestamp).toISOString(),
-            detectedAt:
-                data.detectedAt ||
-                event?.detectedAt ||
-                event?.timestamp ||
-                null,
+            detectedAt: data.detectedAt || event?.detectedAt || event?.timestamp || null,
             classification,
             reason
         };
     }
 
     addEvent(serverId, event) {
-        if (!serverId) {
-            throw new Error("Server id is required");
-        }
-
+        if (!serverId) throw new Error("Server id is required");
         const sample = this.getExactRestart(event);
-
-        if (!sample) {
-            return false;
-        }
+        if (!sample) return false;
 
         const samples = this.servers.get(serverId) || [];
-
-        if (
-            samples.some(existing =>
-                existing.timestamp === sample.timestamp
-            )
-        ) {
-            return false;
-        }
+        if (samples.some(existing => existing.timestamp === sample.timestamp)) return false;
 
         samples.push(sample);
-        samples.sort((left, right) =>
-            left.timestamp - right.timestamp
-        );
-
-        if (samples.length > this.maximumEvents) {
-            samples.splice(
-                0,
-                samples.length - this.maximumEvents
-            );
-        }
-
+        samples.sort((left, right) => left.timestamp - right.timestamp);
+        if (samples.length > this.maximumEvents) samples.splice(0, samples.length - this.maximumEvents);
         this.servers.set(serverId, samples);
-        this.fitCache.delete(serverId);
-
         return true;
     }
 
     getToleranceMs(cycleMs) {
-        return Math.max(
-            this.minimumWindowMs,
-            cycleMs * this.windowRatio
+        return Math.max(this.minimumWindowMs, cycleMs * this.windowRatio);
+    }
+
+    median(values = []) {
+        if (!values.length) return null;
+        const sorted = [...values].sort((left, right) => left - right);
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0
+            ? (sorted[middle - 1] + sorted[middle]) / 2
+            : sorted[middle];
+    }
+
+    round(value, digits = 3) {
+        const factor = 10 ** digits;
+        return Math.round(value * factor) / factor;
+    }
+
+    getWindowedSamples(serverId, now) {
+        const cutoff = now - this.historyWindowMs;
+        return (this.servers.get(serverId) || []).filter(sample =>
+            sample.timestamp >= cutoff && sample.timestamp <= now
         );
     }
 
-    getCandidates(samples) {
+    getIntervals(samples) {
+        const intervals = [];
+        let previous = null;
+
+        for (const sample of samples) {
+            if (!previous) {
+                previous = sample;
+                continue;
+            }
+
+            const durationMs = sample.timestamp - previous.timestamp;
+            if (!Number.isFinite(durationMs) || durationMs < this.minimumIntervalMs) continue;
+
+            intervals.push({ start: previous, end: sample, durationMs });
+            previous = sample;
+        }
+
+        return intervals;
+    }
+
+    getCluster(intervals, seedMs) {
+        let members = intervals.filter(interval =>
+            Math.abs(interval.durationMs - seedMs) <= this.getToleranceMs(seedMs)
+        );
+        let cycleMs = this.median(members.map(interval => interval.durationMs));
+        if (!Number.isFinite(cycleMs)) return null;
+
+        let toleranceMs = this.getToleranceMs(cycleMs);
+        members = intervals.filter(interval =>
+            Math.abs(interval.durationMs - cycleMs) <= toleranceMs
+        );
+        cycleMs = this.median(members.map(interval => interval.durationMs));
+        if (!Number.isFinite(cycleMs)) return null;
+
+        toleranceMs = this.getToleranceMs(cycleMs);
+        const meanDeviationMs = members.reduce((total, interval) =>
+            total + Math.abs(interval.durationMs - cycleMs), 0
+        ) / members.length;
+
+        return { cycleMs, toleranceMs, members, meanDeviationMs };
+    }
+
+    findDominantCluster(intervals) {
+        let best = null;
+        for (const interval of intervals) {
+            const cluster = this.getCluster(intervals, interval.durationMs);
+            if (!cluster) continue;
+            if (!best ||
+                cluster.members.length > best.members.length ||
+                (cluster.members.length === best.members.length &&
+                    cluster.meanDeviationMs < best.meanDeviationMs)) {
+                best = cluster;
+            }
+        }
+        return best;
+    }
+
+    getRecentScheduleChange(intervals, dominant) {
+        const recent = intervals.slice(-this.scheduleChangeIntervals);
+        if (recent.length < this.scheduleChangeIntervals) return null;
+
+        const cycleMs = this.median(recent.map(interval => interval.durationMs));
+        const toleranceMs = this.getToleranceMs(cycleMs);
+        if (!recent.every(interval => Math.abs(interval.durationMs - cycleMs) <= toleranceMs)) return null;
+
+        const changed = !dominant ||
+            Math.abs(cycleMs - dominant.cycleMs) > Math.max(toleranceMs, dominant.toleranceMs);
+        if (!changed) return null;
+
+        const meanDeviationMs = recent.reduce((total, interval) =>
+            total + Math.abs(interval.durationMs - cycleMs), 0
+        ) / recent.length;
+        return { cycleMs, toleranceMs, members: recent, meanDeviationMs, scheduleChanged: true };
+    }
+
+    getCycleKind(cycleMs) {
         const sixHours = 6 * 60 * 60 * 1000;
         const eightHours = 8 * 60 * 60 * 1000;
-        const candidates = [
-            { cycleMs: sixHours, kind: "STANDARD_6H" },
-            { cycleMs: eightHours, kind: "STANDARD_8H" }
-        ];
-        const customCycles = new Map();
-
-        for (let left = 0; left < samples.length; left += 1) {
-            for (
-                let right = left + 1;
-                right < samples.length;
-                right += 1
-            ) {
-                const difference =
-                    samples[right].timestamp -
-                    samples[left].timestamp;
-
-                for (
-                    let multiple = 1;
-                    multiple <= this.maximumMultiple;
-                    multiple += 1
-                ) {
-                    const cycleMs = difference / multiple;
-
-                    if (
-                        cycleMs < this.minimumCustomCycleMs ||
-                        cycleMs > this.maximumCustomCycleMs
-                    ) {
-                        continue;
-                    }
-
-                    const roundedCycleMs =
-                        Math.round(cycleMs / 60000) * 60000;
-                    customCycles.set(
-                        roundedCycleMs,
-                        {
-                            cycleMs: roundedCycleMs,
-                            kind: "CUSTOM"
-                        }
-                    );
-                }
-            }
-        }
-
-        customCycles.delete(sixHours);
-        customCycles.delete(eightHours);
-
-        return candidates.concat(
-            [...customCycles.values()]
-        );
+        if (Math.abs(cycleMs - sixHours) <= this.getToleranceMs(sixHours)) return "STANDARD_6H";
+        if (Math.abs(cycleMs - eightHours) <= this.getToleranceMs(eightHours)) return "STANDARD_8H";
+        return "CUSTOM";
     }
 
-    evaluateCandidate(samples, candidate) {
-        const toleranceMs =
-            this.getToleranceMs(candidate.cycleMs);
-        let best = null;
-
-        for (const anchor of samples) {
-            const slots = new Map();
-            const outliers = [];
-
-            for (const sample of samples) {
-                const cycles = Math.round(
-                    (sample.timestamp - anchor.timestamp) /
-                    candidate.cycleMs
-                );
-                const expected =
-                    anchor.timestamp +
-                    cycles * candidate.cycleMs;
-                const errorMs = Math.abs(
-                    sample.timestamp - expected
-                );
-
-                if (errorMs <= toleranceMs) {
-                    const candidateSample = {
-                        ...sample,
-                        cycleIndex: cycles,
-                        errorMs
-                    };
-                    const occupied = slots.get(cycles);
-
-                    if (
-                        !occupied ||
-                        candidateSample.errorMs <
-                            occupied.errorMs
-                    ) {
-                        if (occupied) {
-                            outliers.push(occupied);
-                        }
-                        slots.set(cycles, candidateSample);
-                    } else {
-                        outliers.push(candidateSample);
-                    }
-                } else {
-                    outliers.push(sample);
-                }
-            }
-
-            const inliers = [...slots.values()];
-            inliers.sort((left, right) =>
-                left.timestamp - right.timestamp
-            );
-            const totalErrorMs = inliers.reduce(
-                (sum, sample) => sum + sample.errorMs,
-                0
-            );
-
-            const intervalSamples = Math.max(
-                0,
-                inliers.length - 1
-            );
-            const meanErrorMs = inliers.length > 0
-                ? totalErrorMs / inliers.length
-                : Number.POSITIVE_INFINITY;
-            const fit = {
-                ...candidate,
-                anchor: anchor.timestamp,
-                toleranceMs,
-                inliers,
-                outliers,
-                intervalSamples,
-                meanErrorMs
-            };
-
-            if (!best || this.compareFits(fit, best) < 0) {
-                best = fit;
-            }
-        }
-
-        return best;
+    getConfidence(cluster, intervals, lastRestartAt, now) {
+        const quantity = Math.min(1, cluster.members.length / 5);
+        const consistency = Math.max(0, 1 - cluster.meanDeviationMs / cluster.toleranceMs);
+        const coverage = intervals.length ? cluster.members.length / intervals.length : 0;
+        const ageMs = Math.max(0, now - lastRestartAt);
+        const recency = Math.max(0, 1 - ageMs / (cluster.cycleMs * 2));
+        return this.round(quantity * 0.3 + consistency * 0.35 + coverage * 0.25 + recency * 0.1);
     }
 
-    compareFits(left, right) {
-        if (left.inliers.length !== right.inliers.length) {
-            return right.inliers.length - left.inliers.length;
-        }
-
-        if (left.intervalSamples !== right.intervalSamples) {
-            return right.intervalSamples - left.intervalSamples;
-        }
-
-        const leftStandard = left.kind === "CUSTOM" ? 0 : 1;
-        const rightStandard = right.kind === "CUSTOM" ? 0 : 1;
-
-        if (leftStandard !== rightStandard) {
-            return rightStandard - leftStandard;
-        }
-
-        return left.meanErrorMs - right.meanErrorMs;
-    }
-
-    findBestFit(samples) {
-        let best = null;
-
-        for (const candidate of this.getCandidates(samples)) {
-            const fit = this.evaluateCandidate(
-                samples,
-                candidate
-            );
-
-            if (!best || this.compareFits(fit, best) < 0) {
-                best = fit;
-            }
-        }
-
-        return best;
+    resultWithoutPrediction(serverId, eventCount, status) {
+        return {
+            status,
+            serverId,
+            eventCount,
+            sampleCount: 0,
+            confidence: 0,
+            cycleHours: null,
+            cycleKind: null,
+            predictedAt: null,
+            predictedWindowStart: null,
+            predictedWindowEnd: null,
+            inliers: [],
+            outliers: []
+        };
     }
 
     getPrediction(serverId, now = Date.now()) {
-        const samples = this.servers.get(serverId) || [];
-
+        const samples = this.getWindowedSamples(serverId, now);
         if (samples.length < this.minimumEvents) {
-            return {
-                status: "INSUFFICIENT_DATA",
-                serverId,
-                eventCount: samples.length,
-                sampleCount: 0,
-                confidence: 0,
-                cycleHours: null,
-                cycleKind: null,
-                predictedAt: null,
-                predictedWindowStart: null,
-                predictedWindowEnd: null,
-                outliers: []
-            };
+            return this.resultWithoutPrediction(serverId, samples.length, "INSUFFICIENT_DATA");
         }
 
-        let fit = this.fitCache.get(serverId);
-
-        if (!fit) {
-            fit = this.findBestFit(samples);
-            this.fitCache.set(serverId, fit);
+        const intervals = this.getIntervals(samples);
+        const dominant = this.findDominantCluster(intervals);
+        const fit = this.getRecentScheduleChange(intervals, dominant) || dominant;
+        if (!fit || fit.members.length < this.minimumPredictionSamples) {
+            return this.resultWithoutPrediction(serverId, samples.length, "LEARNING");
         }
-        const sampleCount = fit.intervalSamples;
-        const errorScore = Math.max(
-            0,
-            1 - fit.meanErrorMs / fit.toleranceMs
-        );
-        const coverage =
-            fit.inliers.length / samples.length;
-        const confidence = Number(
-            (coverage * errorScore).toFixed(3)
-        );
-        const requiredSamples = fit.kind === "CUSTOM"
-            ? this.minimumCustomPredictionSamples
-            : this.minimumPredictionSamples;
-        const predicted = sampleCount >= requiredSamples;
-        let predictedTimestamp = null;
 
-        if (predicted) {
-            predictedTimestamp =
-                fit.inliers[fit.inliers.length - 1]
-                    .timestamp + fit.cycleMs;
-
-            while (predictedTimestamp <= now) {
-                predictedTimestamp += fit.cycleMs;
-            }
-        }
+        const lastRestart = samples[samples.length - 1];
+        const predictedTimestamp = lastRestart.timestamp + fit.cycleMs;
+        const stale = predictedTimestamp + fit.toleranceMs < now;
+        const inlierEndTimes = new Set(fit.members.map(interval => interval.end.timestamp));
+        const outlierEndTimes = new Set(intervals
+            .filter(interval => !inlierEndTimes.has(interval.end.timestamp))
+            .map(interval => interval.end.timestamp));
+        const confidence = this.getConfidence(fit, intervals, lastRestart.timestamp, now);
 
         return {
-            status: predicted ? "PREDICTED" : "LEARNING",
+            status: stale ? "STALE" : "PREDICTED",
             serverId,
             eventCount: samples.length,
-            sampleCount,
+            sampleCount: fit.members.length,
             confidence,
-            cycleHours: Number(
-                (fit.cycleMs / 3600000).toFixed(3)
-            ),
-            cycleKind: fit.kind,
-            toleranceMinutes: Math.round(
-                fit.toleranceMs / 60000
-            ),
-            predictedAt: predictedTimestamp
-                ? new Date(predictedTimestamp).toISOString()
-                : null,
-            predictedWindowStart: predictedTimestamp
-                ? new Date(
-                    predictedTimestamp - fit.toleranceMs
-                ).toISOString()
-                : null,
-            predictedWindowEnd: predictedTimestamp
-                ? new Date(
-                    predictedTimestamp + fit.toleranceMs
-                ).toISOString()
-                : null,
-            inliers: fit.inliers.map(sample => ({
-                restartAt: sample.restartAt,
-                errorSeconds: Math.round(
-                    sample.errorMs / 1000
-                )
-            })),
-            outliers: fit.outliers.map(sample => ({
-                restartAt: sample.restartAt,
-                classification: "UNSCHEDULED_OR_OUTLIER"
-            }))
+            cycleHours: this.round(fit.cycleMs / 3600000),
+            cycleKind: this.getCycleKind(fit.cycleMs),
+            toleranceMinutes: Math.round(fit.toleranceMs / 60000),
+            historyWindowDays: this.historyWindowMs / 86400000,
+            scheduleChanged: Boolean(fit.scheduleChanged),
+            predictedAt: stale ? null : new Date(predictedTimestamp).toISOString(),
+            predictedWindowStart: stale ? null : new Date(predictedTimestamp - fit.toleranceMs).toISOString(),
+            predictedWindowEnd: stale ? null : new Date(predictedTimestamp + fit.toleranceMs).toISOString(),
+            inliers: samples
+                .filter(sample => inlierEndTimes.has(sample.timestamp))
+                .map(sample => ({
+                    restartAt: sample.restartAt,
+                    errorSeconds: Math.round(Math.abs(
+                        fit.members.find(interval => interval.end.timestamp === sample.timestamp).durationMs - fit.cycleMs
+                    ) / 1000)
+                })),
+            outliers: samples
+                .filter(sample => outlierEndTimes.has(sample.timestamp))
+                .map(sample => ({
+                    restartAt: sample.restartAt,
+                    classification: "UNSCHEDULED_OR_OUTLIER"
+                }))
         };
     }
 }
