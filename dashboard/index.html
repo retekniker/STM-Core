@@ -195,14 +195,6 @@
         }
         .watchdog-clock-panel { display: flex; align-items: stretch; justify-content: space-between; gap: 0.75rem; height: 100%; }
         .watchdog-clock-meta { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
-        .clock-prediction-active { max-width: 100%; overflow: hidden; }
-        .clock-prediction-message { display: inline-block; min-width: max-content; padding-left: 100%; font-size: clamp(0.82rem, 2.4vw, 1.35rem); animation: clock-prediction-scroll 12s linear infinite; }
-        @keyframes clock-prediction-scroll {
-            from { transform: translateX(0); }
-            to { transform: translateX(-100%); }
-        }
-
-
         /* STATUSY ASSET SATURATION & TĘTNIĄCE PROCENTY */
         .status-pulse-online { color: #00ff9c; text-shadow: 0 0 8px #00ff9c; animation: alert-blink 2s infinite; }
         .status-pulse-offline { color: #ff4d4d; text-shadow: 0 0 8px #ff4d4d; animation: alert-blink-rapid 0.5s infinite; }
@@ -992,6 +984,8 @@
             return `Re-Tek corp.      ..::77th JSOC::.. Server Tactical Monitor PRO V${version}//........SYSTEM READY!`;
         }
         let dmdDefaultText = createDmdDefaultText();
+        let predictionDmdTimer = null;
+        let predictionDmdIndex = 0;
 
         async function refreshDmdVersion() {
             try {
@@ -1015,6 +1009,46 @@
             el.appendChild(cur);
         }
 
+        function stopPredictionDmdRotation() {
+            if (predictionDmdTimer !== null) clearInterval(predictionDmdTimer);
+            predictionDmdTimer = null;
+        }
+
+        function getDmdPredictions() {
+            return ['EU1', 'EU2', 'EU3']
+                .map(server => ({ server, prediction: cache[server]?.restartPrediction }))
+                .filter(item => item.prediction?.status === 'PREDICTED');
+        }
+
+        function renderPredictionDmd() {
+            const dmdStream = document.getElementById('dmd-text-stream');
+            const dmdNode = document.getElementById('dmd-main-node');
+            const dmdOverride = document.getElementById('dmd-override-zone');
+            const auxiliary = [document.getElementById('dmd-reticle-node'), document.getElementById('heat-zone-container')];
+            if (!dmdStream || !dmdNode || !dmdOverride) return;
+            const predictions = getDmdPredictions();
+            stopPredictionDmdRotation();
+            dmdStream.style.opacity = '1';
+            auxiliary.forEach(element => { if (element) element.style.opacity = '1'; });
+            dmdOverride.style.opacity = '0';
+            dmdNode.className = "flex-1 dmd-container w-full min-w-0";
+            if (!predictions.length) {
+                setDMDText(dmdStream, dmdDefaultText, '█');
+                return;
+            }
+
+            predictionDmdIndex %= predictions.length;
+            const current = predictions[predictionDmdIndex];
+            setDMDText(dmdStream, `Re-Tek corp.      >> ${formatRestartPredictionDmd(current.server, current.prediction)}`, '█');
+            if (predictions.length > 1) {
+                predictionDmdTimer = setInterval(() => {
+                    if (dmdAlertController.active) return;
+                    predictionDmdIndex = (predictionDmdIndex + 1) % predictions.length;
+                    renderPredictionDmd();
+                }, 8000);
+            }
+        }
+
         function resetDmdDisplay() {
             const dmdStream = document.getElementById('dmd-text-stream');
             const dmdNode = document.getElementById('dmd-main-node');
@@ -1024,8 +1058,7 @@
             dmdStream.style.opacity = '1';
             auxiliary.forEach(element => { if (element) element.style.opacity = '1'; });
             dmdOverride.style.opacity = '0';
-            setDMDText(dmdStream, dmdDefaultText, '█');
-            dmdNode.className = "flex-1 dmd-container w-full min-w-0";
+            renderPredictionDmd();
         }
 
         function renderDmdAlert(item) {
@@ -1034,6 +1067,7 @@
             const dmdOverride = document.getElementById('dmd-override-zone');
             const auxiliary = [document.getElementById('dmd-reticle-node'), document.getElementById('heat-zone-container')];
             if (!dmdStream || !dmdNode || !dmdOverride) throw new Error('DMD display is unavailable');
+            stopPredictionDmdRotation();
             const critical = item.severity === 'critical';
             dmdStream.style.opacity = critical ? '0' : '1';
             auxiliary.forEach(element => { if (element) element.style.opacity = critical ? '0' : '1'; });
@@ -1168,7 +1202,7 @@
             clockMode[server] = nextClockMode(clockMode[server]);
             if (clockMode[server] === 'prediction') {
                 const prediction = cache[server]?.restartPrediction || {};
-                pushToDMD(server + ' // ' + formatRestartPrediction(prediction), 'warning', { source: 'prediction', serverId: server, colorClass: 'dmd-alarm-yellow' });
+                if (!dmdAlertController.active) renderPredictionDmd();
             }
             updateClock();
         };
@@ -2060,6 +2094,7 @@
                         if (advMode) logEvent(`[ADV] ${sn} PARALLEL FETCH REJECTED: ${r.reason?.message||r.reason}`, "text-red-900", true);
                     }
                 });
+                if (!dmdAlertController.active) renderPredictionDmd();
 
                 wdLogCounter++; if (wdLogCounter >= 12) { logEvent(`[WD] STATUS: STABLE / SYNC OK`, "text-cyan-400 opacity-80"); wdLogCounter = 0; }
 
@@ -2310,7 +2345,7 @@
                 }
 
 
-                if (clockMode[n] === 'prediction') {
+                    if (clockMode[n] === 'prediction') {
                     const frame = getPredictionClockFrame({
                         prediction,
                         nowMs: Date.now(),
@@ -2320,10 +2355,7 @@
                         renderClockValue(element, frame.text);
                         if (element) element.title = `${_predTxt}\nClick: elapsed, restart-time, Restart Prediction.`;
                     });
-                    etas.forEach(element => { if (element) {
-                        element.className = "text-[9px] font-black tracking-widest mt-1 uppercase text-yellow-400 whitespace-nowrap";
-                        element.textContent = 'PREDICTED NEXT RESTART';
-                    }});
+                    etas.forEach(element => { if (element) element.textContent = ''; });
                     return;
                 }
                 // [v5] ZEGAR LICZY W GÓRĘ od ostatniego wykrytego restartu (TIME-SINCE-RESTART)

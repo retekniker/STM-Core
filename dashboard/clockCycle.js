@@ -40,10 +40,34 @@
         return { kind: "prediction", text };
     }
 
+    function formatRestartPredictionDmd(serverId, prediction, formatDate) {
+        const status = String(prediction?.status || "AWAITING_BACKEND_MODEL").toUpperCase();
+        if (status !== "PREDICTED" || !Number.isFinite(Date.parse(prediction?.predictedAt))) {
+            return `${serverId} // RESTART PREDICTION // ${status.replaceAll("_", " ")}`;
+        }
+
+        const format = value => typeof formatDate === "function"
+            ? formatDate(new Date(value))
+            : new Date(value).toLocaleString("en-GB", { hour12: false });
+        const cycle = Number.isFinite(Number(prediction.cycleHours))
+            ? `${Number(prediction.cycleHours)}H CYCLE`
+            : "CYCLE LEARNING";
+        const confidence = Number.isFinite(Number(prediction.confidence))
+            ? `${Math.round(Number(prediction.confidence) * 100)}% CONFIDENCE`
+            : "CONFIDENCE LEARNING";
+        const windowStart = Date.parse(prediction.predictedWindowStart || "");
+        const windowEnd = Date.parse(prediction.predictedWindowEnd || "");
+        const windowText = Number.isFinite(windowStart) && Number.isFinite(windowEnd)
+            ? `WINDOW ${format(windowStart)} - ${format(windowEnd)}`
+            : "WINDOW UNAVAILABLE";
+        return `${serverId} // RESTART PREDICTION // ${format(prediction.predictedAt)} // ${cycle} // ${confidence} // ${windowText}`;
+    }
+
     return {
         CLOCK_MODES,
         nextClockMode,
         formatRestartPrediction,
-        getPredictionClockFrame
+        getPredictionClockFrame,
+        formatRestartPredictionDmd
     };
 });
