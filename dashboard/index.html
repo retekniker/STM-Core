@@ -975,6 +975,21 @@
         let advMode = localStorage.getItem('jsoc_adv_mode') === 'true';
         let audioUnlocked = false; let voiceEnabled = false; let ttsVoice = null;
         let audioQueue = []; let isPlayingQueue = false; let currentAudioObj = null; let ttsUtterances = [];
+        const VOICE_ACKNOWLEDGED_KEY = 'jsoc_voice_acknowledged';
+        const VOICE_ENABLED_KEY = 'jsoc_voice_enabled';
+        function readVoiceStartupState(storage = localStorage) {
+            try {
+                return {
+                    acknowledged: storage.getItem(VOICE_ACKNOWLEDGED_KEY) === 'true',
+                    enabled: storage.getItem(VOICE_ENABLED_KEY) === 'true'
+                };
+            } catch (error) {
+                return { acknowledged: false, enabled: false };
+            }
+        }
+        const voiceStartupState = readVoiceStartupState();
+        voiceEnabled = voiceStartupState.enabled;
+        audioUnlocked = voiceEnabled;
 
         let showStats = false;
         let autoFavEnabled = false;
@@ -1258,6 +1273,10 @@
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") { Notification.requestPermission(); }
 
             voiceEnabled = !voiceEnabled;
+            try {
+                localStorage.setItem(VOICE_ACKNOWLEDGED_KEY, 'true');
+                localStorage.setItem(VOICE_ENABLED_KEY, String(voiceEnabled));
+            } catch (error) { console.warn('[VOICE] state persistence failed', error); }
             if (voiceEnabled) {
                 audioUnlocked = true;
                 btnInit.innerText = "VOICE: ON"; btnInit.classList.remove("border-gray-500", "text-gray-500"); btnInit.classList.add("border-green-500", "text-green-500");
@@ -3420,9 +3439,21 @@
             let isUpdatingAll = true;
             updateAll().finally(() => { isUpdatingAll = false; });
 
-            addSystemAlert("VOICE COMMS STANDBY. CLICK [INIT COMM] TO ACTIVATE.", "alert-startup-voice");
-            armInitCommAttention();
-            logEvent("VOICE ENGINE DISABLED. AWAITING MANUAL OVERRIDE.", "text-cyan-400 font-bold");
+            if (!voiceStartupState.acknowledged) {
+                addSystemAlert("VOICE COMMS STANDBY. CLICK [INIT COMM] TO ACTIVATE.", "alert-startup-voice");
+                armInitCommAttention();
+                logEvent("VOICE ENGINE DISABLED. AWAITING MANUAL OVERRIDE.", "text-cyan-400 font-bold");
+            } else if (voiceStartupState.enabled) {
+                const btnInit = document.getElementById("btnInitAudio");
+                const statusEl = document.getElementById("audioStatus");
+                if (btnInit) { btnInit.innerText = "VOICE: ON"; btnInit.classList.remove("border-gray-500", "text-gray-500", "btn-attention"); btnInit.classList.add("border-green-500", "text-green-500"); }
+                if (statusEl) { statusEl.innerText = "COMM-LINK ACTIVE"; statusEl.classList.remove("text-red-500"); statusEl.classList.add("text-green-400"); }
+            } else {
+                const btnInit = document.getElementById("btnInitAudio");
+                const statusEl = document.getElementById("audioStatus");
+                if (btnInit) { btnInit.innerText = "VOICE: OFF"; btnInit.classList.remove("border-green-500", "text-green-500", "btn-attention"); btnInit.classList.add("border-gray-500", "text-gray-500"); }
+                if (statusEl) { statusEl.innerText = "AUDIO LOCKED"; statusEl.classList.remove("text-green-400"); statusEl.classList.add("text-red-500"); }
+            }
             logEvent(`[WD] STM PRO KERNEL V6.0 ACTIVE (SILENT HUNTER PROTOCOL)`, "text-cyan-400 font-bold");
             logEvent(`[SYS] 12H QUARANTINE ENGAGED. AWAITING LOCK-ON.`, "text-yellow-500 font-bold");
         })();

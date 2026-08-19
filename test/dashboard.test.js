@@ -487,3 +487,28 @@ test("first-start standby visibly arms INIT.COM until the operator clicks it", (
     assert.match(html, /btnInit\.classList\.remove\("btn-attention"\)/);
     assert.match(html, /removeByAlertId\("alert-startup-voice"\)/);
 });
+
+test("INIT.COM is first-launch only and VOICE-COM state persists across reloads", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    assert.match(html, /const VOICE_ACKNOWLEDGED_KEY = 'jsoc_voice_acknowledged'/);
+    assert.match(html, /const VOICE_ENABLED_KEY = 'jsoc_voice_enabled'/);
+    assert.match(html, /if \(!voiceStartupState\.acknowledged\)/);
+    assert.match(html, /localStorage\.setItem\(VOICE_ACKNOWLEDGED_KEY, 'true'\)/);
+    assert.match(html, /localStorage\.setItem\(VOICE_ENABLED_KEY, String\(voiceEnabled\)\)/);
+    assert.match(html, /btnInit\.innerText = "VOICE: OFF"/);
+    assert.doesNotMatch(html, /pageshow[\s\S]{0,120}armInitCommAttention/);
+    assert.doesNotMatch(html, /visibilitychange[\s\S]{0,120}armInitCommAttention/);
+
+    const source = extractFunction(html, "readVoiceStartupState");
+    const readVoiceStartupState = Function(
+        `const VOICE_ACKNOWLEDGED_KEY = 'jsoc_voice_acknowledged'; const VOICE_ENABLED_KEY = 'jsoc_voice_enabled'; ${source}; return readVoiceStartupState;`
+    )();
+    const storage = new Map([
+        ["jsoc_voice_acknowledged", "true"],
+        ["jsoc_voice_enabled", "true"]
+    ]);
+    const state = readVoiceStartupState({
+        getItem: key => storage.get(key) || null
+    });
+    assert.deepEqual(state, { acknowledged: true, enabled: true });
+});
