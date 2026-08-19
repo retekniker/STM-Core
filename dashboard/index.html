@@ -1625,6 +1625,44 @@
             pushToDMD(`[SYS] OPERATOR DB EXPORTED`, 'success', { source: 'operator', colorClass: 'dmd-alarm-green' });
         }
 
+        function hasOperatorHistory(name, data = statsData) {
+            const entry = data?.[name];
+            return Boolean(entry && (
+                Number(entry.sessionTime) > 0 ||
+                Number(entry.totalTime) > 0
+            ));
+        }
+
+        function formatOperatorHistoryExport(name, entry) {
+            const sessionTime = Number(entry?.sessionTime) || 0;
+            const totalTime = Number(entry?.totalTime) || 0;
+            const lastTick = Number(entry?.lastTick);
+            const updated = Number.isFinite(lastTick) ? new Date(lastTick).toISOString() : 'UNKNOWN';
+            return [
+                'STM CORE OPERATOR HISTORY',
+                `OPERATOR: ${name}`,
+                `EXPORTED: ${new Date().toISOString()}`,
+                `LAST UPDATED: ${updated}`,
+                '',
+                'HISTORY',
+                `SESSION TIME MS: ${sessionTime}`,
+                `TOTAL TIME MS: ${totalTime}`,
+                `SESSION TIME: ${Math.floor(sessionTime / 3600000)}H ${String(Math.floor((sessionTime % 3600000) / 60000)).padStart(2, '0')}M`,
+                `TOTAL TIME: ${Math.floor(totalTime / 3600000)}H ${String(Math.floor((totalTime % 3600000) / 60000)).padStart(2, '0')}M`
+            ].join('\n');
+        }
+
+        function exportOperatorHistory(name) {
+            if (!hasOperatorHistory(name)) return false;
+            const safeName = String(name).trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'operator';
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([formatOperatorHistoryExport(name, statsData[name])], { type: 'text/plain;charset=utf-8' }));
+            link.download = `stm-operator-history-${safeName}.txt`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 0);
+            return true;
+        }
+
         function toggleStats() {
             showStats = !showStats;
             const btn = document.getElementById('btnStatsToggle');
@@ -2526,9 +2564,25 @@
                                 <span class="text-white font-black text-sm md:text-base tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] leading-none mb-1" title="Session Time">S: ${String(sH).padStart(2, '0')}h ${String(sM).padStart(2, '0')}m</span>
                                 <span class="text-yellow-500 font-bold text-[10px] tracking-widest leading-none" title="Total Time">T: ${String(tH).padStart(2, '0')}h ${String(tM).padStart(2, '0')}m</span>
                             </div>
-                            <span class="cursor-pointer hover:text-red-500 px-2 text-lg ml-1" style="color: ${colors.text}" onclick="removeWatch(${escapeAttr(JSON.stringify(n))})">✖</span>
+                            <div class="operator-stats-actions flex items-center gap-1">
+                                <span class="cursor-pointer hover:text-red-500 px-2 text-lg ml-1" style="color: ${colors.text}" onclick="removeWatch(${escapeAttr(JSON.stringify(n))})">✖</span>
+                            </div>
                         </div>
                     `;
+                    if (hasOperatorHistory(n)) {
+                        const exportButton = document.createElement('button');
+                        exportButton.type = 'button';
+                        exportButton.className = 'btn-system-led operator-history-export';
+                        exportButton.style.cssText = 'padding: 2px 5px; font-size: 8px;';
+                        exportButton.textContent = 'EX';
+                        exportButton.setAttribute('aria-label', `Export history for ${n}`);
+                        exportButton.addEventListener('click', event => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            exportOperatorHistory(n);
+                        });
+                        item.querySelector('.operator-stats-actions')?.prepend(exportButton);
+                    }
                 } else {
                     if (isOnline && playerSessions[n]) { let sessionMin = Math.floor((Date.now() - playerSessions[n]) / 60000); sessionTimeStr = `<span class="opacity-50 text-[9px] ml-1 tracking-widest shrink-0">[${sessionMin}m]</span>`; }
                     item.className = `flex justify-between items-center p-2 rounded font-bold tracking-wide border-l-2 transition-colors ${isOnline?'':'opacity-70'}`;

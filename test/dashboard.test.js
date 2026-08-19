@@ -408,6 +408,32 @@ test("SquadRoster supports single select, CTRL toggles, touch selection and dupl
     assert.deepEqual(planRosterAdds(["Alpha", "Bravo"], squads, 1, 2), ["Alpha"]);
 });
 
+test("operator history EX is data-backed, isolated and leaves bulk export unchanged", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    assert.match(html, /if \(showStats\)/);
+    assert.match(html, /if \(hasOperatorHistory\(n\)\)/);
+    assert.match(html, /exportButton\.textContent = 'EX'/);
+    assert.match(html, /event\.stopPropagation\(\);\s*exportOperatorHistory\(n\)/);
+    assert.match(html, /function exportOperators\(\)/);
+    assert.match(html, /stm-operator-history-\$\{safeName\}\.txt/);
+
+    const hasSource = extractFunction(html, "hasOperatorHistory");
+    const hasOperatorHistory = Function(`${hasSource}; return hasOperatorHistory;`)();
+    assert.equal(hasOperatorHistory("Alpha", { Alpha: { sessionTime: 0, totalTime: 0 } }), false);
+    assert.equal(hasOperatorHistory("Alpha", { Alpha: { sessionTime: 1, totalTime: 0 } }), true);
+    assert.equal(hasOperatorHistory("Missing", {}), false);
+
+    const formatSource = extractFunction(html, "formatOperatorHistoryExport");
+    const formatOperatorHistoryExport = Function(`${formatSource}; return formatOperatorHistoryExport;`)();
+    const text = formatOperatorHistoryExport("Alpha", { sessionTime: 3600000, totalTime: 7200000, lastTick: 0 });
+    assert.match(text, /OPERATOR: Alpha/);
+    assert.match(text, /SESSION TIME MS: 3600000/);
+    assert.match(text, /TOTAL TIME MS: 7200000/);
+    assert.match(text, /SESSION TIME: 1H 00M/);
+    assert.match(text, /TOTAL TIME: 2H 00M/);
+    assert.doesNotMatch(text, /Bravo|EU1/);
+});
+
 test("new monitoring session ignores historical uptime and accepts its first confirmed restart", () => {
     const harness = createRestartClockHarness("AUTO");
 
