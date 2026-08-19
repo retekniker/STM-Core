@@ -48,6 +48,14 @@
         .glow-text { text-shadow: 0 0 12px rgba(0, 255, 156, 0.8), 0 0 20px rgba(0, 255, 156, 0.4); }
         .bottom-logo { max-width: 200px; width: 100%; height: auto; margin-top: 15px; filter: drop-shadow(0 0 10px rgba(0, 255, 156, 0.3)); opacity: 0.8; }
         .players-count-glow { font-size: 1.75rem; color: #ffffff; text-shadow: 0 0 10px rgba(0, 255, 156, 0.8), 0 0 20px rgba(0, 255, 156, 0.4); font-weight: 700; line-height: 1; }
+        .server-map-name { font-size: 1rem; font-weight: 900; line-height: 1.25; }
+        .server-map-eu1 { color: #00ff9c; }
+        .server-map-eu2 { color: #eab308; }
+        .server-map-eu3 { color: #00e5ff; }
+        .server-ping-value { font-size: 1rem; font-weight: 900; line-height: 1.25; }
+        .server-ping-normal { color: #00ff9c; }
+        .server-ping-high { color: #eab308; }
+        .server-ping-very-high, .server-ping-offline { color: #ff4d4d; }
         .cap-bar-bg { background: rgba(255, 255, 255, 0.05); height: 12px; border: 1px solid rgba(0, 255, 156, 0.2); border-radius: 2px; overflow: hidden; }
         .cap-bar-fill { height: 100%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s; }
 
@@ -352,7 +360,7 @@
                         </div>
                     </div>
                     <div id="statusEU1" class="text-[10px] px-2 py-0.5 rounded border border-current uppercase w-full text-right mb-3">Loading</div>
-                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU1" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU1" class="text-right truncate text-[11px]">-</div><div class="opacity-70">LAT:</div> <div id="pingEU1" class="text-right font-bold">-ms</div></div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU1" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU1" class="text-right truncate server-map-name server-map-eu1">-</div><div class="opacity-70">LAT:</div> <div id="pingEU1" class="text-right server-ping-value server-ping-normal">-ms</div></div>
                     <div id="listEU1" class="h-[400px] md:h-[500px] overflow-y-auto text-xs space-y-1 custom-scrollbar pr-1"></div>
                 </div>
 
@@ -364,7 +372,7 @@
                         </div>
                     </div>
                     <div id="statusEU2" class="text-[10px] px-2 py-0.5 rounded border border-current uppercase w-full text-right mb-3">Loading</div>
-                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU2" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU2" class="text-right truncate text-[11px]">-</div><div class="opacity-70">LAT:</div> <div id="pingEU2" class="text-right font-bold">-ms</div></div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU2" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU2" class="text-right truncate server-map-name server-map-eu2">-</div><div class="opacity-70">LAT:</div> <div id="pingEU2" class="text-right server-ping-value server-ping-normal">-ms</div></div>
                     <div id="listEU2" class="h-[400px] md:h-[500px] overflow-y-auto text-xs space-y-1 custom-scrollbar pr-1"></div>
                 </div>
 
@@ -376,7 +384,7 @@
                         </div>
                     </div>
                     <div id="statusEU3" class="text-[10px] px-2 py-0.5 rounded border border-current uppercase w-full text-right mb-3">Loading</div>
-                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU3" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU3" class="text-right truncate text-[11px]">-</div><div class="opacity-70">LAT:</div> <div id="pingEU3" class="text-right font-bold">-ms</div></div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-4 items-center"><div class="opacity-70">OPR:</div> <div id="playersEU3" class="text-right players-count-glow">-/-</div><div class="opacity-70">AO:</div> <div id="mapEU3" class="text-right truncate server-map-name server-map-eu3">-</div><div class="opacity-70">LAT:</div> <div id="pingEU3" class="text-right server-ping-value server-ping-normal">-ms</div></div>
                     <div id="listEU3" class="h-[400px] md:h-[500px] overflow-y-auto text-xs space-y-1 custom-scrollbar pr-1"></div>
                 </div>
             </div>
@@ -1711,6 +1719,14 @@
             lsSet('jsoc_ping_baseline', JSON.stringify(pingBaseline));
         }
 
+        function getLatencyClass(status, ping) {
+            if (String(status || '').toLowerCase() === 'offline') return 'server-ping-offline';
+            const latency = Number(ping);
+            if (latency > CONNECTION_LATENCY_THRESHOLDS.veryHigh) return 'server-ping-very-high';
+            if (latency > CONNECTION_LATENCY_THRESHOLDS.high) return 'server-ping-high';
+            return 'server-ping-normal';
+        }
+
         function detectPingSpike(server, ping) {
             const b = pingBaseline[server];
             if (!b || b < 20) return false;
@@ -2128,7 +2144,7 @@
                     else { sEl.innerText = "ONLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-green-500 text-right w-full uppercase text-green-500"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
                 } else { sEl.innerText = "OFFLINE"; sEl.className = "text-[10px] px-2 py-0.5 rounded border border-red-500 text-right w-full uppercase opacity-50"; container.classList.add('soc-border'); container.classList.remove('soc-border-pulse'); }
 
-                document.getElementById(`players${name}`).innerText = `${c.players || 0}/${c.maxPlayers || 0}`; document.getElementById(`map${name}`).innerText = c.details?.map || "-"; document.getElementById(`ping${name}`).innerText = `${c.ping || 0}ms`;
+                document.getElementById(`players${name}`).innerText = `${c.players || 0}/${c.maxPlayers || 0}`; document.getElementById(`map${name}`).innerText = c.details?.map || "-"; const pingEl = document.getElementById(`ping${name}`); pingEl.innerText = `${c.ping || 0}ms`; pingEl.className = `text-right server-ping-value ${getLatencyClass(c.status, c.ping)}`;
                 // Hash check: skip full DOM rebuild if player list unchanged
                 // FIX v2: dodajemy squadsVersion - reassign gracza zmienia jego kolor nawet bez zmiany rosteru
                 const listHash = (c.list || []).map(p => `${p.name}:${Math.floor(Number(p.time) || 0)}`).join('|') + '|' + currentSquadIdx + '|' + squadsVersion;

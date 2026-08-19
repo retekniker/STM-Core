@@ -175,6 +175,31 @@ test("dashboard routes connection transitions through the DMD alert gate", () =>
     assert.match(html, /source: 'connectivity'/);
 });
 
+test("server panels emphasize map names and classify latency with DMD thresholds", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+
+    for (const server of ["EU1", "EU2", "EU3"]) {
+        assert.match(html, new RegExp(`id="map${server}"[^>]+server-map-name server-map-${server.toLowerCase()}`));
+        assert.match(html, new RegExp(`id="ping${server}"[^>]+server-ping-value server-ping-normal`));
+    }
+    assert.match(html, /<div class="opacity-70">OPR:<\/div>/);
+    assert.match(html, /server-map-name \{ font-size: 1rem; font-weight: 900;/);
+    assert.match(html, /server-ping-value \{ font-size: 1rem; font-weight: 900;/);
+    assert.match(html, /CONNECTION_LATENCY_THRESHOLDS\.veryHigh/);
+    assert.match(html, /CONNECTION_LATENCY_THRESHOLDS\.high/);
+
+    const source = extractFunction(html, "getLatencyClass");
+    const getLatencyClass = Function(
+        "CONNECTION_LATENCY_THRESHOLDS",
+        `${source}; return getLatencyClass;`
+    )({ high: 200, veryHigh: 400 });
+    assert.equal(getLatencyClass("online", 200), "server-ping-normal");
+    assert.equal(getLatencyClass("online", 201), "server-ping-high");
+    assert.equal(getLatencyClass("online", 400), "server-ping-high");
+    assert.equal(getLatencyClass("online", 401), "server-ping-very-high");
+    assert.equal(getLatencyClass("offline", 20), "server-ping-offline");
+});
+
 test("dashboard retains A2S player connection time and CRLF layout", () => {
     const contents = fs.readFileSync(dashboardPath);
     const html = contents.toString("utf8");
