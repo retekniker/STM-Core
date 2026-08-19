@@ -1044,6 +1044,20 @@
             }
         });
         const restartLiveGate = new RestartLiveGate();
+        const connectionAlertGate = new ConnectionAlertGate();
+
+        function handleConnectionAlert(server, status, ping) {
+            const alert = connectionAlertGate.observe({ serverId: server, status, ping });
+            if (!alert) return false;
+            pushToDMD(alert.text, alert.severity, {
+                source: 'connectivity',
+                serverId: server,
+                dedupeKey: alert.dedupeKey,
+                colorClass: alert.colorClass
+            });
+            return true;
+        }
+
         function escapeHTML(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -1992,9 +2006,11 @@
                     restartCandidateSince: core.restartCandidateSince || null,
                     restartPrediction: core.restartPrediction || { status: 'INSUFFICIENT_DATA' }
                 };
+                handleConnectionAlert(name, finalStatus, lat);
             } catch (err) {
                 if (advMode && err.message !== "429") { logEvent(`[ADV] ${name} FETCH FAILED`, "text-red-900", true); }
                 if (!cache[name]) { cache[name] = { status: 'offline', players: 0, maxPlayers: 0, details: {}, list: [], ping: 0 }; } else { cache[name].status = 'offline'; cache[name].players = 0; cache[name].list = []; }
+                handleConnectionAlert(name, 'offline', 0);
             }
         }
 

@@ -166,6 +166,15 @@ test("dashboard delegates restart confirmation to the backend", () => {
     }
 });
 
+test("dashboard routes connection transitions through the DMD alert gate", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+
+    assert.match(html, /const connectionAlertGate = new ConnectionAlertGate\(\)/);
+    assert.match(html, /handleConnectionAlert\(name, finalStatus, lat\)/);
+    assert.match(html, /handleConnectionAlert\(name, 'offline', 0\)/);
+    assert.match(html, /source: 'connectivity'/);
+});
+
 test("dashboard retains A2S player connection time and CRLF layout", () => {
     const contents = fs.readFileSync(dashboardPath);
     const html = contents.toString("utf8");

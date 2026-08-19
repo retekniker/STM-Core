@@ -3,7 +3,9 @@ const assert = require("node:assert/strict");
 const {
     DmdAlertController,
     RestartLiveGate,
-    DMD_ALERT_DURATIONS
+    ConnectionAlertGate,
+    DMD_ALERT_DURATIONS,
+    CONNECTION_LATENCY_THRESHOLDS
 } = require("../dashboard/dmdAlerts");
 
 function harness(options = {}) {
@@ -139,4 +141,25 @@ test("render failure resets DMD and continues safely", () => {
     assert.equal(calls, 1);
     assert.equal(state.controller.active, null);
     assert.equal(state.resets, 1);
+});
+
+test("connection alerts classify high and very high latency only on state changes", () => {
+    assert.deepEqual(CONNECTION_LATENCY_THRESHOLDS, { high: 200, veryHigh: 400 });
+    const gate = new ConnectionAlertGate();
+
+    assert.equal(gate.observe({ serverId: "EU1", status: "online", ping: 80 }), null);
+    assert.match(gate.observe({ serverId: "EU1", status: "online", ping: 250 }).text, /EU1 HIGH LATENCY \/\/ 250MS/);
+    assert.equal(gate.observe({ serverId: "EU1", status: "online", ping: 260 }), null);
+    const veryHigh = gate.observe({ serverId: "EU1", status: "online", ping: 450 });
+    assert.equal(veryHigh.severity, "warning");
+    assert.match(veryHigh.text, /EU1 VERY HIGH LATENCY \/\/ 450MS/);
+});
+
+test("offline and latency recovery alerts are emitted once without replaying startup state", () => {
+    const gate = new ConnectionAlertGate();
+
+    assert.equal(gate.observe({ serverId: "EU2", status: "offline", ping: 0 }), null);
+    assert.equal(gate.observe({ serverId: "EU2", status: "offline", ping: 0 }), null);
+    assert.equal(gate.observe({ serverId: "EU2", status: "online", ping: 90 }).severity, "success");
+    assert.equal(gate.observe({ serverId: "EU2", status: "online", ping: 90 }), null);
 });

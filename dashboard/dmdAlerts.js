@@ -17,6 +17,10 @@
         warning: 2,
         critical: 3
     });
+    const CONNECTION_LATENCY_THRESHOLDS = Object.freeze({
+        high: 200,
+        veryHigh: 400
+    });
 
     class DmdAlertController {
         constructor(options = {}) {
@@ -218,5 +222,77 @@
         }
     }
 
-    return { DmdAlertController, RestartLiveGate, DMD_ALERT_DURATIONS: DURATIONS };
+    class ConnectionAlertGate {
+        constructor(options = {}) {
+            this.highLatencyMs = options.highLatencyMs ?? CONNECTION_LATENCY_THRESHOLDS.high;
+            this.veryHighLatencyMs = options.veryHighLatencyMs ?? CONNECTION_LATENCY_THRESHOLDS.veryHigh;
+            this.states = new Map();
+            this.sequence = 0;
+        }
+
+        classify(status, ping) {
+            if (String(status || "").toLowerCase() === "offline") return "OFFLINE";
+            const latency = Number(ping);
+            if (!Number.isFinite(latency) || latency <= 0) return "UNKNOWN";
+            if (latency > this.veryHighLatencyMs) return "VERY_HIGH";
+            if (latency > this.highLatencyMs) return "HIGH";
+            return "NORMAL";
+        }
+
+        observe({ serverId, status, ping }) {
+            if (!serverId) return null;
+            const state = this.classify(status, ping);
+            const previous = this.states.get(serverId);
+            this.states.set(serverId, state);
+            if (!previous || previous === state || state === "UNKNOWN") return null;
+
+            const latency = Number(ping);
+            const pingLabel = Number.isFinite(latency) && latency > 0
+                ? `${Math.round(latency)}MS`
+                : "PING UNAVAILABLE";
+            const key = `connectivity:${serverId}:${state}:${++this.sequence}`;
+
+            if (state === "OFFLINE") {
+                return {
+                    severity: "critical",
+                    colorClass: "dmd-alarm-red",
+                    text: `[ ! ] ${serverId} OFFLINE // ${pingLabel} [ ! ]`,
+                    dedupeKey: key
+                };
+            }
+            if (state === "VERY_HIGH") {
+                return {
+                    severity: "warning",
+                    colorClass: "dmd-alarm-red",
+                    text: `[ !! ] ${serverId} VERY HIGH LATENCY // ${pingLabel} [ !! ]`,
+                    dedupeKey: key
+                };
+            }
+            if (state === "HIGH") {
+                return {
+                    severity: "warning",
+                    colorClass: "dmd-alarm-yellow",
+                    text: `[ ! ] ${serverId} HIGH LATENCY // ${pingLabel} [ ! ]`,
+                    dedupeKey: key
+                };
+            }
+            if (state === "NORMAL" && ["HIGH", "VERY_HIGH", "OFFLINE"].includes(previous)) {
+                return {
+                    severity: "success",
+                    colorClass: "dmd-alarm-green",
+                    text: `${serverId} CONNECTION RECOVERED // ${pingLabel}`,
+                    dedupeKey: key
+                };
+            }
+            return null;
+        }
+    }
+
+    return {
+        DmdAlertController,
+        RestartLiveGate,
+        ConnectionAlertGate,
+        DMD_ALERT_DURATIONS: DURATIONS,
+        CONNECTION_LATENCY_THRESHOLDS
+    };
 });
