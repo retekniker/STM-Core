@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.21
+
+### Changed
+
+- Adds a safe DMD alert queue with live restart, connectivity, recovery and deduplicated alert handling.
+- Moves full Restart Prediction details to the main DMD while clocks show only the predicted restart time.
+- Improves server panel readability for map names and latency with server-aware colors and shared thresholds.
+- Persists INIT.COM / VOICE-COM state across reload and window lifecycle changes.
+- Adds SquadRoster desktop/mobile multi-select, duplicate-safe bulk add and persistent Online/Alphabetical sorting.
+- Adds single-operator history TXT export when real Stats data exists and removes the obsolete Draft Unlinked path.
+
 ## 0.8.20
 
 ### Changed
