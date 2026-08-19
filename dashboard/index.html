@@ -98,6 +98,7 @@
 
         @keyframes number-glow-pulse { 0%, 100% { filter: brightness(0.8); text-shadow: 0 0 2px currentColor; transform: scale(1); } 50% { filter: brightness(1.5); text-shadow: 0 0 8px currentColor, 0 0 12px currentColor; transform: scale(1.1); } }
         .squad-number-glow { animation: number-glow-pulse 3s ease-in-out infinite; font-weight: 900; display: inline-block; opacity: 1 !important; }
+        .roster-player-selected { outline: 2px solid #eab308; outline-offset: -2px; background: rgba(234, 179, 8, 0.18) !important; box-shadow: inset 0 0 12px rgba(234, 179, 8, 0.28); }
 
         /* EFEKT PULSOWANIA DLA OFICJALNYCH CZŁONKÓW JSOC NA LISTACH */
         @keyframes jsoc-name-pulse {
@@ -883,6 +884,35 @@
         let renderDirty = true; // flag: true when data changed, renderUI needed
         let playerSessions = {};
         const selectedRosterPlayers = new Set();
+        function updateRosterSelection(selection, name, multiSelect) {
+            const next = new Set(selection);
+            if (!multiSelect) next.clear();
+            if (multiSelect && next.has(name)) next.delete(name);
+            else next.add(name);
+            return next;
+        }
+
+        function refreshRosterSelectionVisuals() {
+            document.querySelectorAll('[data-roster-player]').forEach(row => {
+                const selected = selectedRosterPlayers.has(row.dataset.rosterPlayer);
+                row.classList.toggle('roster-player-selected', selected);
+                row.setAttribute('aria-selected', String(selected));
+            });
+        }
+
+        function planRosterAdds(selected, allSquads, squadIndex, maximum) {
+            const existing = new Set(Object.values(allSquads).flat().map(name => name.toLowerCase()));
+            const additions = [];
+            for (const name of selected) {
+                const normalized = name.trim();
+                const key = normalized.toLowerCase();
+                if (!normalized || existing.has(key)) continue;
+                if (allSquads[squadIndex].length + additions.length >= maximum) break;
+                additions.push(normalized);
+                existing.add(key);
+            }
+            return additions;
+        }
 
         let lastRestartData = safeJsonGet('jsoc_last_restarts', { EU1: null, EU2: null, EU3: null });
         let statsData = safeJsonGet('jsoc_stats', {});
@@ -2246,8 +2276,10 @@
                         if (!isClan) rClass += " unassigned-player";
                     }
 
-                    if (selectedRosterPlayers.has(p.name)) rClass += " ring-2 ring-yellow-400";
+                    if (selectedRosterPlayers.has(p.name)) rClass += " roster-player-selected";
                     row.className = rClass;
+                    row.dataset.rosterPlayer = p.name;
+                    row.setAttribute('aria-selected', String(selectedRosterPlayers.has(p.name)));
                     row.innerHTML = `<span class="${numClass}" style="${numStyle}">${i+1}.</span><span class="player-name truncate flex-1">${escapeHTML(p.name)}</span><span class="ml-2 shrink-0 text-[9px] opacity-60 tabular-nums" title="A2S player connection time">${formatPlayerConnectionTime(p.time)}</span>`;
                     const mobileAdd = document.createElement("button");
                     mobileAdd.type = "button";
@@ -2258,11 +2290,13 @@
                     row.appendChild(mobileAdd);
                     row.ondblclick = () => addWatch(p.name);
                     row.onclick = event => {
-                        if (!(event.ctrlKey || event.metaKey)) return;
                         event.preventDefault();
-                        const key = p.name;
-                        if (selectedRosterPlayers.has(key)) { selectedRosterPlayers.delete(key); row.classList.remove("ring-2", "ring-yellow-400"); }
-                        else { selectedRosterPlayers.add(key); row.classList.add("ring-2", "ring-yellow-400"); }
+                        const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches;
+                        const multiSelect = event.ctrlKey || event.metaKey || coarsePointer;
+                        const next = updateRosterSelection(selectedRosterPlayers, p.name, multiSelect);
+                        selectedRosterPlayers.clear();
+                        next.forEach(name => selectedRosterPlayers.add(name));
+                        refreshRosterSelectionVisuals();
                     };
                     listEl.appendChild(row);
                 });
@@ -2516,9 +2550,12 @@
         function addWatch(val) {
             const input = document.getElementById("watchInput");
             if (!val && !input.value.trim() && selectedRosterPlayers.size) {
-                const selected = Array.from(selectedRosterPlayers);
+                const additions = planRosterAdds(Array.from(selectedRosterPlayers), ALL_SQUADS, currentSquadIdx, currentSquadIdx === 8 ? 210 : 11);
                 selectedRosterPlayers.clear();
-                selected.forEach(name => addWatch(name));
+                additions.forEach(name => ALL_SQUADS[currentSquadIdx].push(name));
+                if (additions.length) bumpSquads();
+                input.value = "";
+                renderWatchList();
                 renderUI();
                 return;
             }

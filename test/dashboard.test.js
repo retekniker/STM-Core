@@ -363,6 +363,28 @@ test("0.8.19 roster and Asset Saturation controls expose the requested defaults"
     assert.match(html, /totalPlayers \+ " — " \+/);
 });
 
+test("SquadRoster supports single select, CTRL toggles, touch selection and duplicate-safe bulk add", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    assert.match(html, /function updateRosterSelection\(selection, name, multiSelect\)/);
+    assert.match(html, /event\.ctrlKey \|\| event\.metaKey \|\| coarsePointer/);
+    assert.match(html, /function planRosterAdds\(selected, allSquads, squadIndex, maximum\)/);
+    assert.match(html, /const additions = planRosterAdds\(Array\.from\(selectedRosterPlayers\)/);
+    assert.match(html, /roster-player-selected/);
+
+    const selectSource = extractFunction(html, "updateRosterSelection");
+    const updateRosterSelection = Function(`${selectSource}; return updateRosterSelection;`)();
+    assert.deepEqual([...updateRosterSelection(new Set(), "Alpha", false)], ["Alpha"]);
+    assert.deepEqual([...updateRosterSelection(new Set(["Alpha"]), "Bravo", true)], ["Alpha", "Bravo"]);
+    assert.deepEqual([...updateRosterSelection(new Set(["Alpha", "Bravo"]), "Alpha", true)], ["Bravo"]);
+    assert.deepEqual([...updateRosterSelection(new Set(["Alpha", "Bravo"]), "Charlie", false)], ["Charlie"]);
+
+    const planSource = extractFunction(html, "planRosterAdds");
+    const planRosterAdds = Function(`${planSource}; return planRosterAdds;`)();
+    const squads = { 1: ["Existing"], 2: [], 3: [] };
+    assert.deepEqual(planRosterAdds(["Existing", "Alpha", "alpha", "Bravo"], squads, 2, 11), ["Alpha", "Bravo"]);
+    assert.deepEqual(planRosterAdds(["Alpha", "Bravo"], squads, 1, 2), ["Alpha"]);
+});
+
 test("new monitoring session ignores historical uptime and accepts its first confirmed restart", () => {
     const harness = createRestartClockHarness("AUTO");
 
