@@ -34,7 +34,7 @@ test("dashboard wires the third clock state and DMD marquee", () => {
     const dashboard = fs.readFileSync(path.join(__dirname, "../dashboard/index.html"), "utf8");
     assert.match(dashboard, /nextClockMode\(clockMode\[server\]\)/);
     assert.match(dashboard, /getPredictionClockFrame/);
-    assert.match(dashboard, /pushToDMD\(server \+ ' \/\/ ' \+ formatRestartPrediction/);
+    assert.match(dashboard, /pushToDMD\(server \+ ' \/\/ ' \+ formatRestartPrediction\(prediction\), 'warning'/);
     assert.match(dashboard, /PREDICTED NEXT RESTART/);
     assert.match(formatRestartPrediction({ status: "LEARNING" }), /LEARNING/);
 });

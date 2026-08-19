@@ -675,6 +675,7 @@
     <script src="pwa.js"></script>
     <script src="historyRangePreference.js"></script>
     <script src="telemetryInspector.js"></script>
+    <script src="dmdAlerts.js"></script>
     <script src="clockCycle.js"></script>
     <script src="watchdogHydration.js"></script>
     <script src="jsocPersonnel.js"></script>
@@ -892,7 +893,6 @@
         let currentVolume = storedVol !== null ? parseFloat(storedVol) : 1.0;
 
         let alert15Triggers = { EU1: false, EU2: false, EU3: false };
-        let lastRestartAlerted = safeJsonGet('jsoc_last_restart_alerts', { EU1: null, EU2: null, EU3: null });
         let sessionRestartDetectedAt = { EU1: null, EU2: null, EU3: null };
 
         function persistMonitoringSession() {
@@ -958,7 +958,7 @@
         }
 
         function reconcileMonitoringSession(sessionId) {
-            if (!sessionId || monitoringSessionId) return;
+            if (!sessionId || monitoringSessionId === sessionId) return;
             monitoringSessionId = sessionId;
             const stored = safeJsonGet('jsoc_monitor_session', null);
             const resolved = resolveMonitoringSession(stored, sessionId);
@@ -966,9 +966,6 @@
             lastRestartData = resolved.lastRestartData;
             sessionRestartDetectedAt = resolved.detectedAt;
             watchdogHydrated = resolved.hydrated;
-            if (!resolved.sameSession) {
-                lastRestartAlerted = { EU1: null, EU2: null, EU3: null };
-            }
             persistMonitoringSession();
             renderWdSwitches();
             updateClock();
@@ -983,9 +980,6 @@
         let autoFavEnabled = false;
         let sortMode = localStorage.getItem('jsoc_sort_mode') || 'ONLINE';
 
-        let dmdQueue = [];
-        let isDmdProcessing = false;
-        let dmdTimeout = null;
         function createDmdDefaultText(version = '--') {
             return `Re-Tek corp.      ..::77th JSOC::.. Server Tactical Monitor PRO V${version}//........SYSTEM READY!`;
         }
@@ -999,7 +993,7 @@
                 const version = String(payload?.version || '').replace(/^v/i, '');
                 if (!/^\d+(?:\.\d+)+$/.test(version)) return;
                 dmdDefaultText = createDmdDefaultText(version);
-                if (!isDmdProcessing) setDMDText(document.getElementById('dmd-text-stream'), dmdDefaultText, '█');
+                if (!dmdAlertController.active) resetDmdDisplay();
             } catch (error) {
                 console.warn('[DMD] version lookup failed', error);
             }
@@ -1012,6 +1006,44 @@
             cur.textContent = cursor;
             el.appendChild(cur);
         }
+
+        function resetDmdDisplay() {
+            const dmdStream = document.getElementById('dmd-text-stream');
+            const dmdNode = document.getElementById('dmd-main-node');
+            const dmdOverride = document.getElementById('dmd-override-zone');
+            const auxiliary = [document.getElementById('dmd-reticle-node'), document.getElementById('heat-zone-container')];
+            if (!dmdStream || !dmdNode || !dmdOverride) return;
+            dmdStream.style.opacity = '1';
+            auxiliary.forEach(element => { if (element) element.style.opacity = '1'; });
+            dmdOverride.style.opacity = '0';
+            setDMDText(dmdStream, dmdDefaultText, '█');
+            dmdNode.className = "flex-1 dmd-container w-full min-w-0";
+        }
+
+        function renderDmdAlert(item) {
+            const dmdStream = document.getElementById('dmd-text-stream');
+            const dmdNode = document.getElementById('dmd-main-node');
+            const dmdOverride = document.getElementById('dmd-override-zone');
+            const auxiliary = [document.getElementById('dmd-reticle-node'), document.getElementById('heat-zone-container')];
+            if (!dmdStream || !dmdNode || !dmdOverride) throw new Error('DMD display is unavailable');
+            const critical = item.severity === 'critical';
+            dmdStream.style.opacity = critical ? '0' : '1';
+            auxiliary.forEach(element => { if (element) element.style.opacity = critical ? '0' : '1'; });
+            dmdOverride.style.opacity = critical ? '1' : '0';
+            setDMDText(critical ? dmdOverride : dmdStream, critical ? item.text : `Re-Tek corp.      >> ${item.text}`, '█');
+            dmdNode.className = "flex-1 dmd-container w-full min-w-0";
+            if (item.colorClass) dmdNode.classList.add(item.colorClass);
+        }
+
+        const dmdAlertController = new DmdAlertController({
+            renderAlert: renderDmdAlert,
+            renderDefault: resetDmdDisplay,
+            onError(error) {
+                console.error('[DMD] alert controller error', error);
+                resetDmdDisplay();
+            }
+        });
+        const restartLiveGate = new RestartLiveGate();
         function escapeHTML(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -1087,7 +1119,7 @@
                         lsSet('jsoc_calibration_data', JSON.stringify(calibrationData));
                         setWdState(n, 'ON');
                         logEvent(`[SYSTEM] ${n} 24H CALIBRATION COMPLETE. SWITCHING TO ON.`, "text-green-400 font-bold");
-                        pushToDMD(`${n} CYCLE SECURED // WD: ON`, 1, 'dmd-alarm-green');
+                        pushToDMD(`${n} CYCLE SECURED // WD: ON`, 'success', { source: 'watchdog', serverId: n, colorClass: 'dmd-alarm-green' });
                     }
                 });
 
@@ -1114,53 +1146,30 @@
             clockMode[server] = nextClockMode(clockMode[server]);
             if (clockMode[server] === 'prediction') {
                 const prediction = cache[server]?.restartPrediction || {};
-                pushToDMD(server + ' // ' + formatRestartPrediction(prediction), 1, 'dmd-alarm-yellow');
+                pushToDMD(server + ' // ' + formatRestartPrediction(prediction), 'warning', { source: 'prediction', serverId: server, colorClass: 'dmd-alarm-yellow' });
             }
             updateClock();
         };
 
-        function pushToDMD(msg, priority = 0, colorClass = null) {
-            dmdQueue.push({ msg, priority, colorClass });
-            if (!isDmdProcessing) processDMD();
+        function pushToDMD(text, severity = 'info', options = {}) {
+            return dmdAlertController.enqueue({
+                text,
+                severity,
+                source: options.source || 'system',
+                serverId: options.serverId || null,
+                occurredAt: options.occurredAt || Date.now(),
+                receivedAt: Date.now(),
+                durationMs: options.durationMs,
+                expiresAt: options.expiresAt,
+                dedupeKey: options.dedupeKey || null,
+                monitoringSessionId: options.monitoringSessionId || monitoringSessionId,
+                colorClass: options.colorClass || null
+            });
         }
 
-        function processDMD() {
-            const dmdStream = document.getElementById('dmd-text-stream');
-            const dmdNode = document.getElementById('dmd-main-node');
-            const dmdOverride = document.getElementById('dmd-override-zone');
-            const hides = [document.getElementById('dmd-reticle-node'), document.getElementById('heat-zone-container')];
-
-            if (!dmdStream || !dmdOverride) return;
-
-            if (dmdQueue.length === 0) {
-                isDmdProcessing = false;
-                dmdStream.style.opacity = '1';
-                hides.forEach(el => { if(el) el.style.opacity = '1'; });
-                dmdOverride.style.opacity = '0';
-                setDMDText(dmdStream, dmdDefaultText, '█');
-                dmdNode.className = "flex-1 dmd-container w-full min-w-0";
-                return;
-            }
-
-            isDmdProcessing = true;
-            const item = dmdQueue.shift();
-            const duration = (item.priority === 2) ? 15000 : (dmdQueue.length > 0 ? 4000 : 8000);
-
-            if (item.priority === 2) {
-                dmdStream.style.opacity = '0';
-                hides.forEach(el => { if(el) el.style.opacity = '0'; });
-                dmdOverride.style.opacity = '1';
-                setDMDText(dmdOverride, item.msg, '█');
-                dmdNode.className = "flex-1 dmd-container w-full min-w-0 " + (item.colorClass || 'dmd-alarm-red');
-            } else {
-                setDMDText(dmdStream, `Re-Tek corp.      >> ${item.msg}`, '█');
-                dmdNode.className = "flex-1 dmd-container w-full min-w-0";
-                if (item.colorClass) dmdNode.classList.add(item.colorClass);
-            }
-
-            if (dmdTimeout) clearTimeout(dmdTimeout);
-            dmdTimeout = setTimeout(processDMD, duration);
-        }
+        document.addEventListener('visibilitychange', () => dmdAlertController.refresh());
+        window.addEventListener('pageshow', () => dmdAlertController.refresh());
+        window.addEventListener('focus', () => dmdAlertController.refresh());
 
         function initVoice() {
             if (!window.speechSynthesis) return;
@@ -1197,14 +1206,14 @@
                 audioUnlocked = true;
                 btnInit.innerText = "VOICE: ON"; btnInit.classList.remove("border-gray-500", "text-gray-500"); btnInit.classList.add("border-green-500", "text-green-500");
                 statusEl.innerText = "COMM-LINK ACTIVE"; statusEl.classList.remove("text-red-500"); statusEl.classList.add("text-green-400");
-                pushToDMD("--::COMM-LINK ACTIVE::--", 1, "dmd-alarm-green");
+                pushToDMD("--::COMM-LINK ACTIVE::--", 'success', { source: 'voice', colorClass: 'dmd-alarm-green', dedupeKey: `voice-on-${Date.now()}` });
                 queueSpeech("Voice communication active.");
                 logEvent("COMM-LINK INITIALIZED", "text-green-400 font-bold");
                 if(window.speechSynthesis) { const msg = new SpeechSynthesisUtterance(""); msg.volume=0; window.speechSynthesis.speak(msg); }
             } else {
                 btnInit.innerText = "VOICE: OFF"; btnInit.classList.remove("border-green-500", "text-green-500"); btnInit.classList.add("border-gray-500", "text-gray-500");
                 statusEl.innerText = "AUDIO LOCKED"; statusEl.classList.remove("text-green-400"); statusEl.classList.add("text-red-500");
-                pushToDMD("--::COMM-LINK DEACTIVATED::--", 1, "dmd-alarm-red");
+                pushToDMD("--::COMM-LINK DEACTIVATED::--", 'warning', { source: 'voice', colorClass: 'dmd-alarm-red', dedupeKey: `voice-off-${Date.now()}` });
                 queueSpeech("Voice communication deactivated.");
                 logEvent("VOICE ENGINE: DISABLED", "text-gray-400");
                 audioQueue = []; if (currentAudioObj) { currentAudioObj.pause(); currentAudioObj = null; } if (window.speechSynthesis) window.speechSynthesis.cancel(); ttsUtterances = [];
@@ -1382,16 +1391,17 @@
 
         function handleBackendRestart(server, core) {
             const detectedAt = core.lastRestartDetectedAt || null;
-            if (!lastRestartAlerted[server]) {
-                lastRestartAlerted[server] = detectedAt || 'NO_RESTART_BASELINE';
-                lsSet('jsoc_last_restart_alerts', JSON.stringify(lastRestartAlerted));
+            const decision = restartLiveGate.observe({
+                monitoringSessionId,
+                serverId: server,
+                detectedAt
+            });
+            if (!decision.live) {
+                if (decision.reason === 'STALE') {
+                    logEvent(`[STM CORE] ${server} RESTART RETAINED AS HISTORY (${detectedAt}).`, 'text-gray-500');
+                }
                 return false;
             }
-
-            if (!detectedAt || lastRestartAlerted[server] === detectedAt) return false;
-
-            lastRestartAlerted[server] = detectedAt;
-            lsSet('jsoc_last_restart_alerts', JSON.stringify(lastRestartAlerted));
 
             clearServerRosterAfterRestart(server);
             const reason = core.lastRestartReason || 'BACKEND CONFIRMATION';
@@ -1401,9 +1411,14 @@
             if (audioUnlocked && voiceEnabled && !isMuted) {
                 queueSpeech(`Critical alert. ${server.replace('EU1', 'EU One')} restart confirmed.`);
             }
-            if (wdState[server] === 'ON') {
-                pushToDMD(`[ ! ] CRITICAL: ${server} RESTART CONFIRMED [ ! ]`, 2, 'dmd-alarm-red');
-            }
+            pushToDMD(`[ ! ] CRITICAL: ${server} RESTART CONFIRMED [ ! ]`, 'critical', {
+                source: 'restart',
+                serverId: server,
+                occurredAt: decision.occurredAt,
+                dedupeKey: decision.key,
+                monitoringSessionId,
+                colorClass: 'dmd-alarm-red'
+            });
 
             return true;
         }
@@ -1489,7 +1504,7 @@
             a.download = `stm_operator_db_${new Date().getTime()}.txt`;
             a.click();
             logEvent("[DB] DATABASE EXPORTED SUCCESSFULLY", "text-yellow-400 font-bold");
-            pushToDMD(`[SYS] OPERATOR DB EXPORTED`, 1, 'dmd-alarm-green');
+            pushToDMD(`[SYS] OPERATOR DB EXPORTED`, 'success', { source: 'operator', colorClass: 'dmd-alarm-green' });
         }
 
         function toggleStats() {
@@ -1506,7 +1521,7 @@
             btn.innerText = `AUTO-FAV: ${autoFavEnabled ? 'ON' : 'OFF'}`;
             if(autoFavEnabled) {
                 btn.classList.add('active');
-                pushToDMD("AUTO-FAV MODULE ENGAGED", 1, "dmd-alarm-green");
+                pushToDMD("AUTO-FAV MODULE ENGAGED", 'success', { source: 'operator', colorClass: 'dmd-alarm-green' });
                 logEvent("[MODULE] AUTO-FAV ENGAGED", "text-cyan-400 font-bold");
             } else {
                 btn.classList.remove('active');
@@ -1546,7 +1561,7 @@
             localStorage.setItem('jsoc_adv_mode', advMode);
             initAdvButton();
             logEvent(`Advanced logging ${advMode ? 'ENABLED' : 'DISABLED'}`, advMode ? "text-cyan-400" : "text-gray-500");
-            pushToDMD(`[SYS] ADVANCED LOGGING: ${advMode ? 'ON' : 'OFF'}`, 1, advMode ? 'dmd-alarm-yellow' : null);
+            pushToDMD(`[SYS] ADVANCED LOGGING: ${advMode ? 'ON' : 'OFF'}`, 'info', { source: 'operator', colorClass: advMode ? 'dmd-alarm-yellow' : null });
         }
 
         function logEvent(text, color = "text-green-500", isAdvanced = false) {
@@ -1586,11 +1601,11 @@
                 : Promise.resolve().then(() => legacyCopyText(text));
             return clipboardWrite.then(() => {
                 logEvent("BLACK BOX COPIED TO CLIPBOARD", "text-cyan-400");
-                pushToDMD(`[SYS] BLACK BOX COPIED TO CLIPBOARD`, 1, 'dmd-alarm-green');
+                pushToDMD(`[SYS] BLACK BOX COPIED TO CLIPBOARD`, 'success', { source: 'operator', colorClass: 'dmd-alarm-green' });
                 return true;
             }).catch(error => {
                 logEvent(`COPY LOG FAILED: ${error.message}`, "text-red-500 font-bold");
-                pushToDMD(`[ERROR] COPY LOG FAILED`, 1, 'dmd-alarm-red');
+                pushToDMD(`[ERROR] COPY LOG FAILED`, 'warning', { source: 'operator', colorClass: 'dmd-alarm-red' });
                 return false;
             });
         }
@@ -1603,7 +1618,7 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = `stm_blackbox_${new Date().getTime()}.txt`; a.click();
             logEvent("BLACK BOX EXPORTED SUCCESSFULLY", "text-cyan-400 font-bold");
-            pushToDMD(`[SYS] BLACK BOX EXPORTED`, 1, 'dmd-alarm-green');
+            pushToDMD(`[SYS] BLACK BOX EXPORTED`, 'success', { source: 'operator', colorClass: 'dmd-alarm-green' });
         }
 
         function addPlayerAlert(name, server, isJoin, squadDetails, joinedAt = null) {
@@ -1692,7 +1707,7 @@
                     lastSpikeAlert[server] = Date.now();
                     logEvent(`[WD-v2] ${server} PING SPIKE STORM: ${ping}ms (baseline ${b}ms, x${(ping/b).toFixed(1)})`, "text-orange-400 font-bold");
                     addSystemAlert(`${server} NETWORK INSTABILITY: ${ping}ms vs ${b}ms baseline`);
-                    pushToDMD(`[ ! ] ${server} LATENCY ANOMALY: ${ping}MS [ ! ]`, 1, 'dmd-alarm-red');
+                    pushToDMD(`[ ! ] ${server} LATENCY ANOMALY: ${ping}MS [ ! ]`, 'warning', { source: 'latency', serverId: server, colorClass: 'dmd-alarm-red', dedupeKey: `latency-${server}-${lastSpikeAlert[server]}` });
                     pingSpikeStrike[server] = 0;
                     return true;
                 }
@@ -1939,7 +1954,7 @@
                         const isClan = isJsocMemberName(pName);
                         if (isClan && !isMassEvent) {
                             setTimeout(() => {
-                                pushToDMD(`WITAMY, ${pName} // JSOC UPLINK ESTABLISHED`);
+                                pushToDMD(`WITAMY, ${pName} // JSOC UPLINK ESTABLISHED`, 'info', { source: 'personnel', serverId: name, dedupeKey: `join-${name}-${pName}-${playerSessions[pName] || 'unknown'}` });
                             }, 3000);
                         }
                     });
