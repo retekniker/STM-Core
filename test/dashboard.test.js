@@ -353,14 +353,37 @@ test("dashboard exposes backend status and prediction presentations", () => {
 test("0.8.19 roster and Asset Saturation controls expose the requested defaults", () => {
     const html = fs.readFileSync(dashboardPath, "utf8");
     assert.match(html, /SORT: ONLINE/);
-    assert.match(html, /localStorage\.getItem\('jsoc_sort_mode'\) \|\| 'ONLINE'/);
-    assert.doesNotMatch(html, /DRAFT UNLINKED/);
+    assert.match(html, /function readSortMode\(storage = localStorage\)/);
+    assert.match(html, /function persistSortMode\(storage, mode\)/);
     assert.match(html, /selectedRosterPlayers = new Set/);
     assert.match(html, /event\.ctrlKey \|\| event\.metaKey/);
     assert.match(html, /let assetSaturationMetric = "TOTAL"/);
     assert.match(html, /serverSamples\?\.\[assetSaturationMetric\]/);
     assert.match(html, /asset-saturation-selected/);
     assert.match(html, /totalPlayers \+ " — " \+/);
+});
+
+test("SquadRoster sort preference defaults safely and persists only valid modes", () => {
+    const html = fs.readFileSync(dashboardPath, "utf8");
+    assert.match(html, /sortMode === 'ONLINE' \? 'ALPHABETICAL' : 'ONLINE'/);
+    assert.doesNotMatch(html, /SORT: ADDED|sortMode === 'ADDED'|sortMode === 'A-Z'/);
+    assert.doesNotMatch(html, /Draft Unlinked|DRAFT UNLINKED|draftUnlinked|draft-unlinked/i);
+
+    const readSource = extractFunction(html, "readSortMode");
+    const readSortMode = Function("SORT_MODE_KEY", `${readSource}; return readSortMode;`)("jsoc_sort_mode");
+    const storage = value => ({ getItem: () => value });
+    assert.equal(readSortMode(storage(null)), "ONLINE");
+    assert.equal(readSortMode(storage("ALPHABETICAL")), "ALPHABETICAL");
+    assert.equal(readSortMode(storage("ADDED")), "ONLINE");
+    assert.equal(readSortMode({ getItem() { throw new Error("corrupt storage"); } }), "ONLINE");
+
+    const persistSource = extractFunction(html, "persistSortMode");
+    const persistSortMode = Function("SORT_MODE_KEY", `${persistSource}; return persistSortMode;`)("jsoc_sort_mode");
+    const writes = [];
+    const writable = { setItem: (key, value) => writes.push([key, value]) };
+    assert.equal(persistSortMode(writable, "ALPHABETICAL"), "ALPHABETICAL");
+    assert.equal(persistSortMode(writable, "invalid"), "ONLINE");
+    assert.deepEqual(writes, [["jsoc_sort_mode", "ALPHABETICAL"], ["jsoc_sort_mode", "ONLINE"]]);
 });
 
 test("SquadRoster supports single select, CTRL toggles, touch selection and duplicate-safe bulk add", () => {
